@@ -1,20 +1,20 @@
 [submodule "cardano-ledger-specs"]
 	path = cardano-ledger-specs
-	url = ../cardano-minutxo-forks/cardano-ledger-specs.git
+	url = https://github.com/nhenin/cardano-ledger-specs.git
 	branch = v2-minutxo
 [submodule "cardano-api"]
 	path = cardano-api
-	url = ../cardano-minutxo-forks/cardano-api.git
+	url = https://github.com/IntersectMBO/cardano-api.git
 	branch = master
 [submodule "cardano-cli"]
 	path = cardano-cli
-	url = ../cardano-minutxo-forks/cardano-cli.git
+	url = https://github.com/IntersectMBO/cardano-cli.git
 	branch = main
 [submodule "cardano-wallet"]
 	path = cardano-wallet
-	url = ../cardano-minutxo-forks/cardano-wallet.git
+	url = https://github.com/cardano-foundation/cardano-wallet.git
 	branch = master
 [submodule "cardano-balance-transaction"]
 	path = cardano-balance-transaction
-	url = ../cardano-minutxo-forks/cardano-balance-transaction.git
+	url = https://github.com/cardano-foundation/cardano-balance-transaction.git
 	branch = main

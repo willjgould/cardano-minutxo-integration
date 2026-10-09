@@ -13,7 +13,8 @@
         "combined_patch": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "imported_untracked_files": [],
-      "pinned_commit": "8352f9600e06405e4428432bf68fcc126e58a711"
+      "pinned_commit": "8352f9600e06405e4428432bf68fcc126e58a711",
+      "submodule_url": "https://github.com/nhenin/cardano-ledger-specs.git"
     },
     "cardano-api": {
       "upstream": "git@github.com:IntersectMBO/cardano-api.git",
@@ -65,7 +66,8 @@
       "preserved_branches": {
         "v2-minutxo": "2166b1807b471fdfcea1749fddd6cee0c650ee61",
         "v2-minutxo-rpc": "99b99f07c44e5ac0487bbe7f2b0af9e691305209"
-      }
+      },
+      "submodule_url": "https://github.com/IntersectMBO/cardano-api.git"
     },
     "cardano-cli": {
       "upstream": "git@github.com:IntersectMBO/cardano-cli.git",
@@ -89,7 +91,8 @@
       "pinned_commit": "4d3dbdba2ab4fc1e31f352b7190d79fce4a84983",
       "preserved_branches": {
         "v2-minutxo": "a85e705212c625e5b360c081a6c36d21d5ece32f"
-      }
+      },
+      "submodule_url": "https://github.com/IntersectMBO/cardano-cli.git"
     },
     "cardano-wallet": {
       "upstream": "git@github.com:cardano-foundation/cardano-wallet.git",
@@ -111,7 +114,8 @@
       "pinned_commit": "4209dcccdfeb0927f3486aada8d85f8157ff51c3",
       "preserved_branches": {
         "v2-minutxo": "2d9f952a0dfd2e14201cfc7147bc5937c7e61f78"
-      }
+      },
+      "submodule_url": "https://github.com/cardano-foundation/cardano-wallet.git"
     },
     "cardano-balance-transaction": {
       "upstream": "git@github.com:cardano-foundation/cardano-balance-transaction.git",
@@ -122,8 +126,11 @@
       "pinned_commit": "897577325745729552495a9add56c713630c497e",
       "preserved_branches": {
         "v2-minutxo": "6ec3c4d2b3185827e9bd6d1c30e666e1c6056da8"
-      }
+      },
+      "submodule_url": "https://github.com/cardano-foundation/cardano-balance-transaction.git"
     }
   },
-  "checkout_mode": "Cached upstream main/master branches, with ledger remaining on v2-minutxo."
+  "checkout_mode": "Cached upstream main/master branches, with ledger remaining on v2-minutxo.",
+  "parent_repository": "https://github.com/willjgould/cardano-minutxo-integration",
+  "preserved_work_location": "Existing local workspace and sibling cardano-minutxo-forks bare repositories; migration branches are not published by the parent push."
 }

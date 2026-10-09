@@ -46,9 +46,14 @@ projects build together.
 ./scripts/workspace shell
 ```
 
-## Preserved integration branches
+## Preserved integration branches in the original local workspace
 
-To restore the API inspection changes in this workspace:
+The saved migration branches and caches are available in the existing local
+workspace and sibling bare repositories. Publishing this parent repository
+does not publish those downstream branches. A fresh GitHub recursive clone
+contains the pinned upstream baselines and Nicolas' ledger branch.
+
+In the original local workspace, restore the API inspection changes with:
 
 ```sh
 git -C cardano-api switch v2-minutxo
@@ -81,7 +86,7 @@ ignored `.workspace/cache/cardano-api/.inspection-deps/` and
 `.workspace/cache/cardano-wallet/.inspection-deps/`; they are inactive while
 the downstream baselines are checked out.
 
-## Inspection commands and recorded results
+## Local inspection commands and recorded results
 
 The migration build/check commands require the preserved API branch; they
 explain which branch to select if their files are absent on an upstream baseline.
@@ -111,19 +116,30 @@ python3 scripts/prepare-wallet-deps.py \
 This is a focused baseline probe, not a full wallet/balancer build. Its fixtures
 must be updated when implementing the balancer migration.
 
-## Local fork repositories
+## Cloning and component publication
 
-`.gitmodules` points at sibling bare repositories in
-`../cardano-minutxo-forks/`. The user will create the GitHub forks and publish
-the desired branches, then the parent can record their confirmed URLs. No
-GitHub repository creation or publication has been performed.
-
-A temporary recursive clone verifies the local source pins:
+The parent repository is
+<https://github.com/willjgould/cardano-minutxo-integration>. Its `.gitmodules`
+uses Nicolas' ledger repository and the upstream API, CLI, wallet and balancer
+repositories. Clone the current pinned sources with:
 
 ```sh
-git -c protocol.file.allow=always clone --recurse-submodules \
-  /home/will/git/cardano-minutxo-integration /tmp/cardano-minutxo-clone
+git clone --recurse-submodules \
+  https://github.com/willjgould/cardano-minutxo-integration.git
+cd cardano-minutxo-integration
+nix develop
 ```
 
-The working repository remains under `/home/will/git`; `/tmp` is only the test
-clone destination.
+The local bare repositories remain at
+`/home/will/git/cardano-minutxo-forks/`, with a `local-fork` remote in each
+existing submodule checkout. They preserve our saved integration branches.
+Downstream GitHub forks and migration branches have not been created or
+published by the parent push. Once those forks exist, the parent can record
+their URLs and selected commits.
+
+The initial parent commit references local migration commits and local fork
+URLs; reproducing that historical inspection state requires those bare
+repositories. The current baseline pins use the upstream URLs above.
+
+The working repository is `/home/will/git/cardano-minutxo-integration`.
+Temporary verification clones under `/tmp` are separate copies.
