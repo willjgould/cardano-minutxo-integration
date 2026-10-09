@@ -1,0 +1,20 @@
+[submodule "cardano-ledger-specs"]
+	path = cardano-ledger-specs
+	url = ../cardano-minutxo-forks/cardano-ledger-specs.git
+	branch = v2-minutxo
+[submodule "cardano-api"]
+	path = cardano-api
+	url = ../cardano-minutxo-forks/cardano-api.git
+	branch = v2-minutxo
+[submodule "cardano-cli"]
+	path = cardano-cli
+	url = ../cardano-minutxo-forks/cardano-cli.git
+	branch = v2-minutxo
+[submodule "cardano-wallet"]
+	path = cardano-wallet
+	url = ../cardano-minutxo-forks/cardano-wallet.git
+	branch = v2-minutxo
+[submodule "cardano-balance-transaction"]
+	path = cardano-balance-transaction
+	url = ../cardano-minutxo-forks/cardano-balance-transaction.git
+	branch = v2-minutxo
