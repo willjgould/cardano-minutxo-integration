@@ -5,16 +5,16 @@
 [submodule "cardano-api"]
 	path = cardano-api
 	url = ../cardano-minutxo-forks/cardano-api.git
-	branch = v2-minutxo
+	branch = master
 [submodule "cardano-cli"]
 	path = cardano-cli
 	url = ../cardano-minutxo-forks/cardano-cli.git
-	branch = v2-minutxo
+	branch = main
 [submodule "cardano-wallet"]
 	path = cardano-wallet
 	url = ../cardano-minutxo-forks/cardano-wallet.git
-	branch = v2-minutxo
+	branch = master
 [submodule "cardano-balance-transaction"]
 	path = cardano-balance-transaction
 	url = ../cardano-minutxo-forks/cardano-balance-transaction.git
-	branch = v2-minutxo
+	branch = main

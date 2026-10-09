@@ -2,7 +2,6 @@
 """Local build/check entrypoints for the pinned minUTxO source workspace."""
 
 import argparse
-import json
 from pathlib import Path
 import shlex
 import subprocess
@@ -57,12 +56,34 @@ def require_files(*paths):
 
 
 def nix_command():
-    # JSON supplies string quoting; escape Nix interpolation in unusual paths.
-    shell_path = json.dumps(str(ROOT / "shell.nix")).replace("${", "\\${")
-    return [
-        "nix", "develop", "--impure", "--expr",
-        "import (builtins.toPath " + shell_path + ")",
+    return ["nix", "develop", str(ROOT)]
+
+
+def require_migration_files(action):
+    required = [
+        API / "scripts/prepare-v2-minutxo-deps.py",
+        API / "scripts/prepare-v2-minutxo-collateral-deps.py",
     ]
+    if action != "prepare":
+        required.append(API / "cabal.project.collateral")
+    if action == "test-api-focused":
+        required.append(API / "cardano-api/test/cardano-api-test/Test/Cardano/Api/OutputVariants.hs")
+    if action == "check-collateral":
+        required.append(API / "scripts/check-v2-minutxo-collateral.py")
+    if action == "build-cli":
+        required.append(ROOT / "cardano-cli/cabal.project.v2-minutxo")
+    missing = [str(p.relative_to(ROOT)) for p in required if not p.is_file()]
+    if missing:
+        commands = "git -C cardano-api switch v2-minutxo"
+        if action == "build-cli":
+            commands += "\ngit -C cardano-cli switch v2-minutxo"
+        raise SystemExit(
+            "The checked-out upstream baselines do not contain the migration files: "
+            + ", ".join(missing)
+            + ".\nThe changes are preserved on the v2-minutxo branches. "
+            + "To use this inspection command, check out the relevant saved branches:\n"
+            + commands
+        )
 
 
 def prepare(dry_run):
@@ -133,7 +154,7 @@ def main():
         return
 
     if not options.dry_run:
-        require_files(ROOT / "shell.nix", API / "shell-v2-minutxo.nix", ROOT / "cardano-ledger-specs" / "flake.nix")
+        require_files(ROOT / "flake.nix", ROOT / "shell.nix", ROOT / "cardano-ledger-specs" / "flake.nix")
 
     if options.action == "shell":
         if arguments and arguments[0] != "--command":
@@ -142,6 +163,8 @@ def main():
             argument_parser.error("--command requires a program")
         run(nix_command() + arguments, dry_run=options.dry_run)
         return
+
+    require_migration_files(options.action)
 
     if options.action == "prepare":
         prepare(options.dry_run)

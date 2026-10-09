@@ -1,7 +1,6 @@
 {
-  "scope": "Minimum-UTxO transaction-writing integration; independent source pins, not a unified build claim.",
-  "default_branch": "v2-minutxo",
-  "rpc_feature": "Preserved on cardano-api/v2-minutxo-rpc; parent pins writer branch.",
+  "scope": "Local writer integration workspace; downstream baselines selected, imported changes preserved on separate branches.",
+  "rpc_feature": "Preserved on cardano-api/v2-minutxo-rpc; not checked out in baseline mode.",
   "components": {
     "cardano-ledger-specs": {
       "upstream": "git@github.com:nhenin/cardano-ledger-specs.git",
@@ -20,7 +19,7 @@
       "upstream": "git@github.com:IntersectMBO/cardano-api.git",
       "base_commit": "425f12244e8f7d80ca439b7c59501daf5c4290b8",
       "import_commit": "c824d245a816c97911d45f08eb4d666794bc39aa",
-      "branch": "v2-minutxo",
+      "branch": "master",
       "source_patch_sha256": {
         "index_patch": "ff6c604b52f103d3fc7ad6b22dd9cc9aa606272d10f6aa05961df58b01f73e54",
         "worktree_patch": "31ff6100e114b69a802d07d3cb05963843b2b4d58630ae11571ac674e9bc5963",
@@ -60,15 +59,19 @@
         "scripts/v2-minutxo-node-lifecycle/v2-minutxo-node-lifecycle.cabal",
         "shell-v2-minutxo.nix"
       ],
-      "pinned_commit": "2166b1807b471fdfcea1749fddd6cee0c650ee61",
+      "pinned_commit": "425f12244e8f7d80ca439b7c59501daf5c4290b8",
       "rpc_branch": "v2-minutxo-rpc",
-      "rpc_branch_commit": "99b99f07c44e5ac0487bbe7f2b0af9e691305209"
+      "rpc_branch_commit": "99b99f07c44e5ac0487bbe7f2b0af9e691305209",
+      "preserved_branches": {
+        "v2-minutxo": "2166b1807b471fdfcea1749fddd6cee0c650ee61",
+        "v2-minutxo-rpc": "99b99f07c44e5ac0487bbe7f2b0af9e691305209"
+      }
     },
     "cardano-cli": {
       "upstream": "git@github.com:IntersectMBO/cardano-cli.git",
       "base_commit": "b8c7166c14504faa72b9162c1d23e1ab2b1aec25",
       "import_commit": "2a70a20fde94089f96c07e4d9529fec038e20d8c",
-      "branch": "v2-minutxo",
+      "branch": "main",
       "source_patch_sha256": {
         "index_patch": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "worktree_patch": "8f1d22bd572b37f496d77e0bc4672aacdfdba954fecd16b4fb67225633d4b1ac",
@@ -83,13 +86,16 @@
         "scripts/check-v2-minutxo-impact.sh",
         "scripts/inspect-v2-minutxo-cli-baseline.py"
       ],
-      "pinned_commit": "a85e705212c625e5b360c081a6c36d21d5ece32f"
+      "pinned_commit": "4d3dbdba2ab4fc1e31f352b7190d79fce4a84983",
+      "preserved_branches": {
+        "v2-minutxo": "a85e705212c625e5b360c081a6c36d21d5ece32f"
+      }
     },
     "cardano-wallet": {
       "upstream": "git@github.com:cardano-foundation/cardano-wallet.git",
       "base_commit": "4209dcccdfeb0927f3486aada8d85f8157ff51c3",
       "import_commit": "10e7ef24b0877dc649e0b9964e78256f1c7b7eac",
-      "branch": "v2-minutxo",
+      "branch": "master",
       "source_patch_sha256": {
         "index_patch": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "worktree_patch": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -102,15 +108,22 @@
         "scripts/v2-minutxo/shell.nix",
         "scripts/v2-minutxo/v2-minutxo-wallet-probe.cabal"
       ],
-      "pinned_commit": "2d9f952a0dfd2e14201cfc7147bc5937c7e61f78"
+      "pinned_commit": "4209dcccdfeb0927f3486aada8d85f8157ff51c3",
+      "preserved_branches": {
+        "v2-minutxo": "2d9f952a0dfd2e14201cfc7147bc5937c7e61f78"
+      }
     },
     "cardano-balance-transaction": {
       "upstream": "git@github.com:cardano-foundation/cardano-balance-transaction.git",
       "base_commit": "6ec3c4d2b3185827e9bd6d1c30e666e1c6056da8",
       "import_commit": "6ec3c4d2b3185827e9bd6d1c30e666e1c6056da8",
-      "branch": "v2-minutxo",
+      "branch": "main",
       "source_archive_sha256": "230ba796eebff7983c56816a80c351191db57062d2e3797ac749d3b807f4730c",
-      "pinned_commit": "6ec3c4d2b3185827e9bd6d1c30e666e1c6056da8"
+      "pinned_commit": "897577325745729552495a9add56c713630c497e",
+      "preserved_branches": {
+        "v2-minutxo": "6ec3c4d2b3185827e9bd6d1c30e666e1c6056da8"
+      }
     }
-  }
+  },
+  "checkout_mode": "Cached upstream main/master branches, with ledger remaining on v2-minutxo."
 }
