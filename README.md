@@ -16,8 +16,7 @@ reapplied. New work stays staged for review until a commit is explicitly request
 This step asks whether Cabal can resolve `cardano-api:lib:cardano-api` against
 the ledger source in this checkout. The runner invokes `cabal build --dry-run`.
 GREEN means the dependency plan resolves; it does not establish compilation or
-transaction behavior. Build and transaction checks will be introduced in later
-red steps and are not included here.
+transaction behavior. Compilation is checked separately with `build`, below.
 
 Run the dependency check from the repository root with the declared GHC 9.6.7 shell:
 
@@ -31,8 +30,8 @@ the command, complete output, and summary in a fresh directory under
 `.workspace/minutxo-incremental/checks/`, so the red and
 green evidence remain available side by side. Terminal colors are cosmetic.
 
-`dependencies` is the only check available in this step and is also the default
-when no step argument is given.
+`dependencies` is the default when no step argument is given. `build` compiles
+the API library; transaction checks have not been introduced yet.
 
 `--offline` uses cached package metadata and source repositories. On a fresh
 checkout, omit it to fetch the pinned source dependencies first. The project
@@ -87,13 +86,55 @@ pinned crypto-class `2.6` despite the API package's `^>=2.5` bound. Its
 These settings predate minUTxO (API commit `3654a7b7b1`); the other copied
 overrides also predate it. No new bound overrides were introduced. This uses
 the older API's cardano-base pin, rather than the different pin in the ledger's
-standalone project. Compilation compatibility remains to be checked separately.
+standalone project. The compilation check below tests this configuration.
 
 The original configuration used API `425f12244` and failed with a protocol
 `^>=0.2` versus `0.1.1.0` conflict on both ledger revisions (runs `run-5uj41ml_`
 and `run-bfonuthu`). That was a baseline mismatch. The earlier assessment that
 the older stack could not resolve overlooked its existing project settings;
 the successful reconstruction above corrects that assessment.
+
+## Compilation check
+
+Run from the same GHC 9.6.7 shell:
+
+```sh
+./scripts/check-minutxo build
+```
+
+This invokes the same Cabal project, build directory, and API library target as
+`dependencies`, without `--dry-run`. It downloads any missing package sources
+and compiles the required dependencies and API. Add `--offline` once the sources
+are cached. The runner retains the full output in `build.log`, writes its
+summary alongside it, and returns Cabal's exit status.
+
+GREEN means the API library builds. A dependency compilation failure is RED
+even if the compiler has not reached the API itself. Neither outcome establishes
+transaction behavior. Compilation fixes belong in a separate step after this
+check and its observed result are reviewed.
+
+**Recorded result, 13 October 2026: GREEN before minUTxO, RED after minUTxO.**
+Both runs used the command above, API revision `cc614415`, GHC 9.6.7, and the
+same project and runner. Only the ledger revision changed:
+
+| Ledger | Revision | Result | Saved run under `.workspace/minutxo-incremental/checks/` |
+| --- | --- | --- | --- |
+| Before minUTxO | `d93c654699c8f10c883a625168f65dd387abc695` | GREEN, exit 0: API library built | `run-wgvo6zdz` |
+| minUTxO tip | `8352f9600e06405e4428432bf68fcc126e58a711` | RED, exit 1: API compilation failed | `run-ppq22q_t` |
+
+The minUTxO build completed the required ledger and consensus libraries, then
+failed in `cardano-api/src/Cardano/Api/Ledger/Internal/Reexport.hs`:
+
+```text
+src/Cardano/Api/Ledger/Internal/Reexport.hs:392:5: error:
+    Module 'Cardano.Ledger.Core' does not export 'mkBasicTxOut'
+```
+
+This is a source compatibility failure exposed by switching to minUTxO.
+No compilation fixes are included in this step, and no transaction assertions
+ran. Dependency resolution remains green. The ledger checkout is restored to
+the minUTxO tip. Full logs, exact revisions, tool versions, and matching project
+and runner hashes are retained in `.workspace/minutxo-build-comparison-ljclibuw/`.
 
 ## Working one step at a time
 
@@ -109,19 +150,19 @@ For each capability:
 4. Introduce the next check in its own red step; do not include future checks
    in an earlier step.
 
-For the current prerequisite step, use
-`./scripts/check-minutxo --offline dependencies` before and after the dependency
-changes. GREEN means the entire plan resolves. Fixing one version conflict and
-encountering another is still RED; it is not a passing test. Once dependencies
-are green, add a build check in a new red step. Once the build is green,
-introduce the first transaction check. Each check should arrive with its own
-reproducer and observed result.
+The dependency baseline is green. For the compilation step, rerun
+`./scripts/check-minutxo build` after each focused fix and retain the dependency
+check as well. Fixing one compiler error and encountering another is still RED;
+it is not a passing build. Once the build is green, introduce the first
+transaction check. Each check should arrive with its own reproducer and
+observed result.
 
 The intended progression is:
 
 1. Reconstruct the API dependency baseline and compare the pre-minUTxO ledger
    with the minUTxO tip (complete: both dependency checks are green).
-2. Introduce an API compilation check and address its failures.
+2. Run the API compilation check (current red: missing `mkBasicTxOut` export),
+   then address its failures in a separate green step.
 3. Introduce an ordinary implicit-output transaction test and make it pass.
 4. Add direct construction of a store-backed output and preserve its kind
    through ledger conversion and serialization.
@@ -139,9 +180,10 @@ migration and are not the entrypoint for this sequence.
 
 `archive/minutxo-dependency-red-20261013` preserves root commit `4643c7f`
 (`red: dependencies`). That checkpoint was removed from the working branch
-after the control run showed its failure also occurs before minUTxO. Its check
-is retained unchanged; the corrected findings and scaffold remain staged for
-review.
+after the control run showed its failure also occurs before minUTxO. The
+dependency baseline was subsequently reconstructed and committed as `f14f211`
+(`dependencies green`). The dependency check's command and default behavior
+are retained as the runner gains additional stages.
 
 `archive/minutxo-bundle-20261013` exists in the root, API, CLI, and ledger
 repositories. The root snapshot pins all three submodule snapshots and includes

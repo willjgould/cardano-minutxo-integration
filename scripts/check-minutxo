@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check dependency resolution for the API against the minUTxO ledger."""
+"""Check dependency resolution or compilation of the API against the ledger."""
 
 import argparse
 import os
@@ -35,14 +35,16 @@ def run(command, log):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("step", nargs="?", choices=("dependencies",), default="dependencies",
-                        help="Only dependency resolution is introduced at this stage")
+    parser.add_argument("step", nargs="?", choices=("dependencies", "build"), default="dependencies",
+                        help="Resolve dependencies (default) or compile the API library")
     parser.add_argument("--offline", action="store_true", help="Use cached Cabal packages only")
     args = parser.parse_args()
     options = ["--project-file=cabal.project.minutxo-incremental",
                "--builddir=.workspace/minutxo-incremental/build"]
     if args.offline:
         options.append("--offline")
+    if args.step == "dependencies":
+        options.append("--dry-run")
 
     checks = ROOT / ".workspace/minutxo-incremental/checks"
     checks.mkdir(parents=True, exist_ok=True)
@@ -50,7 +52,7 @@ def main():
     print(f"Logs: {report}", flush=True)
     print(f"\nRUN {args.step}", flush=True)
     with (report / f"{args.step}.log").open("w") as log:
-        exit_code = run(["cabal", "build", *options, "--dry-run", TARGET], log)
+        exit_code = run(["cabal", "build", *options, TARGET], log)
 
     state = "GREEN" if exit_code == 0 else f"RED (exit {exit_code})"
     summary = f"{args.step:22} {state}\n"
