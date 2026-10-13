@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check API dependencies, compilation, or local transaction construction."""
+"""Check API dependencies, compilation, or local transaction handling."""
 
 import argparse
 import os
@@ -15,6 +15,7 @@ TARGET = "cardano-api:lib:cardano-api"
 TRANSACTION_TARGETS = {
     "transaction": "minutxo-transaction:exe:check-transaction",
     "store-backed": "minutxo-transaction:exe:check-store-backed-transaction",
+    "read-back": "minutxo-transaction:exe:check-store-backed-readback",
 }
 
 
@@ -39,7 +40,7 @@ def run(command, log):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("step", nargs="?", choices=("dependencies", "build", "transaction", "store-backed"),
+    parser.add_argument("step", nargs="?", choices=("dependencies", "build", "transaction", "store-backed", "read-back"),
                         default="dependencies",
                         help="Resolve dependencies (default), compile the API, or check a local transaction")
     parser.add_argument("--offline", action="store_true", help="Use cached Cabal packages only")

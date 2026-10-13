@@ -35,6 +35,7 @@ green evidence remain available side by side. Terminal colors are cosmetic.
 the API library; `transaction` builds and runs the local unsigned-body check
 for ordinary implicit-deposit outputs. `store-backed` separately checks the
 API's ability to construct a store-backed output in an unsigned body.
+`read-back` checks that the constructed output can be read back through the API.
 
 `--offline` uses cached package metadata and source repositories. On a fresh
 checkout, omit it to fetch the pinned source dependencies first. The project
@@ -273,8 +274,9 @@ implement store-backed balancing. JSON encoding and ledger-to-API conversion
 remain explicitly unsupported, as does minimum-coin calculation for these
 outputs.
 
-The test, runner, Cabal project, and dependency pins are unchanged from the red
-checkpoint. The ledger remains at `8352f9600`. The same command now compiles
+At this green checkpoint (`0ed36f1`), the test, runner, Cabal project, and
+dependency pins were unchanged from the red checkpoint. The ledger remains at
+`8352f9600`. The same command now compiles
 the check and confirms exactly one store-backed output with the requested
 application assets.
 
@@ -289,6 +291,45 @@ Fourmolu's formatting check passes for both changed Haskell files. This mileston
 proves unsigned-body construction and output kind/assets preservation only.
 Reverse conversion, serialization, minimum ADA, balancing, and node acceptance
 need their own checks and implementation steps.
+
+## Store-backed output read-back
+
+```sh
+./scripts/check-minutxo read-back
+```
+
+The separate `checks/transaction/ReadBack.hs` executable constructs the same
+simple store-backed Dijkstra body, then reads its outputs through the public
+`getTxBodyContent` API. It requires exactly one `TxOutValueStoreBacked` carrying
+2,000,000 lovelace and no native assets. Matching the returned value constructor
+forces the lazy ledger-to-API conversion; comparing the application assets
+then checks their preservation.
+
+This step covers read-back only. It does not add JSON, CBOR, balancing, or
+minimum-ADA checks. The earlier construction checks remain separate and
+unchanged. Full output is saved in `read-back.log`; the command returns nonzero
+for an unsupported conversion, an assertion failure, or a build failure.
+
+**Recorded result, 13 October 2026: RED at runtime, after successful compilation.**
+The executable starts, but reading the output value fails with:
+
+```text
+check-store-backed-readback: fromLedgerTxOutValue: store-backed outputs are not supported
+```
+
+This is the existing API's explicit rejection during reverse conversion. The
+read-back assertions cannot complete; no output-kind or asset comparison has
+passed. The failure is not a dependency or compilation failure. The API remains
+at `7072bd8cc` and the ledger at `8352f9600`; no implementation changes are
+included in this red step.
+
+| Command | Result | Saved run under `.workspace/minutxo-incremental/checks/` |
+| --- | --- | --- |
+| `./scripts/check-minutxo read-back` | RED, exit 1: executable ran; reverse conversion raised an error | `run-xrn9d0ww` |
+| `./scripts/check-minutxo --offline dependencies` | GREEN, exit 0 | `run-4sssg1iw` |
+| `./scripts/check-minutxo --offline build` | GREEN, exit 0 | `run-4yluiyo4` |
+| `./scripts/check-minutxo --offline transaction` | GREEN, exit 0: ordinary-output assertions passed | `run-6cadbrqq` |
+| `./scripts/check-minutxo --offline store-backed` | GREEN, exit 0: construction assertions passed | `run-1l4kq4er` |
 
 ## Working one step at a time
 
@@ -305,8 +346,9 @@ For each capability:
    in an earlier step.
 
 The dependency, compilation, ordinary-output, and store-backed construction
-checks are green. The next step is a separate check for the next missing
-capability, such as converting store-backed outputs back from the ledger.
+checks are green. The separate read-back check is red at the unsupported
+ledger-to-API conversion. Its next green step must implement that capability
+and pass the same check.
 Retain the existing checks as the sequence advances. Fixing one compiler error
 and encountering another is still RED; it is not a passing build. A check that
 already passes establishes a baseline; do not manufacture a failure. Each new
@@ -323,10 +365,11 @@ The intended progression is:
 4. Add direct construction of a store-backed output and preserve its kind and
    application assets through API-to-ledger conversion (complete: the same
    store-backed check is green).
-5. Check reverse conversion, serialization, and minimum ADA for each output
-   kind in separate steps.
-6. Add balancing, change, and collateral checks as separate capabilities.
-7. Exercise the CLI writer path, then signing and submission; add Plutus
+5. Read store-backed outputs back through the API (current red: reverse
+   conversion raises an unsupported-operation error).
+6. Check serialization and minimum ADA for each output kind in separate steps.
+7. Add balancing, change, and collateral checks as separate capabilities.
+8. Exercise the CLI writer path, then signing and submission; add Plutus
    execution and the wallet/balancer paths with their own reproducers.
 
 Later items are future work, not claims of implemented support. Keep missing

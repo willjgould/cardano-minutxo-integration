@@ -21,3 +21,12 @@ executable check-store-backed-transaction
     cardano-api,
     cardano-ledger-core,
     microlens
+
+executable check-store-backed-readback
+  main-is: ReadBack.hs
+  default-language: Haskell2010
+  ghc-options: -Wall -Werror -Wno-deprecations
+  build-depends:
+    base >= 4.18 && < 4.19,
+    cardano-api,
+    cardano-ledger-core
