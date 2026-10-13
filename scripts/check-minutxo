@@ -12,7 +12,10 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 TARGET = "cardano-api:lib:cardano-api"
-TRANSACTION_TARGET = "minutxo-transaction:exe:check-transaction"
+TRANSACTION_TARGETS = {
+    "transaction": "minutxo-transaction:exe:check-transaction",
+    "store-backed": "minutxo-transaction:exe:check-store-backed-transaction",
+}
 
 
 def run(command, log):
@@ -36,7 +39,7 @@ def run(command, log):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("step", nargs="?", choices=("dependencies", "build", "transaction"),
+    parser.add_argument("step", nargs="?", choices=("dependencies", "build", "transaction", "store-backed"),
                         default="dependencies",
                         help="Resolve dependencies (default), compile the API, or check a local transaction")
     parser.add_argument("--offline", action="store_true", help="Use cached Cabal packages only")
@@ -47,8 +50,8 @@ def main():
         options.append("--offline")
     if args.step == "dependencies":
         options.append("--dry-run")
-    command = (["cabal", "run", *options, TRANSACTION_TARGET]
-               if args.step == "transaction"
+    command = (["cabal", "run", *options, TRANSACTION_TARGETS[args.step]]
+               if args.step in TRANSACTION_TARGETS
                else ["cabal", "build", *options, TARGET])
 
     checks = ROOT / ".workspace/minutxo-incremental/checks"

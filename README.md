@@ -32,7 +32,8 @@ green evidence remain available side by side. Terminal colors are cosmetic.
 
 `dependencies` is the default when no step argument is given. `build` compiles
 the API library; `transaction` builds and runs the local unsigned-body check
-described below.
+for ordinary implicit-deposit outputs. `store-backed` separately checks the
+API's ability to construct a store-backed output in an unsigned body.
 
 `--offline` uses cached package metadata and source repositories. On a fresh
 checkout, omit it to fetch the pinned source dependencies first. The project
@@ -212,6 +213,51 @@ source packages needed for the executable build. No transaction assertions ran
 in that attempt; it is not evidence of missing transaction support. The normal
 run above completed the build and assertions without changing the check.
 
+## Store-backed output construction
+
+```sh
+./scripts/check-minutxo store-backed
+```
+
+This separate executable (`checks/transaction/StoreBacked.hs`) requests a
+store-backed output through `Api.TxOutValueStoreBacked` and
+`Api.createTransactionBody`. The constructor follows the interface in the
+archived implementation; it has not been added to the incremental API yet.
+The check uses the existing ledger `ApplicationAssets` type directly, without
+constructing or injecting a ledger output in place of the missing API support.
+
+Once it compiles, the check must build a Dijkstra body containing exactly one
+`StoreBackedTxOut` with the requested application assets: 2,000,000 lovelace
+and no native assets. Those lovelace are application assets, not a capacity
+deposit. An implicit output or changed assets must fail the check. Serialization,
+minimum-deposit calculation, balancing, and node acceptance remain later steps.
+
+The new executable is a separate Cabal component so the ordinary `transaction`
+check remains runnable even when this one cannot compile. Its complete output
+is saved in `store-backed.log`. A compilation failure means its transaction
+assertions have not run; the same command must eventually compile and pass all
+assertions to demonstrate green.
+
+**Recorded result, 13 October 2026: RED while compiling the new check.**
+The API library builds, but the new executable reports:
+
+```text
+StoreBacked.hs:44:12: error: [GHC-76037]
+    Not in scope: data constructor ‘Api.TxOutValueStoreBacked’
+    NB: the module ‘Cardano.Api’ does not export ‘TxOutValueStoreBacked’.
+```
+
+No store-backed transaction assertions ran. No API or ledger implementation
+changes are included in this red step; their revisions remain `31fe7986b` and
+`8352f9600` respectively.
+
+| Command | Result | Saved run under `.workspace/minutxo-incremental/checks/` |
+| --- | --- | --- |
+| `./scripts/check-minutxo store-backed` | RED, exit 1: missing API constructor; assertions not run | `run-lvq2lbtf` |
+| `./scripts/check-minutxo --offline dependencies` | GREEN, exit 0 | `run-cwvyurnh` |
+| `./scripts/check-minutxo --offline build` | GREEN, exit 0 | `run-8svhv4e8` |
+| `./scripts/check-minutxo --offline transaction` | GREEN, exit 0: ordinary-output assertions passed | `run-_8dnhtr_` |
+
 ## Working one step at a time
 
 For each capability:
@@ -227,8 +273,9 @@ For each capability:
    in an earlier step.
 
 The dependency, compilation, and ordinary-output transaction checks are green.
-The next step is a separate check exposing missing store-backed output support.
-Retain the existing checks as the sequence advances. Fixing one compiler error
+The separate store-backed check is red at the missing API constructor. Its next
+green step must add the focused support and pass the same check. Retain the
+existing checks as the sequence advances. Fixing one compiler error
 and encountering another is still RED; it is not a passing build. A check that
 already passes establishes a baseline; do not manufacture a failure. Each new
 check should arrive with its own reproducer and observed result.
@@ -241,9 +288,9 @@ The intended progression is:
    step (complete: the same check is green with the focused API adaptations).
 3. Introduce an ordinary implicit-output transaction test (complete: green
    baseline without further implementation changes).
-4. Add direct construction of a store-backed output and preserve its kind
-   through ledger conversion and serialization.
-5. Check minimum ADA for each output kind.
+4. Add direct construction of a store-backed output and preserve its kind and
+   application assets through ledger conversion (current red: missing API constructor).
+5. Check serialization and minimum ADA for each output kind in separate steps.
 6. Add balancing, change, and collateral checks as separate capabilities.
 7. Exercise the CLI writer path, then signing and submission; add Plutus
    execution and the wallet/balancer paths with their own reproducers.
