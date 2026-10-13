@@ -6,7 +6,8 @@ code in `cardano-api`, `cardano-cli`, `cardano-wallet`, and
 
 The working branch is `work/minutxo-incremental`. The API is based on its historical
 prototype revision `cc614415bb588ab496ab34924c1b076bf1af59c3`, with focused
-compilation adaptations for the existing `v2-minutxo` ledger pin. Other downstream
+compilation adaptations and store-backed output construction for the existing
+`v2-minutxo` ledger pin. Other downstream
 components retain their original pins and have not been tested in this step.
 The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
@@ -163,10 +164,10 @@ The source patch and verification metadata are retained locally in
 `.workspace/minutxo-compile-green-20261013/`.
 
 This established compilation only; no transaction assertions ran at that
-checkpoint. Store-backed conversion, JSON, minimum-coin calculation, and balancing are
-still unsupported in the adapted paths: they fail explicitly, using exceptions
-or structured errors depending on the existing function's return type. Full
-store-backed writer support belongs to later red/green steps.
+checkpoint. Store-backed construction is covered by the later step below.
+Ledger-to-API conversion, JSON, minimum-coin calculation, and balancing still
+require separate support; the adapted paths reject unsupported operations
+explicitly. Full store-backed writer support remains later work.
 
 ## Local transaction construction
 
@@ -222,11 +223,11 @@ run above completed the build and assertions without changing the check.
 This separate executable (`checks/transaction/StoreBacked.hs`) requests a
 store-backed output through `Api.TxOutValueStoreBacked` and
 `Api.createTransactionBody`. The constructor follows the interface in the
-archived implementation; it has not been added to the incremental API yet.
+archived implementation; it was absent at the red checkpoint (`f7a1299`).
 The check uses the existing ledger `ApplicationAssets` type directly, without
 constructing or injecting a ledger output in place of the missing API support.
 
-Once it compiles, the check must build a Dijkstra body containing exactly one
+The check must compile and build a Dijkstra body containing exactly one
 `StoreBackedTxOut` with the requested application assets: 2,000,000 lovelace
 and no native assets. Those lovelace are application assets, not a capacity
 deposit. An implicit output or changed assets must fail the check. Serialization,
@@ -247,9 +248,9 @@ StoreBacked.hs:44:12: error: [GHC-76037]
     NB: the module ‘Cardano.Api’ does not export ‘TxOutValueStoreBacked’.
 ```
 
-No store-backed transaction assertions ran. No API or ledger implementation
-changes are included in this red step; their revisions remain `31fe7986b` and
-`8352f9600` respectively.
+No store-backed transaction assertions ran at that checkpoint. The red step
+included no API or ledger implementation changes; their revisions were
+`31fe7986b` and `8352f9600` respectively.
 
 | Command | Result | Saved run under `.workspace/minutxo-incremental/checks/` |
 | --- | --- | --- |
@@ -257,6 +258,37 @@ changes are included in this red step; their revisions remain `31fe7986b` and
 | `./scripts/check-minutxo --offline dependencies` | GREEN, exit 0 | `run-cwvyurnh` |
 | `./scripts/check-minutxo --offline build` | GREEN, exit 0 | `run-8svhv4e8` |
 | `./scripts/check-minutxo --offline transaction` | GREEN, exit 0: ordinary-output assertions passed | `run-_8dnhtr_` |
+
+### Store-backed construction fix: green with the same check
+
+**Recorded result, 13 October 2026: GREEN; the store-backed assertions now run
+and pass.** The focused API changes on top of `31fe7986b` add the Dijkstra-only
+`TxOutValueStoreBacked` constructor and convert it to a ledger store-backed
+output. The basic value projections expose application assets only, excluding
+the separate capacity deposit.
+
+Two existing fee calculations now reject store-backed values explicitly where
+their old pattern filters would otherwise silently omit them. This does not
+implement store-backed balancing. JSON encoding and ledger-to-API conversion
+remain explicitly unsupported, as does minimum-coin calculation for these
+outputs.
+
+The test, runner, Cabal project, and dependency pins are unchanged from the red
+checkpoint. The ledger remains at `8352f9600`. The same command now compiles
+the check and confirms exactly one store-backed output with the requested
+application assets.
+
+| Command | Result | Saved run under `.workspace/minutxo-incremental/checks/` |
+| --- | --- | --- |
+| `./scripts/check-minutxo store-backed` | GREEN, exit 0: store-backed assertions ran and passed | `run-be_xxd1p` |
+| `./scripts/check-minutxo --offline dependencies` | GREEN, exit 0 | `run-gzouhzag` |
+| `./scripts/check-minutxo --offline build` | GREEN, exit 0 | `run-9682gshg` |
+| `./scripts/check-minutxo --offline transaction` | GREEN, exit 0: ordinary-output assertions passed | `run-ufe14_6o` |
+
+Fourmolu's formatting check passes for both changed Haskell files. This milestone
+proves unsigned-body construction and output kind/assets preservation only.
+Reverse conversion, serialization, minimum ADA, balancing, and node acceptance
+need their own checks and implementation steps.
 
 ## Working one step at a time
 
@@ -272,10 +304,10 @@ For each capability:
 4. Introduce the next check in its own red step; do not include future checks
    in an earlier step.
 
-The dependency, compilation, and ordinary-output transaction checks are green.
-The separate store-backed check is red at the missing API constructor. Its next
-green step must add the focused support and pass the same check. Retain the
-existing checks as the sequence advances. Fixing one compiler error
+The dependency, compilation, ordinary-output, and store-backed construction
+checks are green. The next step is a separate check for the next missing
+capability, such as converting store-backed outputs back from the ledger.
+Retain the existing checks as the sequence advances. Fixing one compiler error
 and encountering another is still RED; it is not a passing build. A check that
 already passes establishes a baseline; do not manufacture a failure. Each new
 check should arrive with its own reproducer and observed result.
@@ -289,8 +321,10 @@ The intended progression is:
 3. Introduce an ordinary implicit-output transaction test (complete: green
    baseline without further implementation changes).
 4. Add direct construction of a store-backed output and preserve its kind and
-   application assets through ledger conversion (current red: missing API constructor).
-5. Check serialization and minimum ADA for each output kind in separate steps.
+   application assets through API-to-ledger conversion (complete: the same
+   store-backed check is green).
+5. Check reverse conversion, serialization, and minimum ADA for each output
+   kind in separate steps.
 6. Add balancing, change, and collateral checks as separate capabilities.
 7. Exercise the CLI writer path, then signing and submission; add Plutus
    execution and the wallet/balancer paths with their own reproducers.
