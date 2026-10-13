@@ -20,6 +20,7 @@ index-state:
   cardano-haskell-packages 2026-09-02T08:49:12Z
 
 packages:
+  checks/transaction
   cardano-api/cardano-api
   cardano-ledger-specs/libs/cardano-data
   cardano-ledger-specs/libs/cardano-ledger-api

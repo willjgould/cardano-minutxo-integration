@@ -31,7 +31,8 @@ the command, complete output, and summary in a fresh directory under
 green evidence remain available side by side. Terminal colors are cosmetic.
 
 `dependencies` is the default when no step argument is given. `build` compiles
-the API library; transaction checks have not been introduced yet.
+the API library; `transaction` builds and runs the local unsigned-body check
+described below.
 
 `--offline` uses cached package metadata and source repositories. On a fresh
 checkout, omit it to fetch the pinned source dependencies first. The project
@@ -147,8 +148,9 @@ paths to the ledger's new output wrapper:
 - Read and update values through the implicit payload, preserving the wrapper.
 - Apply the ledger's minimum-coin calculation to that payload.
 
-The ledger remains at `8352f9600e06405e4428432bf68fcc126e58a711`. The project,
-dependency pins, and check script are unchanged from the red checkpoint.
+The ledger remains at `8352f9600e06405e4428432bf68fcc126e58a711`. At this green
+checkpoint (`65b49f8`), the project, dependency pins, and check script were
+unchanged from the red checkpoint.
 
 | Command | Result | Saved run under `.workspace/minutxo-incremental/checks/` |
 | --- | --- | --- |
@@ -159,11 +161,56 @@ Fourmolu's formatting check also passes for all seven changed Haskell files.
 The source patch and verification metadata are retained locally in
 `.workspace/minutxo-compile-green-20261013/`.
 
-This establishes compilation only. No transaction assertions have been added or
-run. Store-backed conversion, JSON, minimum-coin calculation, and balancing are
+This established compilation only; no transaction assertions ran at that
+checkpoint. Store-backed conversion, JSON, minimum-coin calculation, and balancing are
 still unsupported in the adapted paths: they fail explicitly, using exceptions
 or structured errors depending on the existing function's return type. Full
 store-backed writer support belongs to later red/green steps.
+
+## Local transaction construction
+
+Run from the same shell:
+
+```sh
+./scripts/check-minutxo transaction
+```
+
+This uses `cabal run` to build and execute `checks/transaction/Main.hs` in the
+same project and build directory. The new executable depends on this checkout's
+API; its dependency pins and library sources are unchanged. Add `--offline`
+once the sources needed for the executable are cached.
+
+The check calls the existing public `createTransactionBody` API for Dijkstra
+with a synthetic input, an explicit fee, and one ordinary output. It inspects
+the resulting ledger body and asserts that it contains exactly one
+`ImplicitDepositTxOut`, with 2,000,000 lovelace and no native assets. It uses the
+existing API output type so that construction exercises the API-to-ledger
+conversion adapted in the previous step.
+
+The executable prints `RUN transaction assertions` when it starts and a `PASS`
+line only after construction and all assertions succeed. Cabal/build failures
+before that marker mean the transaction assertions did not run. All failures
+remain RED, with the full output saved in `transaction.log`.
+
+This checks unsigned transaction-body construction. It does not resolve the
+synthetic input against a UTxO set or check balancing, minimum ADA, signing,
+serialization, or node acceptance. Those are separate capabilities.
+
+**Recorded result, 13 October 2026: GREEN with no further API or ledger fixes.**
+This establishes the working implicit-output baseline before introducing a
+store-backed check. The API remains at `31fe7986b`, and the ledger remains at
+`8352f9600`.
+
+| Command | Result | Saved run under `.workspace/minutxo-incremental/checks/` |
+| --- | --- | --- |
+| `./scripts/check-minutxo transaction` | GREEN, exit 0: transaction assertions ran and passed | `run-z1iwx57x` |
+| `./scripts/check-minutxo --offline dependencies` | GREEN, exit 0 | `run-gux25kb1` |
+| `./scripts/check-minutxo --offline build` | GREEN, exit 0 | `run-_tzrphu9` |
+
+The initial offline attempt (`run-r5x2jbvu`) stopped because Cabal lacked cached
+source packages needed for the executable build. No transaction assertions ran
+in that attempt; it is not evidence of missing transaction support. The normal
+run above completed the build and assertions without changing the check.
 
 ## Working one step at a time
 
@@ -179,11 +226,12 @@ For each capability:
 4. Introduce the next check in its own red step; do not include future checks
    in an earlier step.
 
-The dependency and compilation checks are green. The next step is to introduce
-the first transaction check separately. Retain the existing dependency and build
-checks as the sequence advances. Fixing one compiler error and encountering
-another is still RED; it is not a passing build. Each new check should arrive
-with its own reproducer and observed result.
+The dependency, compilation, and ordinary-output transaction checks are green.
+The next step is a separate check exposing missing store-backed output support.
+Retain the existing checks as the sequence advances. Fixing one compiler error
+and encountering another is still RED; it is not a passing build. A check that
+already passes establishes a baseline; do not manufacture a failure. Each new
+check should arrive with its own reproducer and observed result.
 
 The intended progression is:
 
@@ -191,7 +239,8 @@ The intended progression is:
    with the minUTxO tip (complete: both dependency checks are green).
 2. Run the API compilation check, then address its failures in a separate green
    step (complete: the same check is green with the focused API adaptations).
-3. Introduce an ordinary implicit-output transaction test and make it pass.
+3. Introduce an ordinary implicit-output transaction test (complete: green
+   baseline without further implementation changes).
 4. Add direct construction of a store-backed output and preserve its kind
    through ledger conversion and serialization.
 5. Check minimum ADA for each output kind.

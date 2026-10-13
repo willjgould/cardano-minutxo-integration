@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check dependency resolution or compilation of the API against the ledger."""
+"""Check API dependencies, compilation, or local transaction construction."""
 
 import argparse
 import os
@@ -12,6 +12,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 TARGET = "cardano-api:lib:cardano-api"
+TRANSACTION_TARGET = "minutxo-transaction:exe:check-transaction"
 
 
 def run(command, log):
@@ -35,8 +36,9 @@ def run(command, log):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("step", nargs="?", choices=("dependencies", "build"), default="dependencies",
-                        help="Resolve dependencies (default) or compile the API library")
+    parser.add_argument("step", nargs="?", choices=("dependencies", "build", "transaction"),
+                        default="dependencies",
+                        help="Resolve dependencies (default), compile the API, or check a local transaction")
     parser.add_argument("--offline", action="store_true", help="Use cached Cabal packages only")
     args = parser.parse_args()
     options = ["--project-file=cabal.project.minutxo-incremental",
@@ -45,6 +47,9 @@ def main():
         options.append("--offline")
     if args.step == "dependencies":
         options.append("--dry-run")
+    command = (["cabal", "run", *options, TRANSACTION_TARGET]
+               if args.step == "transaction"
+               else ["cabal", "build", *options, TARGET])
 
     checks = ROOT / ".workspace/minutxo-incremental/checks"
     checks.mkdir(parents=True, exist_ok=True)
@@ -52,7 +57,7 @@ def main():
     print(f"Logs: {report}", flush=True)
     print(f"\nRUN {args.step}", flush=True)
     with (report / f"{args.step}.log").open("w") as log:
-        exit_code = run(["cabal", "build", *options, TARGET], log)
+        exit_code = run(command, log)
 
     state = "GREEN" if exit_code == 0 else f"RED (exit {exit_code})"
     summary = f"{args.step:22} {state}\n"
