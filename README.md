@@ -4,12 +4,12 @@ This workspace tests how the minUTxO ledger change affects transaction-writing
 code in `cardano-api`, `cardano-cli`, `cardano-wallet`, and
 `cardano-balance-transaction`. Use this checkout and its declared submodules.
 
-The working branch is `work/minutxo-incremental`. The API uses its historical
-prototype revision `cc614415bb588ab496ab34924c1b076bf1af59c3`, alongside the
-existing `v2-minutxo` ledger pin. Other downstream components retain their
-original pins and have not been tested in this step. The previous combined
-implementation is preserved separately; production changes have not been
-reapplied. New work stays staged for review until a commit is explicitly requested.
+The working branch is `work/minutxo-incremental`. The API is based on its historical
+prototype revision `cc614415bb588ab496ab34924c1b076bf1af59c3`, with focused
+compilation adaptations for the existing `v2-minutxo` ledger pin. Other downstream
+components retain their original pins and have not been tested in this step.
+The previous combined implementation is preserved separately. New work stays
+staged for review until a commit is explicitly requested.
 
 ## Dependency baseline: green before and after minUTxO
 
@@ -110,8 +110,8 @@ summary alongside it, and returns Cabal's exit status.
 
 GREEN means the API library builds. A dependency compilation failure is RED
 even if the compiler has not reached the API itself. Neither outcome establishes
-transaction behavior. Compilation fixes belong in a separate step after this
-check and its observed result are reviewed.
+transaction behavior. The red check was committed separately from its compilation
+fixes, as recorded below.
 
 **Recorded result, 13 October 2026: GREEN before minUTxO, RED after minUTxO.**
 Both runs used the command above, API revision `cc614415`, GHC 9.6.7, and the
@@ -131,10 +131,39 @@ src/Cardano/Api/Ledger/Internal/Reexport.hs:392:5: error:
 ```
 
 This is a source compatibility failure exposed by switching to minUTxO.
-No compilation fixes are included in this step, and no transaction assertions
-ran. Dependency resolution remains green. The ledger checkout is restored to
-the minUTxO tip. Full logs, exact revisions, tool versions, and matching project
-and runner hashes are retained in `.workspace/minutxo-build-comparison-ljclibuw/`.
+Commit `1254f0c` records this red checkpoint without compilation fixes. No
+transaction assertions ran. Dependency resolution remained green. The ledger
+checkout was restored to the minUTxO tip. Full logs, exact revisions, tool versions,
+and matching project and runner hashes are retained in
+`.workspace/minutxo-build-comparison-ljclibuw/`.
+
+### Compilation fix: green on the same minUTxO ledger
+
+**Recorded result, 13 October 2026: the same build check is now GREEN.**
+The API source changes on top of `cc614415` adapt the existing implicit-output
+paths to the ledger's new output wrapper:
+
+- Use `mkBasicTxOutWithImplicitDeposit` and the corresponding payload type.
+- Read and update values through the implicit payload, preserving the wrapper.
+- Apply the ledger's minimum-coin calculation to that payload.
+
+The ledger remains at `8352f9600e06405e4428432bf68fcc126e58a711`. The project,
+dependency pins, and check script are unchanged from the red checkpoint.
+
+| Command | Result | Saved run under `.workspace/minutxo-incremental/checks/` |
+| --- | --- | --- |
+| `./scripts/check-minutxo build` | GREEN, exit 0: API library built | `run-707hob82` |
+| `./scripts/check-minutxo --offline dependencies` | GREEN, exit 0 | `run-iutd6r9n` |
+
+Fourmolu's formatting check also passes for all seven changed Haskell files.
+The source patch and verification metadata are retained locally in
+`.workspace/minutxo-compile-green-20261013/`.
+
+This establishes compilation only. No transaction assertions have been added or
+run. Store-backed conversion, JSON, minimum-coin calculation, and balancing are
+still unsupported in the adapted paths: they fail explicitly, using exceptions
+or structured errors depending on the existing function's return type. Full
+store-backed writer support belongs to later red/green steps.
 
 ## Working one step at a time
 
@@ -150,19 +179,18 @@ For each capability:
 4. Introduce the next check in its own red step; do not include future checks
    in an earlier step.
 
-The dependency baseline is green. For the compilation step, rerun
-`./scripts/check-minutxo build` after each focused fix and retain the dependency
-check as well. Fixing one compiler error and encountering another is still RED;
-it is not a passing build. Once the build is green, introduce the first
-transaction check. Each check should arrive with its own reproducer and
-observed result.
+The dependency and compilation checks are green. The next step is to introduce
+the first transaction check separately. Retain the existing dependency and build
+checks as the sequence advances. Fixing one compiler error and encountering
+another is still RED; it is not a passing build. Each new check should arrive
+with its own reproducer and observed result.
 
 The intended progression is:
 
 1. Reconstruct the API dependency baseline and compare the pre-minUTxO ledger
    with the minUTxO tip (complete: both dependency checks are green).
-2. Run the API compilation check (current red: missing `mkBasicTxOut` export),
-   then address its failures in a separate green step.
+2. Run the API compilation check, then address its failures in a separate green
+   step (complete: the same check is green with the focused API adaptations).
 3. Introduce an ordinary implicit-output transaction test and make it pass.
 4. Add direct construction of a store-backed output and preserve its kind
    through ledger conversion and serialization.
