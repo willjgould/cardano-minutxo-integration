@@ -1,145 +1,187 @@
-# minUTxO writer integration workspace
+# Incremental minUTxO writer integration
 
-This repository groups five projects as pinned Git submodules. The ledger stays
-on `v2-minutxo`; the downstream projects are checked out on their locally cached
-upstream `main` or `master` branches. The integration changes remain committed
-on separate branches in each local fork.
+This workspace tests how the minUTxO ledger change affects transaction-writing
+code in `cardano-api`, `cardano-cli`, `cardano-wallet`, and
+`cardano-balance-transaction`. Use this checkout and its declared submodules.
 
-| Directory | Checked-out branch | Preserved work |
-| --- | --- | --- |
-| `cardano-ledger-specs` | `v2-minutxo` | Implicit/store-backed output implementation remains active. |
-| `cardano-api` | `master` | Output-model, conversion and minimum-ADA migration on `v2-minutxo`; RPC fix on `v2-minutxo-rpc`. |
-| `cardano-cli` | `main` | Compatibility changes and inspection checks on `v2-minutxo`. |
-| `cardano-wallet` | `master` | Focused baseline inspection sources/configuration on `v2-minutxo`. |
-| `cardano-balance-transaction` | `main` | Original inspected source pin on `v2-minutxo`; no production migration was made. |
+The working branch is `work/minutxo-incremental`. The API uses its historical
+prototype revision `cc614415bb588ab496ab34924c1b076bf1af59c3`, alongside the
+existing `v2-minutxo` ledger pin. Other downstream components retain their
+original pins and have not been tested in this step. The previous combined
+implementation is preserved separately; production changes have not been
+reapplied. New work stays staged for review until a commit is explicitly requested.
 
-These are locally cached branch tips, with no GitHub fetch during setup. The
-CLI's cached `main` is dated 2024-07-18. `components.json` records the current
-pins, imported source provenance and preserved migration branch commits.
+## Dependency baseline: green before and after minUTxO
 
-## Root Nix shell
+This step asks whether Cabal can resolve `cardano-api:lib:cardano-api` against
+the ledger source in this checkout. The runner invokes `cabal build --dry-run`.
+GREEN means the dependency plan resolves; it does not establish compilation or
+transaction behavior. Build and transaction checks will be introduced in later
+red steps and are not included here.
 
-Enter the shell directly from the repository root:
+Run the dependency check from the repository root with the declared GHC 9.6.7 shell:
 
 ```sh
-cd /home/will/git/cardano-minutxo-integration
 nix develop
+./scripts/check-minutxo --offline dependencies
 ```
 
-To check its compiler without starting an interactive session:
+The runner preserves Cabal's exit status and prints a summary. Each run saves
+the command, complete output, and summary in a fresh directory under
+`.workspace/minutxo-incremental/checks/`, so the red and
+green evidence remain available side by side. Terminal colors are cosmetic.
 
-```sh
-nix develop --command ghc --numeric-version
+`dependencies` is the only check available in this step and is also the default
+when no step argument is given.
+
+`--offline` uses cached package metadata and source repositories. On a fresh
+checkout, omit it to fetch the pinned source dependencies first. The project
+uses the API and ledger source in this checkout and the historical API's
+source pins, package-index dates, constraints, and `allow-newer` settings.
+It does not load a prebuilt package environment or patch dependency sources.
+
+**Recorded result, 13 October 2026: the reconstructed older stack resolves
+dependencies both before and after minUTxO.**
+
+```text
+dependencies           GREEN
 ```
 
-The root flake uses the pinned sibling ledger's GHC 9.6.7 shell and adds LMDB,
-Snappy and Linux liburing. It works independently of which API branch is checked
-out. The ledger input uses a relative local Git URL, so the workspace can move
-and the root flake works with Nix 2.18's Git submodule handling.
+The same command above, project configuration, API revision `cc614415`, and
+GHC 9.6.7 were used for both runs. Only the ledger revision changed:
 
-The shell supplies tools and native libraries. It does not establish that the
-downstream baseline sources compile against the ledger branch or that all five
-projects build together.
+| Ledger | Revision | Result | Saved run under `.workspace/minutxo-incremental/checks/` |
+| --- | --- | --- | --- |
+| Parent of the first minUTxO commit | `d93c654699c8f10c883a625168f65dd387abc695` | GREEN, exit 0 | `run-f2xdr5xq` |
+| Current minUTxO tip | `8352f9600e06405e4428432bf68fcc126e58a711` | GREEN, exit 0 | `run-atssxtkh` |
+
+The ledger checkout was restored to the minUTxO tip after the comparison.
+Both plans select the same package versions, including protocol `0.1.1.0`,
+crypto-class `2.6.0.0`, crypto-wrapper `1.7.0.0`, crypton `1.0.6`, and consensus
+`3.0.1.0`. Neither run compiled code or executed transaction assertions.
+The project snapshot, run metadata, and both plans are retained locally in
+`.workspace/older-stack-reconstruction-__sa3b8t/`.
+
+### What the reconstruction preserves
+
+The historical API project pins ledger `daa38fec95ddba68ad4e780b933e7e094d68241d`,
+the direct parent of Nicolas's pre-minUTxO base. Their Cabal manifests and
+project configuration are identical. The root project substitutes the declared
+ledger submodule and keeps the historical API's exact ledger package selection.
+This uses published Byron packages, including crypto-wrapper `1.7`, and includes
+the test-library packages needed by consensus. Test suites remain disabled.
+
+The remaining source pins come unchanged from that API project's `cabal.project`:
+
+| Dependency | Revision |
+| --- | --- |
+| cardano-base | `fbfb3f05d8092492f000264edca2d7a1a105741a` |
+| typed-protocols | `9b4627221ae5d649f2303c6926a8dba3f9934658` |
+| kes-agent | `4e7ec7b5102a030587413f4af770e87a15c9cb9c` |
+| ouroboros-network | `4b3ab7664f609a1aee0f0c24dcfcfd0ab899fc42` |
+| ouroboros-consensus | `e5b82026e4f3395fbb94f0af62f711655d96fec7` |
+
+The API project's existing `allow-newer: cardano-crypto-class` permits its
+pinned crypto-class `2.6` despite the API package's `^>=2.5` bound. Its
+`crypton <1.1` constraint selects the older crypto implementation using `memory`.
+These settings predate minUTxO (API commit `3654a7b7b1`); the other copied
+overrides also predate it. No new bound overrides were introduced. This uses
+the older API's cardano-base pin, rather than the different pin in the ledger's
+standalone project. Compilation compatibility remains to be checked separately.
+
+The original configuration used API `425f12244` and failed with a protocol
+`^>=0.2` versus `0.1.1.0` conflict on both ledger revisions (runs `run-5uj41ml_`
+and `run-bfonuthu`). That was a baseline mismatch. The earlier assessment that
+the older stack could not resolve overlooked its existing project settings;
+the successful reconstruction above corrects that assessment.
+
+## Working one step at a time
+
+For each capability:
+
+1. **Red:** add the smallest direct check, run it, and retain its log. Leave this
+   step staged for review. For a transaction assertion to demonstrate red, its
+   dependencies and build must already be green.
+2. **Green:** after the red step is reviewed, make the focused implementation
+   change and rerun the **same command and assertions**. Leave the fix staged
+   with its new log for review. Commit only when explicitly requested.
+3. Rerun the existing checks to show that earlier capabilities still pass.
+4. Introduce the next check in its own red step; do not include future checks
+   in an earlier step.
+
+For the current prerequisite step, use
+`./scripts/check-minutxo --offline dependencies` before and after the dependency
+changes. GREEN means the entire plan resolves. Fixing one version conflict and
+encountering another is still RED; it is not a passing test. Once dependencies
+are green, add a build check in a new red step. Once the build is green,
+introduce the first transaction check. Each check should arrive with its own
+reproducer and observed result.
+
+The intended progression is:
+
+1. Reconstruct the API dependency baseline and compare the pre-minUTxO ledger
+   with the minUTxO tip (complete: both dependency checks are green).
+2. Introduce an API compilation check and address its failures.
+3. Introduce an ordinary implicit-output transaction test and make it pass.
+4. Add direct construction of a store-backed output and preserve its kind
+   through ledger conversion and serialization.
+5. Check minimum ADA for each output kind.
+6. Add balancing, change, and collateral checks as separate capabilities.
+7. Exercise the CLI writer path, then signing and submission; add Plutus
+   execution and the wallet/balancer paths with their own reproducers.
+
+Later items are future work, not claims of implemented support. Keep missing
+support as a failure; do not add fallback behavior to make a reproducer run.
+The old `scripts/workspace` inspection commands belong to the preserved broad
+migration and are not the entrypoint for this sequence.
+
+## Preserved work
+
+`archive/minutxo-dependency-red-20261013` preserves root commit `4643c7f`
+(`red: dependencies`). That checkpoint was removed from the working branch
+after the control run showed its failure also occurs before minUTxO. Its check
+is retained unchanged; the corrected findings and scaffold remain staged for
+review.
+
+`archive/minutxo-bundle-20261013` exists in the root, API, CLI, and ledger
+repositories. The root snapshot pins all three submodule snapshots and includes
+the paired Plutus test, runtime setup, dependency patches, and previous README.
+The earlier `v2-minutxo` and `v2-minutxo-rpc` branches remain available.
+
+Inspect the previous work without applying it:
 
 ```sh
-./scripts/workspace status
-./scripts/workspace shell
+git show archive/minutxo-bundle-20261013:README.md
+git -C cardano-api diff HEAD..archive/minutxo-bundle-20261013
 ```
 
-## Preserved integration branches in the original local workspace
-
-The saved migration branches and caches are available in the existing local
-workspace and sibling bare repositories. Publishing this parent repository
-does not publish those downstream branches. A fresh GitHub recursive clone
-contains the pinned upstream baselines and Nicolas' ledger branch.
-
-In the original local workspace, restore the API inspection changes with:
+To select the complete archived workspace:
 
 ```sh
-git -C cardano-api switch v2-minutxo
-./scripts/workspace build-api
-./scripts/workspace test-api-focused
+git switch archive/minutxo-bundle-20261013
+git submodule update --init
 ```
 
-For the CLI integration attempt, also restore its preserved branch:
+To return to the incremental workspace, switch the root to
+`work/minutxo-incremental` and run `git submodule update --init` again. These are
+local branches; they have not been published. Existing ignored build artifacts
+are retained, but the new check uses its own build directory.
+
+An additional local recovery copy in
+`.workspace/incremental-recovery-07ug6tqd/` contains verified copies of modified
+and untracked files, separate staged and unstaged patches, original revisions,
+and index listings. This preserves the original staging information as well as
+the archived source.
+
+## Clone and shell
 
 ```sh
-git -C cardano-cli switch v2-minutxo
-./scripts/workspace build-cli
-```
-
-The RPC fix is an optional API branch based on its writer migration. To review:
-
-```sh
-git -C cardano-api diff v2-minutxo..v2-minutxo-rpc
-```
-
-Wallet inspection files can be restored with
-`git -C cardano-wallet switch v2-minutxo`. The wallet and balancer production
-migrations remain outstanding. Switching submodule branches changes the
-working-tree pins; commit the parent gitlinks when you want to record that set.
-
-Original repositories, their branches, stashes and staged RPC fix remain
-untouched. Exact source/index backups are stored locally in
-`.git/import-backups/`. Generated dependency caches were preserved under the
-ignored `.workspace/cache/cardano-api/.inspection-deps/` and
-`.workspace/cache/cardano-wallet/.inspection-deps/`; they are inactive while
-the downstream baselines are checked out.
-
-## Local inspection commands and recorded results
-
-The migration build/check commands require the preserved API branch; they
-explain which branch to select if their files are absent on an upstream baseline.
-Preparation can download checksum-verified package archives when uncached.
-
-The API commands retain the dependency closure from the latest inspection:
-API 11.8 and adapted consensus 5.1. The focused selection previously passed
-27 tests in the original inspection checkout. The collateral probe constructed
-50 cases: 34 ledger checks passed and 16 failed in the unfinished store-backed
-collateral rule. Those results have not been rerun in baseline mode.
-
-The CLI entrypoint attempts a build against the API's current inspection
-closure. The previous successful CLI inspection used an older closure, so
-further compatibility changes may be needed. A build would not implement the
-outstanding CLI option for choosing store-backed outputs.
-
-The historical wallet selection probe requires pristine inspected balancer
-sources; restore the wallet and balancer `v2-minutxo` branches before using it.
-After restoring those branches, its checksum-pinned archives can be prepared
-without downloading:
-
-```sh
-python3 scripts/prepare-wallet-deps.py \
-  --archive-cache .workspace/cache/cardano-wallet/.inspection-deps
-```
-
-This is a focused baseline probe, not a full wallet/balancer build. Its fixtures
-must be updated when implementing the balancer migration.
-
-## Cloning and component publication
-
-The parent repository is
-<https://github.com/willjgould/cardano-minutxo-integration>. Its `.gitmodules`
-uses Nicolas' ledger repository and the upstream API, CLI, wallet and balancer
-repositories. Clone the current pinned sources with:
-
-```sh
-git clone --recurse-submodules \
-  https://github.com/willjgould/cardano-minutxo-integration.git
+git clone --recurse-submodules https://github.com/willjgould/cardano-minutxo-integration
 cd cardano-minutxo-integration
 nix develop
 ```
 
-The local bare repositories remain at
-`/home/will/git/cardano-minutxo-forks/`, with a `local-fork` remote in each
-existing submodule checkout. They preserve our saved integration branches.
-Downstream GitHub forks and migration branches have not been created or
-published by the parent push. Once those forks exist, the parent can record
-their URLs and selected commits.
-
-The initial parent commit references local migration commits and local fork
-URLs; reproducing that historical inspection state requires those bare
-repositories. The current baseline pins use the upstream URLs above.
-
-The working repository is `/home/will/git/cardano-minutxo-integration`.
-Temporary verification clones under `/tmp` are separate copies.
+The root Nix shell supplies GHC and native build libraries; it does not establish
+that the downstream packages compile against the ledger. `components.json`
+records the original import provenance and baseline pins. New local branches
+must be published separately before they are available in a fresh clone.

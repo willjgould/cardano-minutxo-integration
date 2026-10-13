@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+"""Check dependency resolution for the API against the minUTxO ledger."""
+
+import argparse
+import os
+from pathlib import Path
+import shlex
+import subprocess
+import sys
+import tempfile
+
+
+ROOT = Path(__file__).resolve().parents[1]
+TARGET = "cardano-api:lib:cardano-api"
+
+
+def run(command, log):
+    line = "$ " + shlex.join(str(part) for part in command) + "\n"
+    print(line, end="", flush=True)
+    log.write(line)
+    try:
+        with subprocess.Popen(
+            command, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+        ) as process:
+            for line in process.stdout:
+                print(line, end="", flush=True)
+                log.write(line)
+            return process.wait()
+    except FileNotFoundError as error:
+        line = f"Cannot run {command[0]}: {error}\n"
+        print(line, end="", flush=True)
+        log.write(line)
+        return 127
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("step", nargs="?", choices=("dependencies",), default="dependencies",
+                        help="Only dependency resolution is introduced at this stage")
+    parser.add_argument("--offline", action="store_true", help="Use cached Cabal packages only")
+    args = parser.parse_args()
+    options = ["--project-file=cabal.project.minutxo-incremental",
+               "--builddir=.workspace/minutxo-incremental/build"]
+    if args.offline:
+        options.append("--offline")
+
+    checks = ROOT / ".workspace/minutxo-incremental/checks"
+    checks.mkdir(parents=True, exist_ok=True)
+    report = Path(tempfile.mkdtemp(prefix="run-", dir=checks))
+    print(f"Logs: {report}", flush=True)
+    print(f"\nRUN {args.step}", flush=True)
+    with (report / f"{args.step}.log").open("w") as log:
+        exit_code = run(["cabal", "build", *options, "--dry-run", TARGET], log)
+
+    state = "GREEN" if exit_code == 0 else f"RED (exit {exit_code})"
+    summary = f"{args.step:22} {state}\n"
+    (report / "summary.txt").write_text(summary)
+    display = summary.rstrip()
+    if sys.stdout.isatty() and "NO_COLOR" not in os.environ:
+        color = "32" if exit_code == 0 else "31"
+        display = f"\033[{color}m{display}\033[0m"
+    print(f"\n{display}")
+    print(f"\nSaved: {report / 'summary.txt'}")
+    # Subprocess signal return codes are negative; shell exit codes use 128+signal.
+    return exit_code if exit_code >= 0 else 128 - exit_code
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
