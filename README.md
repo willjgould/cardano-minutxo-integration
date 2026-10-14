@@ -38,7 +38,8 @@ for ordinary implicit-deposit outputs. `store-backed` separately checks the
 API's ability to construct a store-backed output in an unsigned body.
 `read-back` checks that the constructed output can be read back through the API.
 `nested` requests a token-only child with deposit funding supplied either by
-the parent or by an ADA-only sibling.
+the parent or by an ADA-only sibling. `serialisation` checks that both complete
+unsigned parent transactions survive a CBOR round-trip through the public API.
 
 `--offline` uses cached package metadata and source repositories. On a fresh
 checkout, omit it to fetch the pinned source dependencies first. The project
@@ -528,6 +529,39 @@ updated assertion alone it failed with expected
 (`run-16datow4`). After restoring the request, both funding examples passed
 (`run-fisd0hgc`). Fourmolu and `git diff --check` also pass.
 
+## Nested transaction serialization
+
+```sh
+./scripts/check-minutxo serialisation
+```
+
+The separate `checks/transaction/Serialisation.hs` executable reuses the fixture
+and builders in `Nested.hs` for both funding arrangements. It encodes each
+complete unsigned parent with `Api.serialiseToRawBytes` and decodes it with
+`Api.deserialiseFromRawBytes`. This is the existing public CBOR interface for
+`UnsignedTx`; the check does not add a serializer or construct ledger bytes by
+hand.
+
+The decoded transaction must equal the original, including its children and
+their order, store-backed token output, child deposit request, parent deposit,
+and fee. Re-encoding must reproduce the same bytes. These are unsigned
+transactions with synthetic inputs; the check does not establish signing,
+ledger acceptance, or submission support.
+
+`Nested.hs` now declares module `Nested` so the new executable can import its
+helpers. The existing `nested` executable still runs `Nested.main` and retains
+all its construction assertions. The new component is separate, so a future
+serialization failure does not prevent running the earlier checks.
+
+**Recorded result, 14 October 2026: GREEN on the first run, with no API or ledger
+changes.** Both funding examples passed in `run-0cxv0e19`; the API remains at
+`ab5ae587f` and the ledger at `8352f9600`. The requested check exposed no missing
+serialization capability for these examples, so there is no red failure to
+record. It is retained as a green baseline.
+
+The existing `./scripts/check-minutxo nested` check also passed both examples
+after the module rename (`run-prgj8k_z`). Fourmolu and `git diff --check` pass.
+
 ## Working one step at a time
 
 For each capability:
@@ -543,8 +577,9 @@ For each capability:
    in an earlier step.
 
 The dependency, compilation, ordinary-output, store-backed construction,
-read-back, and nested construction checks are green. Ledger funding enforcement
-remains a separate capability; construction does not establish it.
+read-back, nested construction, and nested CBOR round-trip checks are green.
+Ledger funding enforcement remains a separate capability; construction and
+serialization do not establish it.
 Retain the existing checks as the sequence advances. Fixing one compiler error
 and encountering another is still RED; it is not a passing build. A check that
 already passes establishes a baseline; do not manufacture a failure. Each new
@@ -566,7 +601,9 @@ The intended progression is:
 6. Construct token-only children with parent and sibling ADA funding (complete:
    both scenarios are green). Keep the ledger's deposit accounting and funding
    enforcement as a separate step.
-7. Check serialization and minimum ADA for each output kind in separate steps.
+7. Round-trip the two nested transactions through CBOR (complete: both are green
+   without further API or ledger changes). Other serialization cases and
+   minimum ADA for each output kind remain separate steps.
 8. Add balancing, change, and collateral checks as separate capabilities.
 9. Exercise the CLI writer path, then signing and submission; add Plutus
    execution and the wallet/balancer paths with their own reproducers.

@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Main where
+module Nested where
 
 import qualified Cardano.Api as Api
 import qualified Cardano.Api.Experimental as Era
