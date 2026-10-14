@@ -30,3 +30,15 @@ executable check-store-backed-readback
     base >= 4.18 && < 4.19,
     cardano-api,
     cardano-ledger-core
+
+executable check-nested-transaction
+  main-is: Nested.hs
+  default-language: Haskell2010
+  ghc-options: -Wall -Werror -Wno-deprecations
+  build-depends:
+    base >= 4.18 && < 4.19,
+    cardano-api,
+    cardano-ledger-core,
+    cardano-ledger-dijkstra,
+    containers,
+    microlens
