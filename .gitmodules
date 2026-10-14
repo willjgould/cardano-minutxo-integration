@@ -4,8 +4,8 @@
 	branch = v2-minutxo
 [submodule "cardano-api"]
 	path = cardano-api
-	url = https://github.com/IntersectMBO/cardano-api.git
-	branch = master
+	url = https://github.com/willjgould/cardano-api.git
+	branch = minutxo-incremental
 [submodule "cardano-cli"]
 	path = cardano-cli
 	url = https://github.com/IntersectMBO/cardano-cli.git
