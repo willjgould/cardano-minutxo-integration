@@ -4,7 +4,7 @@ This workspace tests how the minUTxO ledger change affects transaction-writing
 code in `cardano-api`, `cardano-cli`, `cardano-wallet`, and
 `cardano-balance-transaction`. Use this checkout and its declared submodules.
 
-The working branch is `work/minutxo-incremental`. The API is based on its historical
+The working branch is `minutxo-incremental`. The API is based on its historical
 prototype revision `cc614415bb588ab496ab34924c1b076bf1af59c3`, with focused
 compilation adaptations, store-backed output construction, read-back, and nested
 transaction construction for the existing `v2-minutxo` ledger pin. Other
@@ -591,7 +591,7 @@ git submodule update --init
 ```
 
 To return to the incremental workspace, switch the root to
-`work/minutxo-incremental` and run `git submodule update --init` again. These are
+`minutxo-incremental` and run `git submodule update --init` again. These are
 local branches; they have not been published. Existing ignored build artifacts
 are retained, but the new check uses its own build directory.
 

@@ -7,7 +7,7 @@ workarounds or compatibility modes merely to make a reproducer run.
 
 # Incremental writer support
 
-On `work/minutxo-incremental`, expose one missing capability with a small,
+On `minutxo-incremental`, expose one missing capability with a small,
 direct failing check before implementing its support. Record the observed
 failure, then keep the necessary fix and its verification in a focused commit.
 Keep dependency and compilation prerequisites separate from transaction
