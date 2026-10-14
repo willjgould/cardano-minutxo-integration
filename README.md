@@ -6,9 +6,10 @@ code in `cardano-api`, `cardano-cli`, `cardano-wallet`, and
 
 The working branch is `work/minutxo-incremental`. The API is based on its historical
 prototype revision `cc614415bb588ab496ab34924c1b076bf1af59c3`, with focused
-compilation adaptations, store-backed output construction, and read-back for the existing
-`v2-minutxo` ledger pin. Other downstream
-components retain their original pins and have not been tested in this step.
+compilation adaptations, store-backed output construction, read-back, and nested
+transaction construction for the existing `v2-minutxo` ledger pin. Other
+downstream components retain their original pins and have not been tested in
+this step.
 The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
@@ -375,26 +376,27 @@ Both examples use a declared deposit `D = 2,000,000` lovelace and a fee
 
 | Component | Parent funds the deposit | Sibling supplies the ADA |
 | --- | --- | --- |
-| Token child | Token-only input and output; requests `D` from parent | Same |
+| Token child | Token-only input and output; no deposit operation or request | Same |
 | ADA supplier | Parent consumes `D + F` | Second child consumes `D`, with no outputs |
 | Parent | One child; declares `DepositToStore D`; pays `F` | Two children; consumes `F`; declares `DepositToStore D`; pays `F` |
 
 In the sibling composition, the ADA contribution enters the combined
-transaction's input value. The parent handles the token child's explicit
-`SubTxRequestDepositFromTopTx D`. The supplier child has no deposit operation;
-the parent records the deposit once. Absence of a child operation does not
-implicitly request delegation.
+transaction's input value. Both children omit deposit-store operations, and the
+parent explicitly records `DepositToStore D` once. The token helper takes only
+an input and output, with no deposit amount. Absence of a child operation does
+not implicitly request delegation; this example checks the constructed fields.
 
 The assertions inspect the built bodies for child membership and order, exact
-inputs and outputs, token assets, the request and deposit amounts, and the
-parent fee. They also check that the fixture supplies exactly the token output,
-one deposit, and the fee. The runner saves `nested.log` and returns the actual
-build or executable failure. The earlier checks remain separate components.
+inputs and outputs, token assets, absence of child deposit operations, the parent
+deposit amount, and the parent fee. They also check that the fixture supplies
+exactly the token output, one deposit, and the fee. The runner saves `nested.log`
+and returns the actual build or executable failure. The earlier checks remain
+separate components.
 
 The nested builder names (`defaultSubTxBodyContent`, `makeUnsignedSubTx`,
 `UnsignedSubTx`, and `setTxSubTransactions`) follow the archived experimental
-API. The fields `subTxDepositStoreChange` and `txDepositStoreChange` are proposed
-additions, absent from both the current API and that archive. They carry
+API. The fields `subTxDepositStoreChange` and `txDepositStoreChange` were proposed
+additions at the red checkpoint, absent from both its API and that archive. They carry
 `Maybe DepositStoreSubTxChange` and `Maybe DepositStoreChange` respectively.
 The test uses ledger lenses only for inspection; it does not construct or patch
 ledger transaction bodies to bypass missing API support.
@@ -404,24 +406,24 @@ amount, not a calculated minimum. The synthetic UTxO is assertion data; no ledge
 validation, signing, or submission runs. A later validation step must address
 the pinned ledger's accounting gap: `dijkstraProducedValue` and
 `localProducedValue` in `eras/dijkstra/impl/src/Cardano/Ledger/Dijkstra/UTxO.hs`
-omit deposit-store operations, and its transaction rules do not enforce the
-child funding request. Construction green alone will not establish funded
-minUTxO enforcement.
+omit deposit-store operations, and its transaction rules do not implement
+deposit-store funding enforcement. Construction green alone will not establish
+funded minUTxO enforcement.
 
 **Recorded result, 14 October 2026: RED while compiling the new check.**
-The dependencies and API library build, but compilation of `Nested.hs` starts
-with:
+At checkpoint `6b8d663`, the dependencies and API library built, but compilation
+of `Nested.hs` started with:
 
 ```text
 Not in scope: ‘Exp.defaultSubTxBodyContent’
 NB: the module ‘Cardano.Api.Experimental.Tx’ does not export ‘defaultSubTxBodyContent’.
 ```
 
-The compiler also reports the absent child fields, `UnsignedSubTx`,
+The compiler also reported the absent child fields, `UnsignedSubTx`,
 `makeUnsignedSubTx`, `setTxSubTransactions`, and both proposed deposit-store
-fields. Neither scenario's transaction assertions ran. This step contains no
-API or ledger implementation changes: they remain at `71666453c` and
-`8352f9600` respectively. Green must use the same command and pass both scenarios.
+fields. Neither scenario's transaction assertions ran. That step contained no
+API or ledger implementation changes: they were at `71666453c` and
+`8352f9600` respectively.
 
 | Command | Result | Saved run under `.workspace/minutxo-incremental/checks/` |
 | --- | --- | --- |
@@ -433,6 +435,84 @@ API or ledger implementation changes: they remain at `71666453c` and
 | `./scripts/check-minutxo --offline read-back` | GREEN, exit 0: read-back assertions passed | `run-gw98bv3u` |
 
 Fourmolu's formatting check passes for `Nested.hs`.
+
+### Fixture correction and repeated red
+
+After adding the missing builders, compilation exposed a separate setup mistake
+in the check: `AssetName` is a type whose constructor in this API is
+`UnsafeAssetName`. The fixture now decodes the same `"offer"` bytes with
+`deserialiseFromRawBytes AsAssetName`. That correction preserved the policy ID,
+quantity, both scenarios, and every assertion.
+
+The corrected fixture was rerun with `./scripts/check-minutxo nested` against
+an isolated `git archive` copy of the declared API submodule at `71666453c`,
+using this checkout's ledger and identical runner, project, and manifest.
+It remains RED at the missing nested-builder API; assertions did not run
+(`run-i7kmckga`, copied into the usual check-log directory). The isolated
+comparison is retained in `.workspace/minutxo-nested-baseline-y99lu7x7/`.
+The pending API implementation was not overwritten during that comparison.
+
+### Nested construction fix: green for both funding arrangements
+
+**Recorded result, 14 October 2026: GREEN; both scenarios' assertions ran and
+passed.** That run used the same corrected fixture and command as the repeated
+red above. The runner, manifest, project, and ledger are unchanged.
+
+The focused API changes on top of `71666453c` add a separate Dijkstra
+`SubTxBodyContent` with inputs, outputs, and a deposit-store operation. Its
+builder creates an unsigned ledger sub-transaction. The parent builder embeds
+children in their requested order and preserves its explicit deposit operation.
+Fees and children cannot be supplied as child-body fields.
+
+This milestone supports key inputs in children. Script inputs return a typed
+unsupported error. Conway rejects nested content and deposit operations.
+Both existing balancing entry points also reject nested/deposit-bearing
+content: their accounting and witness estimates are not ready for it. These
+rejections avoid silently discarding fields or returning the deposit as change;
+they do not implement balancing or ledger funding enforcement.
+
+That construction check confirmed seven tokens and zero ADA in the token child's
+input and output, the child funding request, one parent deposit, and the fee,
+for both parent and sibling funding. The ledger remains at `8352f9600`.
+
+| Command | Result | Saved run under `.workspace/minutxo-incremental/checks/` |
+| --- | --- | --- |
+| `./scripts/check-minutxo nested` | GREEN, exit 0: both funding scenarios' assertions passed | `run-z7eigs7m` |
+| `./scripts/check-minutxo --offline dependencies` | GREEN, exit 0 | `run-tvepsmu7` |
+| `./scripts/check-minutxo --offline build` | GREEN, exit 0 | `run-6dlnidnq` |
+| `./scripts/check-minutxo --offline transaction` | GREEN, exit 0: ordinary-output assertions passed | `run-9j6g4thz` |
+| `./scripts/check-minutxo --offline store-backed` | GREEN, exit 0: construction assertions passed | `run-9f5fa56p` |
+| `./scripts/check-minutxo --offline read-back` | GREEN, exit 0: read-back assertions passed | `run-tsuukwxe` |
+
+Seven additional checks passed: ordinary Conway construction, rejection of a
+Conway deposit operation, rejection of a native-script child input, and rejection
+of deposit-only and nested-only content by each balancing entry point. Their
+source, runner, and output are retained in `.workspace/minutxo-nested-boundary/`.
+Fourmolu passes for the four changed API files and `Nested.hs`; `git diff --check`
+also passes. The source patch, hashes, and verification metadata are retained in
+`.workspace/minutxo-nested-green-3uz63ti8/`.
+
+The example now has two explicit entry points: `exampleParentFundsDeposit` and
+`exampleSiblingFundsDeposit`. Each shows its input amounts and child list;
+the first gives the parent deposit + fee, while the second gives the parent
+only the fee and adds an ADA child supplying the deposit. `main` prepares the
+token contribution once and passes it unchanged to both examples. Construction
+helpers and assertions remain shared, without a funding sum type or branching
+inside verification. That split preserved the fixed amounts and all 16
+assertions; the helpers do not add balancing or ledger validation.
+`./scripts/check-minutxo nested` remained GREEN after the split: both scenarios
+passed in `run-sy9bgisk`.
+
+The token contribution now explicitly sets `subTxDepositStoreChange = Nothing`.
+Its helper no longer accepts a deposit amount, and the assertion previously
+checking `SubTxRequestDepositFromTopTx D` now requires `SNothing`. All other
+assertions and both funding arrangements are preserved. The earlier red/green
+logs above used the explicit child request; this change exercises the API's
+existing support for an absent operation, without changing the API or ledger.
+`./scripts/check-minutxo nested` is GREEN with the absent operation: both funding
+examples passed in `run-jixh3hws`, including the `SNothing` assertion. Fourmolu
+and `git diff --check` also pass. This remains a construction check; it does not
+establish ledger acceptance or automatic deposit funding.
 
 ## Working one step at a time
 
@@ -448,9 +528,9 @@ For each capability:
 4. Introduce the next check in its own red step; do not include future checks
    in an earlier step.
 
-The dependency, compilation, ordinary-output, store-backed construction, and
-read-back checks are green. The nested check is red at missing public API
-construction support. This capability now precedes serialization.
+The dependency, compilation, ordinary-output, store-backed construction,
+read-back, and nested construction checks are green. Ledger funding enforcement
+remains a separate capability; construction does not establish it.
 Retain the existing checks as the sequence advances. Fixing one compiler error
 and encountering another is still RED; it is not a passing build. A check that
 already passes establishes a baseline; do not manufacture a failure. Each new
@@ -469,9 +549,9 @@ The intended progression is:
    store-backed check is green).
 5. Read store-backed outputs back through the API (complete: the same read-back
    check is green).
-6. Construct token-only children with parent and sibling ADA funding (current
-   red: missing public API builders). Keep the ledger's deposit accounting and
-   funding enforcement as a separate step.
+6. Construct token-only children with parent and sibling ADA funding (complete:
+   both scenarios are green). Keep the ledger's deposit accounting and funding
+   enforcement as a separate step.
 7. Check serialization and minimum ADA for each output kind in separate steps.
 8. Add balancing, change, and collateral checks as separate capabilities.
 9. Exercise the CLI writer path, then signing and submission; add Plutus
