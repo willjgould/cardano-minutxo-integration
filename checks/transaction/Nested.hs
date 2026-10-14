@@ -28,10 +28,10 @@ import System.IO (BufferMode (LineBuffering), hSetBuffering, stdout)
 main :: IO ()
 main = do
     hSetBuffering stdout LineBuffering
-    fixture@Fixture{tokenInput, tokenOutput} <- exampleFixture
+    fixture@Fixture{tokenInput, tokenOutput, deposit} <- exampleFixture
     tokenContribution <-
         either (die . show) pure $
-            prepareTokenContribution tokenInput tokenOutput
+            prepareTokenContribution tokenInput tokenOutput deposit
 
     exampleParentFundsDeposit fixture tokenContribution
     exampleSiblingFundsDeposit fixture tokenContribution
@@ -75,18 +75,19 @@ exampleSiblingFundsDeposit fixture@Fixture{tokenInput, tokenOutput, parentInput,
     checkConstruction fixture utxo parentCoin contributions transaction
     putStrLn "PASS: nested construction preserves token-only assets and explicit parent deposit, SiblingFunds"
 
--- The token contribution declares only its input and output, with no deposit
--- operation or funding request. Both examples reuse it unchanged.
+-- The token contribution supplies only tokens and explicitly requests its
+-- deposit from the parent. Both examples reuse the same contribution.
 prepareTokenContribution ::
     Api.TxIn ->
     Api.TxOut Api.CtxUTxO Api.DijkstraEra ->
+    Ledger.Coin ->
     Either Exp.MakeUnsignedTxError Exp.UnsignedSubTx
-prepareTokenContribution input output =
+prepareTokenContribution input output depositAmount =
     Exp.makeUnsignedSubTx
         Exp.defaultSubTxBodyContent
             { Exp.subTxIns = [keyInput input]
             , Exp.subTxOuts = [Exp.TxOut (Api.toShelleyTxOut Api.ShelleyBasedEraDijkstra output)]
-            , Exp.subTxDepositStoreChange = Nothing
+            , Exp.subTxDepositStoreChange = Just (Dijkstra.SubTxRequestDepositFromTopTx depositAmount)
             }
 
 -- The ADA input contributes to aggregate accounting; only the parent records
@@ -204,7 +205,10 @@ checkConstruction Fixture{tokenInput, parentInput, siblingInput, tokens, deposit
             offered <- inputValue utxo tokenBody
             assertEqual "token-only input assets" tokens offered
             assertEqual "token input ADA" (Ledger.Coin 0) (Api.selectLovelace offered)
-            assertEqual "no deposit operation in token child" Ledger.SNothing (tokenBody ^. Dijkstra.depositStoreSubTxChangeTxBodyL)
+            assertEqual
+                "token child requests deposit from parent"
+                (Ledger.SJust (Dijkstra.SubTxRequestDepositFromTopTx deposit))
+                (tokenBody ^. Dijkstra.depositStoreSubTxChangeTxBodyL)
             case toList (tokenBody ^. Core.outputsTxBodyL) of
                 [Core.StoreBackedTxOut payload] ->
                     assertEqual "token-only output assets" tokenAssets (payload ^. Core.applicationAssetsTxOutL)

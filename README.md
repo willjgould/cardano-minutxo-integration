@@ -376,20 +376,23 @@ Both examples use a declared deposit `D = 2,000,000` lovelace and a fee
 
 | Component | Parent funds the deposit | Sibling supplies the ADA |
 | --- | --- | --- |
-| Token child | Token-only input and output; no deposit operation or request | Same |
+| Token child | Token-only input and output; requests `SubTxRequestDepositFromTopTx D` | Same |
 | ADA supplier | Parent consumes `D + F` | Second child consumes `D`, with no outputs |
 | Parent | One child; declares `DepositToStore D`; pays `F` | Two children; consumes `F`; declares `DepositToStore D`; pays `F` |
 
-In the sibling composition, the ADA contribution enters the combined
-transaction's input value. Both children omit deposit-store operations, and the
-parent explicitly records `DepositToStore D` once. The token helper takes only
-an input and output, with no deposit amount. Absence of a child operation does
-not implicitly request delegation; this example checks the constructed fields.
+In both compositions, the token child explicitly requests the deposit from the
+parent, following Nicolas's guidance. The token helper takes the deposit amount
+alongside its token-only input and output. In the sibling composition, the ADA
+contribution enters the combined transaction's input value; the ADA-only sibling
+has no deposit operation. The parent explicitly records `DepositToStore D` once
+in both examples. This check inspects the constructed fields, without establishing
+deposit-funding enforcement.
 
 The assertions inspect the built bodies for child membership and order, exact
-inputs and outputs, token assets, absence of child deposit operations, the parent
-deposit amount, and the parent fee. They also check that the fixture supplies
-exactly the token output, one deposit, and the fee. The runner saves `nested.log`
+inputs and outputs, token assets, the token child's request for exactly `D`,
+absence of an ADA-sibling deposit operation, the parent deposit amount, and the
+parent fee. They also check that the fixture supplies exactly the token output,
+one deposit, and the fee. The runner saves `nested.log`
 and returns the actual build or executable failure. The earlier checks remain
 separate components.
 
@@ -503,16 +506,27 @@ assertions; the helpers do not add balancing or ledger validation.
 `./scripts/check-minutxo nested` remained GREEN after the split: both scenarios
 passed in `run-sy9bgisk`.
 
-The token contribution now explicitly sets `subTxDepositStoreChange = Nothing`.
-Its helper no longer accepts a deposit amount, and the assertion previously
-checking `SubTxRequestDepositFromTopTx D` now requires `SNothing`. All other
-assertions and both funding arrangements are preserved. The earlier red/green
-logs above used the explicit child request; this change exercises the API's
-existing support for an absent operation, without changing the API or ledger.
-`./scripts/check-minutxo nested` is GREEN with the absent operation: both funding
+An earlier version explicitly set `subTxDepositStoreChange = Nothing` in the
+token contribution. Its helper omitted the deposit amount, and the assertion
+checked `SNothing` instead of `SubTxRequestDepositFromTopTx D`. All other
+assertions and both funding arrangements were preserved. That version exercised
+the API's existing support for an absent operation, without changing the API or
+ledger; the red/green logs above used the explicit child request.
+`./scripts/check-minutxo nested` was GREEN with the absent operation: both funding
 examples passed in `run-jixh3hws`, including the `SNothing` assertion. Fourmolu
-and `git diff --check` also pass. This remains a construction check; it does not
+and `git diff --check` also passed.
+
+Following Nicolas's guidance, the current example restores
+`Just (SubTxRequestDepositFromTopTx D)` on the token contribution and checks the
+exact request amount. The ADA-only sibling still uses `Nothing`, and the parent
+still records one deposit. This remains a construction check; it does not
 establish ledger acceptance or automatic deposit funding.
+
+The same `./scripts/check-minutxo nested` command verified the change: with the
+updated assertion alone it failed with expected
+`SJust (SubTxRequestDepositFromTopTx (Coin 2000000))`, actual `SNothing`
+(`run-16datow4`). After restoring the request, both funding examples passed
+(`run-fisd0hgc`). Fourmolu and `git diff --check` also pass.
 
 ## Working one step at a time
 
