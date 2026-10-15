@@ -7,10 +7,10 @@ module Main where
 import qualified Cardano.Api as Api
 import qualified Cardano.Api.Experimental as Era
 import qualified Cardano.Api.Experimental.Tx as Exp
-import qualified Cardano.Api.Ledger as Ledger
 
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Dijkstra.Core as Dijkstra
+import qualified Cardano.Ledger.Dijkstra.UTxODeposit.TopTx as TopTx
 import qualified Cardano.Ledger.Hashes as Hashes
 import qualified Cardano.Ledger.Keys as Keys
 import Cardano.Ledger.State (verifyWitVKey)
@@ -78,7 +78,7 @@ checkSignedParent label Fixture{parentInput, deposit, fee} key contributions = d
         either (die . show) pure $
             Exp.makeUnsignedTx Era.DijkstraEra $
                 Exp.defaultTxBodyContent
-                    { Exp.txDepositStoreChange = Just (Dijkstra.DepositToStore deposit)
+                    { Exp.txNetUTxODepositChange = TopTx.DeclaresNetUTxODepositAllocation deposit
                     }
                     & Exp.setTxIns [Nested.keyInput parentInput]
                     & Exp.setTxFee fee
@@ -93,8 +93,8 @@ checkSignedParent label Fixture{parentInput, deposit, fee} key contributions = d
         (toList (body ^. Dijkstra.subTransactionsTxBodyL))
     Nested.assertEqual
         (label <> ": parent deposit operation")
-        (Ledger.SJust (Dijkstra.DepositToStore deposit))
-        (body ^. Dijkstra.depositStoreChangeTxBodyL)
+        (TopTx.DeclaresNetUTxODepositAllocation deposit)
+        (body ^. Dijkstra.netUTxODepositChangeTxBodyL)
     checkWitness (label <> " parent") key transaction
     let bytes = Api.serialiseToRawBytes signed
     decoded <- either (die . show) pure $ Api.deserialiseFromRawBytes Api.asType bytes

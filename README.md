@@ -14,9 +14,10 @@ The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
 **Current checkpoint:** Nicolas's ledger has been pulled to `0675bed39`.
-The funding command is now RED at API compilation because the deposit
-declaration interface changed. Earlier green results below used ledger
-`8352f9600`; transaction assertions have not run against the new pin.
+With the API declaration migration and exact deposit calculation,
+`node-token-funding` is GREEN: both token-only outputs are included, their
+allocations survive an epoch boundary, and total ADA is conserved. Submitting
+the two nested examples remains the next step.
 
 ## Dependency baseline: green before and after minUTxO
 
@@ -53,7 +54,8 @@ it does not start a node or submit a transaction.
 `node-transaction` additionally submits an ordinary ADA transfer and checks its
 resulting UTxO.
 `node-token-funding` prepares two real token-only, store-backed inputs for the
-nested examples, paying an explicit store deposit and requiring chain inclusion.
+nested examples, paying an exact store deposit and requiring chain inclusion,
+recorded allocations, and conservation of total ADA across an epoch boundary.
 
 `--offline` uses cached package metadata and source repositories. On a fresh
 checkout, omit it to fetch the pinned source dependencies first. The project
@@ -768,10 +770,13 @@ genesis-funded UTxO and mints 14 native tokens under a policy authorized by its
 payment key. It creates two store-backed outputs, each containing 7 tokens and
 zero lovelace, and returns the remaining ADA as an ordinary change output.
 
-The transaction declares `DepositToStore 4000000` and deducts that 4 ADA from
-change, in addition to the fixed 1 ADA fee. These are manually chosen fixture
-amounts, not an automatic calculation of the required deposit or fee. Omitting
-the deposit or returning its ADA as change would bypass the funding capability
+The fixture queries the node's protocol parameters and uses the ledger's
+`requiredUTxODeposit` to price each serialized store-backed output. It supplies
+their sum through `txNetUTxODepositChange` as
+`DeclaresNetUTxODepositAllocation`, deducting that amount and the fixed 1 ADA fee
+from change. This is explicit fixture balancing; the API's automatic balancing
+and store-backed minimum-deposit calculation remain unsupported. Omitting the
+deposit or returning its ADA as change would bypass the funding capability
 this check is intended to exercise.
 
 The signed transaction is retained as `token-funding.cbor` in the printed
@@ -779,12 +784,17 @@ private node directory. A submission rejection is recorded separately in
 `token-funding-rejected.json`. Mempool acceptance produces
 `token-funding-submitted.json`; success also requires finding all three exact
 outputs in the chain's UTxO and confirming the genesis input is consumed,
-recorded in `token-funding-included.json`. The supervisor always stops its node.
+then checking the Store balance and both allocation records. The check also
+requires unchanged total ADA at inclusion and in the next epoch, with both
+allocations still present. `token-funding-included.json` records those results.
+Consensus keeps UTxO tables outside its debug ledger state, so both are queried
+at one acquired point before summing all ADA pots. The supervisor always stops
+its node.
 
 This is input preparation only. Neither nested example is submitted by this
 command; their submission checks follow after this prerequisite is green.
 
-**Recorded result, 15 October 2026: RED at funding submission.** In
+**Original result, 15 October 2026: RED at funding submission.** In
 `run-yd4bl5mv`, compilation succeeded and Dijkstra blocks advanced from 48 to
 49. The node rejected the funding transaction with `ValueNotConservedUTxO`:
 
@@ -794,9 +804,10 @@ produced: 899,996,000,000 lovelace + 14 tokens
 difference: 4,000,000 lovelace (the declared store deposit)
 ```
 
-The transaction returns 899,995,000,000 lovelace as change and pays a
-1,000,000-lovelace fee. The pinned ledger's
-[`dijkstraProducedValue` / `localProducedValue`](cardano-ledger-specs/eras/dijkstra/impl/src/Cardano/Ledger/Dijkstra/UTxO.hs)
+The original fixture declares `DepositToStore 4000000`, returns
+899,995,000,000 lovelace as change and pays a 1,000,000-lovelace fee. Ledger
+`8352f9600`'s
+[`dijkstraProducedValue` / `localProducedValue`](https://github.com/nhenin/cardano-ledger-specs/blob/8352f9600e06405e4428432bf68fcc126e58a711/eras/dijkstra/impl/src/Cardano/Ledger/Dijkstra/UTxO.hs)
 omit `DepositToStore` from produced value, so the explicitly paid deposit
 causes this mismatch. This is a ledger accounting prerequisite, not a nested
 transaction rejection. Neither nested example was submitted or included.
@@ -810,9 +821,10 @@ must also record the deposit in persistent state and conserve total ADA.
 The existing `utxosDeposited` field cannot serve as a substitute: Dijkstra's
 epoch transition resets it to certificate and governance obligations, and
 ADA-pot totals are derived from those obligations. Store allocation and
-withdrawal rules need an agreed design before implementing this ledger support.
-The current inclusion check alone does not prove deposit retention; verification
-of the implementation must also cover state persistence and total ADA.
+withdrawal rules needed an agreed design before implementing this ledger support;
+the subsequent upstream implementation is described below. The original
+inclusion check alone did not prove deposit retention, so verification now also
+covers the stored allocations and total ADA across an epoch boundary.
 
 The node stopped cleanly. Non-secret rejection evidence, signed transaction,
 ready-tip evidence, and node log are copied alongside `node-token-funding.log`
@@ -884,6 +896,71 @@ adaptations are included in this step. The complete log, exit summary and
 repository revisions are retained in
 `.workspace/minutxo-incremental/checks/run-y8uagohj/`.
 
+The ledger update and this compilation red were committed as `40bb5b0`
+(`red: update ledger to recorded deposit-store accounting`). The ledger itself
+was fast-forwarded; there was no merge commit inside the submodule.
+
+### Adapt declarations and calculate exact funding
+
+The API now passes `TopTxUTxODepositDeclaration` and
+`SubTxUTxODepositDeclaration` through `txNetUTxODepositChange` and
+`subTxNetUTxODepositChange`. Defaults use `NoUTxODepositDeclaration`; explicit
+declarations are still rejected in Conway and by automatic balancing. The
+existing nested construction and signing fixtures use the new constructors
+and `StrictlyPositiveCoin` for positive amounts. These names supersede the old
+operation types in the historical steps above.
+
+With compilation restored, the same funding check reached the node but remained
+RED in `run-5i9z7ihx`: the old fixture declared 4,000,000 lovelace while the
+updated ledger required 2,267,060. Its rejection was
+`InexactTopTxDepositChange (Coin 4000000) (Coin 2267060)`. The fix prices the two
+outputs using the queried protocol parameters and deducts their exact deposit
+from change. No further ledger, consensus, RPC, node, or dependency changes
+were needed for the API and fixture adaptation.
+
+**Recorded result, 15 October 2026: GREEN, exit 0**, using the same command:
+
+```sh
+./scripts/check-minutxo node-token-funding
+```
+
+Run `run-zkgbxt32` verified the genesis input was consumed and all three outputs
+matched. Each token-only output received a recorded allocation of 1,133,530
+lovelace, for a Store balance of 2,267,060. Both records and the balance were
+unchanged from inclusion in epoch 1 to epoch 2. Total ADA was
+1,000,000,400,000 lovelace before submission, at inclusion, and after the epoch
+transition. Change was 899,996,732,940 lovelace after the deposit and 1 ADA fee.
+The node stopped cleanly.
+
+The run directory retains the command log, summary, non-secret submission and
+inclusion evidence, signed CBOR, node log, revisions, and the tested API/check
+patches. During development, `run-374yfm8n` included the funding transaction but
+failed the new ADA-total assertion because the debug-state query omitted UTxO
+tables. Querying both components at one acquired point corrected that test;
+the failure was not evidence of ADA creation by the ledger.
+
+The construction fixtures retain their synthetic inputs and chosen amounts;
+they are not live-valid examples under the new net-deposit rules. Their future
+submission step must account for released input allocations and create a
+positive net capacity increase to demonstrate parent or sibling funding.
+
+All existing regression checks also passed on ledger `0675bed39` with this API
+adaptation. Saved runs are under `.workspace/minutxo-incremental/checks/`:
+
+| Check | GREEN run |
+| --- | --- |
+| Ordinary node submission | `run-p1krriey` |
+| Dependency resolution | `run-129mnv1y` |
+| API compilation | `run-0dvc2_zd` |
+| Ordinary transaction construction | `run-u1534uqh` |
+| Store-backed construction | `run-vf6ix7t4` |
+| Store-backed read-back | `run-n9r_c1rm` |
+| Both nested constructions | `run-so25bfka` |
+| Both nested CBOR round-trips | `run-7yhbpttx` |
+| Both nested signing examples | `run-1hjn5010` |
+
+Fourmolu and `git diff --check` pass.
+
 ## Working one step at a time
 
 For each capability:
@@ -900,10 +977,11 @@ For each capability:
 
 At ledger pin `8352f9600`, the dependency, compilation, ordinary-output,
 store-backed construction, read-back, nested construction, nested CBOR round-trip,
-and signing checks were green. The update to `0675bed39` is currently red at API
-compilation, as recorded above.
-Ledger funding enforcement remains a separate capability; construction and
-serialization do not establish it.
+and signing checks were green. They remain green on `0675bed39` after the
+declaration migration. Ordinary submission and exact token-only input funding
+also pass, including Store retention and ADA conservation across an epoch.
+Nested submission remains a separate capability; construction and serialization
+do not establish it.
 Retain the existing checks as the sequence advances. Fixing one compiler error
 and encountering another is still RED; it is not a passing build. A check that
 already passes establishes a baseline; do not manufacture a failure. Each new
@@ -932,9 +1010,10 @@ The intended progression is:
    (complete: the same check is green after the focused child-signing API fix).
 9. Establish a compatible local prototype node and ordinary ADA submission
    (complete: node build, startup, and ordinary transfer are green). Fund real
-   token-only inputs with `node-token-funding`, then submit the nested examples
-   using manually determined fees and deposits; keep input funding separate
-   from nested transaction failures.
+   token-only inputs with `node-token-funding` (complete: inclusion, exact Store
+   allocations, epoch retention and total ADA are green). Next, submit the nested
+   examples using explicitly calculated deposits and fixture fees; keep input
+   funding separate from nested transaction failures.
 10. Add automatic balancing, change, and collateral checks as separate
     capabilities. Exercise CLI, Plutus, wallet, and balancer paths with their
     own reproducers.

@@ -13,6 +13,9 @@ import qualified Cardano.Api.Ledger as Ledger
 
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Dijkstra.Core as Dijkstra
+import qualified Cardano.Ledger.Dijkstra.UTxODeposit.SubTx as SubTx
+import qualified Cardano.Ledger.Dijkstra.UTxODeposit.TopTx as TopTx
+import Cardano.Ledger.StrictlyPositiveCoin (StrictlyPositiveCoin, mkStrictlyPositiveCoin, unStrictlyPositiveCoin)
 
 import Control.Monad (unless)
 import Data.Foldable (toList)
@@ -40,7 +43,7 @@ main = do
 exampleParentFundsDeposit :: Fixture -> Exp.UnsignedSubTx -> IO ()
 exampleParentFundsDeposit fixture@Fixture{tokenInput, tokenOutput, parentInput, address, deposit, fee} tokenContribution = do
     putStrLn "RUN transaction assertions: nested token-only output, ParentFunds"
-    let parentCoin = deposit <> fee
+    let parentCoin = unStrictlyPositiveCoin deposit <> fee
         utxo =
             Api.UTxO $
                 Map.fromList
@@ -66,7 +69,7 @@ exampleSiblingFundsDeposit fixture@Fixture{tokenInput, tokenOutput, parentInput,
                 Map.fromList
                     [ (tokenInput, tokenOutput)
                     , (parentInput, adaOutput address parentCoin)
-                    , (siblingInput, adaOutput address deposit)
+                    , (siblingInput, adaOutput address (unStrictlyPositiveCoin deposit))
                     ]
         contributions = [tokenContribution, adaContribution]
     transaction <-
@@ -80,14 +83,14 @@ exampleSiblingFundsDeposit fixture@Fixture{tokenInput, tokenOutput, parentInput,
 prepareTokenContribution ::
     Api.TxIn ->
     Api.TxOut Api.CtxUTxO Api.DijkstraEra ->
-    Ledger.Coin ->
+    StrictlyPositiveCoin ->
     Either Exp.MakeUnsignedTxError Exp.UnsignedSubTx
 prepareTokenContribution input output depositAmount =
     Exp.makeUnsignedSubTx
         Exp.defaultSubTxBodyContent
             { Exp.subTxIns = [keyInput input]
             , Exp.subTxOuts = [Exp.TxOut (Api.toShelleyTxOut Api.ShelleyBasedEraDijkstra output)]
-            , Exp.subTxDepositStoreChange = Just (Dijkstra.SubTxRequestDepositFromTopTx depositAmount)
+            , Exp.subTxNetUTxODepositChange = SubTx.RequestsUTxODepositFromTopTx depositAmount
             }
 
 -- The ADA input contributes to aggregate accounting; only the parent records
@@ -99,21 +102,21 @@ prepareAdaContribution input =
         Exp.defaultSubTxBodyContent
             { Exp.subTxIns = [keyInput input]
             , Exp.subTxOuts = []
-            , Exp.subTxDepositStoreChange = Nothing
+            , Exp.subTxNetUTxODepositChange = SubTx.NoUTxODepositDeclaration
             }
 
 -- Assemble the unsigned parent with explicit amounts. This does not calculate
 -- the required deposit, balance the transaction, or validate ledger rules.
 composeTransaction ::
     Api.TxIn ->
-    Ledger.Coin ->
+    StrictlyPositiveCoin ->
     Ledger.Coin ->
     [Exp.UnsignedSubTx] ->
     Either Exp.MakeUnsignedTxError (Exp.UnsignedTx (Api.ShelleyLedgerEra Api.DijkstraEra))
 composeTransaction input depositAmount feeAmount contributions =
     Exp.makeUnsignedTx Era.DijkstraEra $
         Exp.defaultTxBodyContent
-            { Exp.txDepositStoreChange = Just (Dijkstra.DepositToStore depositAmount)
+            { Exp.txNetUTxODepositChange = TopTx.DeclaresNetUTxODepositAllocation depositAmount
             }
             & Exp.setTxIns [keyInput input]
             & Exp.setTxFee feeAmount
@@ -138,7 +141,7 @@ data Fixture = Fixture
     , tokenOutput :: Api.TxOut Api.CtxUTxO Api.DijkstraEra
     , address :: Api.AddressInEra Api.DijkstraEra
     , tokens :: Api.Value
-    , deposit :: Ledger.Coin
+    , deposit :: StrictlyPositiveCoin
     , fee :: Ledger.Coin
     }
 
@@ -157,6 +160,9 @@ exampleFixture = do
             Api.deserialiseFromRawBytesHex
                 "22222222222222222222222222222222222222222222222222222222"
     assetName <- either (die . show) pure $ Api.deserialiseFromRawBytes Api.AsAssetName "offer"
+    deposit <-
+        maybe (die "FAIL: fixture deposit must be strictly positive") pure $
+            mkStrictlyPositiveCoin (Ledger.Coin 2_000_000)
     let era = Api.ShelleyBasedEraDijkstra
         address =
             Api.makeShelleyAddressInEra
@@ -174,7 +180,7 @@ exampleFixture = do
             , tokenOutput = Api.TxOut address (Api.TxOutValueStoreBacked tokenAssets) Api.TxOutDatumNone Api.ReferenceScriptNone
             , address
             , tokens
-            , deposit = Ledger.Coin 2_000_000
+            , deposit
             , fee = Ledger.Coin 200_000
             }
 
@@ -194,7 +200,7 @@ checkConstruction Fixture{tokenInput, parentInput, siblingInput, tokens, deposit
     assertEqual "parent inputs" (Set.singleton (Api.toShelleyTxIn parentInput)) (body ^. Core.inputsTxBodyL)
     assertEqual "parent outputs" [] (toList (body ^. Core.outputsTxBodyL))
     assertEqual "parent fee" fee (body ^. Core.feeTxBodyL)
-    assertEqual "parent deposit" (Ledger.SJust (Dijkstra.DepositToStore deposit)) (body ^. Dijkstra.depositStoreChangeTxBodyL)
+    assertEqual "parent deposit" (TopTx.DeclaresNetUTxODepositAllocation deposit) (body ^. Dijkstra.netUTxODepositChangeTxBodyL)
     parentValue <- inputValue utxo body
     assertEqual "parent input assets" (Api.lovelaceToValue parentCoin) parentValue
 
@@ -207,18 +213,18 @@ checkConstruction Fixture{tokenInput, parentInput, siblingInput, tokens, deposit
             assertEqual "token input ADA" (Ledger.Coin 0) (Api.selectLovelace offered)
             assertEqual
                 "token child requests deposit from parent"
-                (Ledger.SJust (Dijkstra.SubTxRequestDepositFromTopTx deposit))
-                (tokenBody ^. Dijkstra.depositStoreSubTxChangeTxBodyL)
+                (SubTx.RequestsUTxODepositFromTopTx deposit)
+                (tokenBody ^. Dijkstra.subTxNetUTxODepositChangeTxBodyL)
             case toList (tokenBody ^. Core.outputsTxBodyL) of
                 [Core.StoreBackedTxOut payload] ->
                     assertEqual "token-only output assets" tokenAssets (payload ^. Core.applicationAssetsTxOutL)
                 _ -> die "FAIL: expected exactly one store-backed token output"
-            otherValues <- mapM (checkSupplier utxo siblingInput deposit) otherChildren
+            otherValues <- mapM (checkSupplier utxo siblingInput (unStrictlyPositiveCoin deposit)) otherChildren
             pure (offered : otherValues)
         [] -> die "FAIL: token child is missing"
     assertEqual
         "fixture input assets equal token output plus one deposit and fee"
-        (tokens <> Api.lovelaceToValue (deposit <> fee))
+        (tokens <> Api.lovelaceToValue (unStrictlyPositiveCoin deposit <> fee))
         (parentValue <> mconcat childValues)
 
 checkSupplier ::
@@ -231,7 +237,7 @@ checkSupplier utxo input deposit child = do
     let body = child ^. Core.bodyTxL
     assertEqual "ADA sibling inputs" (Set.singleton (Api.toShelleyTxIn input)) (body ^. Core.inputsTxBodyL)
     assertEqual "ADA sibling outputs" [] (toList (body ^. Core.outputsTxBodyL))
-    assertEqual "no duplicate deposit in ADA sibling" Ledger.SNothing (body ^. Dijkstra.depositStoreSubTxChangeTxBodyL)
+    assertEqual "no duplicate deposit in ADA sibling" SubTx.NoUTxODepositDeclaration (body ^. Dijkstra.subTxNetUTxODepositChangeTxBodyL)
     value <- inputValue utxo body
     assertEqual "ADA-only sibling input assets" (Api.lovelaceToValue deposit) value
     pure value
