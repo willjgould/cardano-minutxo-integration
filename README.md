@@ -40,6 +40,8 @@ API's ability to construct a store-backed output in an unsigned body.
 `nested` requests a token-only child with deposit funding supplied either by
 the parent or by an ADA-only sibling. `serialisation` checks that both complete
 unsigned parent transactions survive a CBOR round-trip through the public API.
+`signing` requests signatures on the children before assembling and signing
+each parent, using generated test keys.
 
 `--offline` uses cached package metadata and source repositories. On a fresh
 checkout, omit it to fetch the pinned source dependencies first. The project
@@ -562,6 +564,62 @@ record. It is retained as a green baseline.
 The existing `./scripts/check-minutxo nested` check also passed both examples
 after the module rename (`run-prgj8k_z`). Fourmolu and `git diff --check` pass.
 
+## Signing nested transactions
+
+```sh
+./scripts/check-minutxo signing
+```
+
+The separate `checks/transaction/Signing.hs` executable requests child signing
+through `makeSubTxKeyWitness` and `signSubTx`, then embeds the signed children
+before signing the parent. This order matters: the parent's body includes the
+child witnesses. Each child needs witnesses over its own body; signing only the
+parent does not satisfy the ledger's child witness checks.
+
+This is a prerequisite missing from our historical API baseline, not evidence
+of a signing regression caused by minUTxO. The requested child-signing helpers
+and `SignedSubTx` already exist in later experimental API history, introduced
+by Jordan Millar in `6d5dee85b`. The current parent helpers accept only `TopTx`.
+Lower-level signature primitives exist, but this check requests the higher-level
+child API directly instead of constructing witnesses by hand.
+
+The examples use generated in-memory keys and synthetic transaction inputs.
+They require exactly one witness from the expected key on each signed child
+and parent, verify each signature against its own transaction body, and check
+that signing preserves bodies, deposit operations, and embedded children.
+The signed parent must also survive a CBOR round-trip. These assertions concern
+the supplied keys, not authority over real UTxOs or full ledger acceptance.
+No node is contacted, and no key files are written.
+
+**Recorded result, 14 October 2026: RED while compiling `Signing.hs`.** The
+dependencies and API library build, but the new executable reports:
+
+```text
+Not in scope: type constructor or class ‘Exp.SignedSubTx’
+NB: the module ‘Cardano.Api.Experimental.Tx’ does not export ‘SignedSubTx’.
+```
+
+The compiler also reports missing `makeSubTxKeyWitness`, `signSubTx`, and
+`setTxSignedSubTransactions`. No signing assertions ran. This step changes only
+the check, runner, manifest, and documentation; the API remains at `ab5ae587f`
+and the ledger at `8352f9600`.
+
+| Command | Result | Saved run under `.workspace/minutxo-incremental/checks/` |
+| --- | --- | --- |
+| `./scripts/check-minutxo signing` | RED, exit 1: missing child-signing API; assertions not run | `run-35b69u0d` |
+| `./scripts/check-minutxo nested` | GREEN, exit 0: both construction examples passed | `run-bxjwzmib` |
+| `./scripts/check-minutxo serialisation` | GREEN, exit 0: both unsigned CBOR round-trips passed | `run-wcjvb0e_` |
+
+Fourmolu and `git diff --check` pass. The initial attempt imported an internal
+ledger module (`run-gdnygjme`); using its public `Cardano.Ledger.State` reexport
+corrected that check setup error before recording the missing-API failure above.
+
+Node submission remains a separate step after signing is green. This checkout
+has no configured active node executable or socket. A submission check needs a
+compatible local prototype node, funded inputs, and their signing keys. The
+archived runtime is only a reference; its prior results do not establish
+compatibility with the current incremental stack.
+
 ## Working one step at a time
 
 For each capability:
@@ -604,9 +662,14 @@ The intended progression is:
 7. Round-trip the two nested transactions through CBOR (complete: both are green
    without further API or ledger changes). Other serialization cases and
    minimum ADA for each output kind remain separate steps.
-8. Add balancing, change, and collateral checks as separate capabilities.
-9. Exercise the CLI writer path, then signing and submission; add Plutus
-   execution and the wallet/balancer paths with their own reproducers.
+8. Sign the children and then their parent in both nested funding examples
+   (current red: child-signing API helpers are missing; assertions have not run).
+9. Submit to a compatible local prototype node using real test inputs and
+   manually determined fees and deposits; keep node setup separate from
+   transaction failures.
+10. Add automatic balancing, change, and collateral checks as separate
+    capabilities. Exercise CLI, Plutus, wallet, and balancer paths with their
+    own reproducers.
 
 Later items are future work, not claims of implemented support. Keep missing
 support as a failure; do not add fallback behavior to make a reproducer run.
