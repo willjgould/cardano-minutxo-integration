@@ -16,8 +16,10 @@ staged for review until a commit is explicitly requested.
 **Current checkpoint:** Nicolas's ledger has been pulled to `0675bed39`.
 With the API declaration migration and exact deposit calculation,
 `node-token-funding` is GREEN: both token-only outputs are included, their
-allocations survive an epoch boundary, and total ADA is conserved. Submitting
-the two nested examples remains the next step.
+allocations survive an epoch boundary, and total ADA is conserved.
+`node-nested-parent` is RED at submission: the node rejects the child's existing
+token input as missing. The sibling-funded submission check follows after that
+input-loading failure is fixed.
 
 ## Dependency baseline: green before and after minUTxO
 
@@ -56,6 +58,8 @@ resulting UTxO.
 `node-token-funding` prepares two real token-only, store-backed inputs for the
 nested examples, paying an exact store deposit and requiring chain inclusion,
 recorded allocations, and conservation of total ADA across an epoch boundary.
+`node-nested-parent` runs that funding prerequisite, then submits one token-only
+child whose additional deposit and fee are funded by the parent.
 
 `--offline` uses cached package metadata and source repositories. On a fresh
 checkout, omit it to fetch the pinned source dependencies first. The project
@@ -961,6 +965,85 @@ adaptation. Saved runs are under `.workspace/minutxo-incremental/checks/`:
 
 Fourmolu and `git diff --check` pass.
 
+## Submit a parent-funded nested transaction
+
+```sh
+./scripts/check-minutxo node-nested-parent
+```
+
+This starts a fresh private node and runs the existing funding check first.
+[NestedParent.hs](checks/node/NestedParent.hs) then consumes one of the two
+seven-token outputs in a child and creates two token-only outputs containing
+three and four tokens. The other funded token output remains untouched.
+
+The child requests only the additional capacity deposit: the prices of its two
+new outputs minus the recorded allocation released by its consumed input.
+The parent spends the funding transaction's ordinary ADA change, declares that
+net deposit, pays a fixed 1 ADA fee, and returns the remaining ADA. The child
+is signed before it is embedded in the signed parent. Both use the fixture's
+payment key; different owners collaborating remain a separate scenario.
+
+Success requires block inclusion, the exact whole UTxO (including consumption
+of both inputs), and the expected deposit store: remove the spent token input's
+allocation, retain the untouched allocation, and add records for the two child
+outputs under the child's transaction ID. Total ADA must remain unchanged.
+Submission and inclusion evidence are saved separately as
+`nested-parent-submitted.json` and `nested-parent-included.json`; a rejection
+is saved as `nested-parent-rejected.json`. The signed parent, including its
+child, is saved as `nested-parent.cbor`. The supervisor always stops its node.
+
+This step adds only the parent-funded submission check. The sibling-funded
+submission check follows once this check is green.
+
+**Recorded result, 15 October 2026: RED at nested submission, exit 1.** In
+`run-nq_rvx7s`, compilation succeeded, Dijkstra blocks advanced from 37 to 38,
+and the funding prerequisite passed, including deposit retention through the
+next epoch and conserved total ADA. The nested transaction then failed with:
+
+```text
+SubBadInputsUTxO: funding transaction's output #0 (the child's token input)
+ValueNotConservedUTxO:
+  consumed: 899,996,732,940 lovelace
+  produced: 899,996,732,940 lovelace + 7 tokens
+```
+
+The child input exists in the queried chain UTxO and has a recorded allocation
+of 1,133,530 lovelace. Its two new outputs require 2,267,060 in total, so the
+parent funds a net 1,133,530 plus the 1,000,000-lovelace fee. The ADA amounts
+balance; the node's validation view is missing the child's input and tokens.
+
+Source review identifies the input-loading gap:
+[`allInputsTxBodyF`](cardano-ledger-specs/eras/dijkstra/impl/src/Cardano/Ledger/Dijkstra/TxBody.hs)
+still uses Babbage's enumeration of only the parent's spending, collateral and
+reference inputs. Consensus uses that getter to load UTxO tables for mempool
+validation, and `neededTxInsForBlock` also uses it for block validation. Child
+inputs are omitted. The check leaves the token input solely in the child;
+adding it as a parent reference input would conceal the missing support.
+
+That run rejected the nested transaction before inclusion, so its inclusion,
+deposit-replacement and conservation assertions did not run. The private
+node stopped cleanly. The run directory contains the log and summary, funding
+inclusion evidence, nested rejection, signed CBOR, node log, and revisions.
+Fourmolu and `git diff --check` pass. No API, ledger, consensus or node support
+fix is included in this new check.
+
+**Temporary upstream-fix experiment, 15 October 2026: GREEN, exit 0.** A local
+backport of upstream commit
+[`027026061`](https://github.com/IntersectMBO/cardano-ledger/commit/027026061e1de792ff8fb6329df4efb27355907d)
+("Switch `allInputsTxBodyF` to look into sub-transactions") made the unchanged
+`node-nested-parent` check pass in `run-ynzr22q3`. The parent was accepted into
+the mempool and included in a block. Both inputs were consumed, the child
+created its three-token and four-token outputs, and the whole UTxO matched.
+The Store balance increased from 2,267,060 to 3,400,590 lovelace with the expected
+replacement allocations. Total ADA remained 1,000,000,400,000 lovelace.
+
+The temporary backport preserved Nicolas's deposit accounting. It was then
+removed, and the original source and staging state were verified as restored.
+The ledger pin remains `0675bed39`, so this committed checkpoint retains the
+red reproducer. The experiment's patch, adaptations, inclusion evidence, and
+restoration record are saved under
+`.workspace/minutxo-incremental/checks/run-ynzr22q3/`.
+
 ## Working one step at a time
 
 For each capability:
@@ -980,8 +1063,8 @@ store-backed construction, read-back, nested construction, nested CBOR round-tri
 and signing checks were green. They remain green on `0675bed39` after the
 declaration migration. Ordinary submission and exact token-only input funding
 also pass, including Store retention and ADA conservation across an epoch.
-Nested submission remains a separate capability; construction and serialization
-do not establish it.
+The new parent-funded nested submission check is red at child-input loading;
+construction and serialization do not establish node acceptance.
 Retain the existing checks as the sequence advances. Fixing one compiler error
 and encountering another is still RED; it is not a passing build. A check that
 already passes establishes a baseline; do not manufacture a failure. Each new
@@ -1011,9 +1094,10 @@ The intended progression is:
 9. Establish a compatible local prototype node and ordinary ADA submission
    (complete: node build, startup, and ordinary transfer are green). Fund real
    token-only inputs with `node-token-funding` (complete: inclusion, exact Store
-   allocations, epoch retention and total ADA are green). Next, submit the nested
-   examples using explicitly calculated deposits and fixture fees; keep input
-   funding separate from nested transaction failures.
+   allocations, epoch retention and total ADA are green). The parent-funded
+   nested submission check is now red at child-input loading. Fix and verify it
+   before adding the sibling-funded submission check, using explicitly calculated
+   deposits and fixture fees.
 10. Add automatic balancing, change, and collateral checks as separate
     capabilities. Exercise CLI, Plutus, wallet, and balancer paths with their
     own reproducers.

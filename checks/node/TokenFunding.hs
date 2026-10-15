@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module TokenFunding (fundTokens) where
+module TokenFunding (fundTokens, LiveState, queryDijkstra, queryLedgerState, depositStore, totalAda, verifyStore) where
 
 import qualified Cardano.Api as Api
 import qualified Cardano.Api.Experimental as Era
