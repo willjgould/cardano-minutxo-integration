@@ -43,7 +43,7 @@ def run(command, log):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("step", nargs="?", choices=("dependencies", "build", "transaction", "store-backed", "read-back", "nested", "serialisation", "signing", "node-build", "node", "node-transaction"),
+    parser.add_argument("step", nargs="?", choices=("dependencies", "build", "transaction", "store-backed", "read-back", "nested", "serialisation", "signing", "node-build", "node", "node-transaction", "node-token-funding"),
                         default="dependencies",
                         help="Resolve dependencies (default), compile the API/node, or run a transaction/node check")
     parser.add_argument("--offline", action="store_true", help="Use cached Cabal packages only")
@@ -59,10 +59,12 @@ def main():
     command = (["cabal", "run", *options, TRANSACTION_TARGETS[args.step]]
                if args.step in TRANSACTION_TARGETS
                else ["cabal", "build", *options, target])
-    if args.step in ("node", "node-transaction"):
+    if args.step in ("node", "node-transaction", "node-token-funding"):
         command = [str(ROOT / "scripts/check-minutxo-node")]
         if args.step == "node-transaction":
             command.append("--submit-ada")
+        if args.step == "node-token-funding":
+            command.append("--fund-tokens")
         if args.offline:
             command.append("--offline")
 

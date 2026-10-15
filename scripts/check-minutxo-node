@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check a private Dijkstra node, optionally submitting one ordinary ADA transfer."""
+"""Check a private Dijkstra node, optionally submitting a transaction."""
 
 import argparse
 import json
@@ -23,8 +23,11 @@ def terminate(signum, _frame):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--offline", action="store_true")
-    parser.add_argument("--submit-ada", action="store_true",
-                        help="After startup, submit and verify one ordinary ADA transfer")
+    submission = parser.add_mutually_exclusive_group()
+    submission.add_argument("--submit-ada", action="store_true",
+                            help="After startup, submit and verify one ordinary ADA transfer")
+    submission.add_argument("--fund-tokens", action="store_true",
+                            help="After startup, mint and fund two token-only store-backed inputs")
     args = parser.parse_args()
     options = ["--project-file=cabal.project.minutxo-node",
                "--builddir=.workspace/minutxo-incremental/build"]
@@ -78,6 +81,9 @@ def main():
                             print(f"PASS: Dijkstra blocks advanced from {first_block} to {tip['block']}", flush=True)
                             if args.submit_ada:
                                 subprocess.run([check, "transfer", str(directory), str(socket)],
+                                               cwd=ROOT, check=True, timeout=150)
+                            if args.fund_tokens:
+                                subprocess.run([check, "fund-tokens", str(directory), str(socket)],
                                                cwd=ROOT, check=True, timeout=150)
                             return
                 time.sleep(1)

@@ -47,6 +47,8 @@ it does not start a node or submit a transaction.
 `node` starts a fresh private node and checks that Dijkstra blocks advance.
 `node-transaction` additionally submits an ordinary ADA transfer and checks its
 resulting UTxO.
+`node-token-funding` prepares two real token-only, store-backed inputs for the
+nested examples, paying an explicit store deposit and requiring chain inclusion.
 
 `--offline` uses cached package metadata and source repositories. On a fresh
 checkout, omit it to fetch the pinned source dependencies first. The project
@@ -748,6 +750,108 @@ the baseline reproducible from this checkout.
 Regression checks also remain green: `dependencies --offline` in `run-vfmqaa4t`
 and `signing --offline` in `run-t6r_khgy`. Fourmolu and `git diff --check` pass.
 
+## Fund the inputs for nested submission
+
+```sh
+./scripts/check-minutxo node-token-funding
+```
+
+The existing nested checks use synthetic inputs. Before submitting those
+examples, this prerequisite creates two real token-only inputs on a fresh
+private node. [TokenFunding.hs](checks/node/TokenFunding.hs) spends the actual
+genesis-funded UTxO and mints 14 native tokens under a policy authorized by its
+payment key. It creates two store-backed outputs, each containing 7 tokens and
+zero lovelace, and returns the remaining ADA as an ordinary change output.
+
+The transaction declares `DepositToStore 4000000` and deducts that 4 ADA from
+change, in addition to the fixed 1 ADA fee. These are manually chosen fixture
+amounts, not an automatic calculation of the required deposit or fee. Omitting
+the deposit or returning its ADA as change would bypass the funding capability
+this check is intended to exercise.
+
+The signed transaction is retained as `token-funding.cbor` in the printed
+private node directory. A submission rejection is recorded separately in
+`token-funding-rejected.json`. Mempool acceptance produces
+`token-funding-submitted.json`; success also requires finding all three exact
+outputs in the chain's UTxO and confirming the genesis input is consumed,
+recorded in `token-funding-included.json`. The supervisor always stops its node.
+
+This is input preparation only. Neither nested example is submitted by this
+command; their submission checks follow after this prerequisite is green.
+
+**Recorded result, 15 October 2026: RED at funding submission.** In
+`run-yd4bl5mv`, compilation succeeded and Dijkstra blocks advanced from 48 to
+49. The node rejected the funding transaction with `ValueNotConservedUTxO`:
+
+```text
+consumed: 900,000,000,000 lovelace + 14 tokens
+produced: 899,996,000,000 lovelace + 14 tokens
+difference: 4,000,000 lovelace (the declared store deposit)
+```
+
+The transaction returns 899,995,000,000 lovelace as change and pays a
+1,000,000-lovelace fee. The pinned ledger's
+[`dijkstraProducedValue` / `localProducedValue`](cardano-ledger-specs/eras/dijkstra/impl/src/Cardano/Ledger/Dijkstra/UTxO.hs)
+omit `DepositToStore` from produced value, so the explicitly paid deposit
+causes this mismatch. This is a ledger accounting prerequisite, not a nested
+transaction rejection. Neither nested example was submitted or included.
+No API, ledger, or node implementation was changed in this red step.
+
+The ledger commit introducing these fields, `ee56dc046`, explicitly implements
+interfaces only; it leaves deposit-store state and accounting unimplemented.
+Adding the amount to `produced` alone would make this submission check pass
+without retaining the deposit anywhere in ledger state. A correct green fix
+must also record the deposit in persistent state and conserve total ADA.
+The existing `utxosDeposited` field cannot serve as a substitute: Dijkstra's
+epoch transition resets it to certificate and governance obligations, and
+ADA-pot totals are derived from those obligations. Store allocation and
+withdrawal rules need an agreed design before implementing this ledger support.
+The current inclusion check alone does not prove deposit retention; verification
+of the implementation must also cover state persistence and total ADA.
+
+The node stopped cleanly. Non-secret rejection evidence, signed transaction,
+ready-tip evidence, and node log are copied alongside `node-token-funding.log`
+under `.workspace/minutxo-incremental/checks/run-yd4bl5mv/`. An initial
+`--offline` attempt (`run-gy4u5_12`) stopped at missing cached dependencies;
+it did not run transaction assertions. The command above completed the build
+and demonstrated the actual submission failure.
+
+The existing `node-transaction --offline` check remains GREEN with the extended
+helper (`run-xs7r5jkx`): ordinary ADA submission was accepted and its exact
+output and consumed input were verified on-chain. Fourmolu and
+`git diff --check` pass.
+
+### Upstream follow-up, 15 October 2026
+
+Fetching Nicolas's `v2-minutxo` branch found tip
+`0675bed392b4b5fe43b0c2a233888d18cc49d624`, 16 commits ahead of our pinned
+`8352f9600`. His [13 October implementation](https://github.com/nhenin/cardano-ledger-specs/commit/dfdb8d936f19115287a403d74c2479181d614d0f)
+adds the missing Store balance, allocations recorded by live output reference,
+snapshot persistence, exact batch accounting, and inclusion of Store ADA in
+the ledger total. The missing-state diagnosis above applies to our old pin;
+we should integrate his implementation instead of creating a competing one.
+
+This requires an API adaptation as well as a ledger pin update: the old
+deposit-store operation types and lenses have been replaced by typed TopTx
+and SubTx UTxO deposit declarations, with separate absent and explicit-zero
+cases. No package-version, dependency-bound, or project-pin changes were found
+in the ledger diff, but compilation against our stack has not been tested.
+
+The newer rules require the exact net deposit: newly priced outputs minus
+recorded deposits released by consumed inputs. The funding fixture's arbitrary
+4 ADA must be replaced by that calculation. A child recreating the same-sized
+store-backed output has zero net deposit; to demonstrate additional parent or
+sibling funding, the live examples must add capacity, for example by splitting
+the token input into two outputs.
+
+This follow-up is a source audit only: the checkout and submodule pin remain
+unchanged and no tests were run against the newer revision. Upstream's
+[verification record](https://github.com/nhenin/cardano-ledger-specs/blob/0675bed392b4b5fe43b0c2a233888d18cc49d624/docs/dijkstra-deposit-store-verification.md#current-implementation-status)
+reports 68 implemented business checks and 174 deliberate failing placeholders;
+dedicated conservation, epoch and recovery checks are among the unfinished
+coverage. Our build, funding, deposit-retention and nested-submission checks
+remain necessary.
+
 ## Working one step at a time
 
 For each capability:
@@ -793,9 +897,10 @@ The intended progression is:
 8. Sign the children and then their parent in both nested funding examples
    (complete: the same check is green after the focused child-signing API fix).
 9. Establish a compatible local prototype node and ordinary ADA submission
-   (complete: node build, startup, and ordinary transfer are green). Submit the
-   nested examples next using real inputs and manually determined fees and
-   deposits; keep node setup separate from transaction failures.
+   (complete: node build, startup, and ordinary transfer are green). Fund real
+   token-only inputs with `node-token-funding`, then submit the nested examples
+   using manually determined fees and deposits; keep input funding separate
+   from nested transaction failures.
 10. Add automatic balancing, change, and collateral checks as separate
     capabilities. Exercise CLI, Plutus, wallet, and balancer paths with their
     own reproducers.

@@ -2,7 +2,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Submission (transfer) where
+module Submission (transfer, queryUTxO, writeEvidence) where
 
 import qualified Cardano.Api as Api
 import qualified Cardano.Api.Experimental as Era

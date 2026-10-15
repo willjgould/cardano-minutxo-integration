@@ -13,6 +13,7 @@ import qualified Genesis
 import qualified Submission
 import System.Environment (getArgs)
 import System.Exit (die)
+import qualified TokenFunding
 
 main :: IO ()
 main = do
@@ -21,7 +22,8 @@ main = do
         ["prepare", directory] -> Genesis.prepare directory
         ["probe", socket] -> probe socket
         ["transfer", directory, socket] -> Submission.transfer directory socket
-        _ -> die "Usage: check-node prepare DIRECTORY | probe SOCKET | transfer DIRECTORY SOCKET"
+        ["fund-tokens", directory, socket] -> TokenFunding.fundTokens directory socket
+        _ -> die "Usage: check-node prepare DIRECTORY | probe SOCKET | transfer DIRECTORY SOCKET | fund-tokens DIRECTORY SOCKET"
 
 probe :: FilePath -> IO ()
 probe socket = do
