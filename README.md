@@ -577,11 +577,13 @@ child witnesses. Each child needs witnesses over its own body; signing only the
 parent does not satisfy the ledger's child witness checks.
 
 This is a prerequisite missing from our historical API baseline, not evidence
-of a signing regression caused by minUTxO. The requested child-signing helpers
-and `SignedSubTx` already exist in later experimental API history, introduced
-by Jordan Millar in `6d5dee85b`. The current parent helpers accept only `TopTx`.
-Lower-level signature primitives exist, but this check requests the higher-level
-child API directly instead of constructing witnesses by hand.
+of a signing regression caused by minUTxO. `makeSubTxKeyWitness` and `signSubTx`
+exist in later experimental API history, introduced by Jordan Millar in
+`6d5dee85b`. That implementation returns a raw ledger child; `SignedSubTx` and
+`setTxSignedSubTransactions` are convenience wrappers added here. The existing
+parent helpers accept only `TopTx`. Lower-level signature primitives exist,
+but this check requests the higher-level child API directly instead of
+constructing witnesses by hand.
 
 The examples use generated in-memory keys and synthetic transaction inputs.
 They require exactly one witness from the expected key on each signed child
@@ -600,9 +602,9 @@ NB: the module ‘Cardano.Api.Experimental.Tx’ does not export ‘SignedSubTx�
 ```
 
 The compiler also reports missing `makeSubTxKeyWitness`, `signSubTx`, and
-`setTxSignedSubTransactions`. No signing assertions ran. This step changes only
-the check, runner, manifest, and documentation; the API remains at `ab5ae587f`
-and the ledger at `8352f9600`.
+`setTxSignedSubTransactions`. No signing assertions ran. The red step changed
+only the check, runner, manifest, and documentation; the API was at `ab5ae587f`
+and the ledger at `8352f9600`. It is committed as `f636338`.
 
 | Command | Result | Saved run under `.workspace/minutxo-incremental/checks/` |
 | --- | --- | --- |
@@ -613,6 +615,31 @@ and the ledger at `8352f9600`.
 Fourmolu and `git diff --check` pass. The initial attempt imported an internal
 ledger module (`run-gdnygjme`); using its public `Cardano.Ledger.State` reexport
 corrected that check setup error before recording the missing-API failure above.
+
+### Signing fix: green with the same check
+
+The focused API change adds `makeSubTxKeyWitness` and `signSubTx`, using the
+later implementation as a reference. Each witness signs the child's own body;
+attaching witnesses preserves its body and any existing witnesses. The
+`SignedSubTx` wrapper and `setTxSignedSubTransactions` setter let the caller
+embed finished signed children before signing the parent. All four names are
+exported from both `Cardano.Api.Experimental.Tx` and `Cardano.Api.Experimental`.
+
+The fix changes only those two API modules. The ledger, dependencies, and
+`Signing.hs` assertions are unchanged. The API fix is committed as `3001ca37b`.
+
+**Recorded result, 15 October 2026: GREEN.** The original signing command now
+executes and passes the assertions for both funding arrangements, including
+cryptographic signature verification and signed-parent CBOR round-trips.
+
+| Command | Result | Saved run under `.workspace/minutxo-incremental/checks/` |
+| --- | --- | --- |
+| `./scripts/check-minutxo signing` | GREEN, exit 0: both signed examples passed | `run-64y5wejt` |
+| `./scripts/check-minutxo nested` | GREEN, exit 0: both construction examples passed | `run-0zj9a_zu` |
+| `./scripts/check-minutxo serialisation` | GREEN, exit 0: both unsigned CBOR round-trips passed | `run-t61isy0e` |
+
+Fourmolu and `git diff --check` pass. These results establish local signing and
+serialization, not ownership of real inputs or acceptance by a node.
 
 Node submission remains a separate step after signing is green. This checkout
 has no configured active node executable or socket. A submission check needs a
@@ -635,7 +662,7 @@ For each capability:
    in an earlier step.
 
 The dependency, compilation, ordinary-output, store-backed construction,
-read-back, nested construction, and nested CBOR round-trip checks are green.
+read-back, nested construction, nested CBOR round-trip, and signing checks are green.
 Ledger funding enforcement remains a separate capability; construction and
 serialization do not establish it.
 Retain the existing checks as the sequence advances. Fixing one compiler error
@@ -663,7 +690,7 @@ The intended progression is:
    without further API or ledger changes). Other serialization cases and
    minimum ADA for each output kind remain separate steps.
 8. Sign the children and then their parent in both nested funding examples
-   (current red: child-signing API helpers are missing; assertions have not run).
+   (complete: the same check is green after the focused child-signing API fix).
 9. Submit to a compatible local prototype node using real test inputs and
    manually determined fees and deposits; keep node setup separate from
    transaction failures.
