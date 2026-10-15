@@ -13,6 +13,11 @@ this step.
 The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
+**Current checkpoint:** Nicolas's ledger has been pulled to `0675bed39`.
+The funding command is now RED at API compilation because the deposit
+declaration interface changed. Earlier green results below used ledger
+`8352f9600`; transaction assertions have not run against the new pin.
+
 ## Dependency baseline: green before and after minUTxO
 
 This step asks whether Cabal can resolve `cardano-api:lib:cardano-api` against
@@ -835,7 +840,8 @@ This requires an API adaptation as well as a ledger pin update: the old
 deposit-store operation types and lenses have been replaced by typed TopTx
 and SubTx UTxO deposit declarations, with separate absent and explicit-zero
 cases. No package-version, dependency-bound, or project-pin changes were found
-in the ledger diff, but compilation against our stack has not been tested.
+in the ledger diff. Compilation was untested at the initial source audit;
+the subsequent pull and build result are recorded below.
 
 The newer rules require the exact net deposit: newly priced outputs minus
 recorded deposits released by consumed inputs. The funding fixture's arbitrary
@@ -844,13 +850,39 @@ store-backed output has zero net deposit; to demonstrate additional parent or
 sibling funding, the live examples must add capacity, for example by splitting
 the token input into two outputs.
 
-This follow-up is a source audit only: the checkout and submodule pin remain
-unchanged and no tests were run against the newer revision. Upstream's
+The initial follow-up was a source audit only: it left the checkout and submodule
+pin unchanged and ran no tests against the newer revision. Upstream's
 [verification record](https://github.com/nhenin/cardano-ledger-specs/blob/0675bed392b4b5fe43b0c2a233888d18cc49d624/docs/dijkstra-deposit-store-verification.md#current-implementation-status)
 reports 68 implemented business checks and 174 deliberate failing placeholders;
 dedicated conservation, epoch and recovery checks are among the unfinished
 coverage. Our build, funding, deposit-retention and nested-submission checks
 remain necessary.
+
+### Pulled ledger: API compilation red
+
+The original funding red and upstream findings were committed as `d5764fc`
+(`red: expose missing deposit-store funding accounting`). The clean ledger
+submodule was then fast-forwarded from `8352f9600` to Nicolas's
+`0675bed392b4b5fe43b0c2a233888d18cc49d624`, and the same command was rerun:
+
+```sh
+./scripts/check-minutxo node-token-funding
+```
+
+**Recorded result, 15 October 2026: RED at API compilation, exit 1.**
+Dependency resolution succeeded, and the updated ledger and consensus libraries
+compiled. The API failed in
+`cardano-api/src/Cardano/Api/Experimental/Tx/Internal/BodyContent/New.hs`
+at lines 285, 299, 326 and 880: the new ledger no longer exports
+`depositStoreChangeTxBodyL`, `DepositStoreSubTxChange`,
+`depositStoreSubTxChangeTxBodyL` or `DepositStoreChange`.
+
+The node did not start and no transaction assertions ran. This is a compilation
+prerequisite exposed by the ledger update; it neither repeats the old on-chain
+funding rejection nor proves that funding now succeeds. No API or fixture
+adaptations are included in this step. The complete log, exit summary and
+repository revisions are retained in
+`.workspace/minutxo-incremental/checks/run-y8uagohj/`.
 
 ## Working one step at a time
 
@@ -866,8 +898,10 @@ For each capability:
 4. Introduce the next check in its own red step; do not include future checks
    in an earlier step.
 
-The dependency, compilation, ordinary-output, store-backed construction,
-read-back, nested construction, nested CBOR round-trip, and signing checks are green.
+At ledger pin `8352f9600`, the dependency, compilation, ordinary-output,
+store-backed construction, read-back, nested construction, nested CBOR round-trip,
+and signing checks were green. The update to `0675bed39` is currently red at API
+compilation, as recorded above.
 Ledger funding enforcement remains a separate capability; construction and
 serialization do not establish it.
 Retain the existing checks as the sequence advances. Fixing one compiler error
