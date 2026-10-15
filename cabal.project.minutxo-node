@@ -1,0 +1,30 @@
+import: cabal.project.minutxo-incremental
+
+-- Node 648fc48b045148a3b2acc5f3b04b039d50375bfc uses the historical
+-- API/consensus sources underlying our incremental project. Keep our current
+-- API and Nicolas's minUTxO ledger; add only the node's build prerequisites.
+packages:
+  checks/node
+  cardano-node/cardano-node
+  cardano-node/trace-forward
+  cardano-node/trace-resources
+  cardano-api/cardano-rpc
+
+package cardano-node
+  flags: -systemd
+
+-- These settings and the ekg-forward pin come from that node's cabal.project.
+package acts
+  flags: -finitary
+
+constraints:
+  any.proto-lens >= 0.7.1.7,
+  any.alfred-margaret < 2.1.1.0 || > 2.1.1.0
+
+allow-older:
+  ekg-forward:ouroboros-network
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ekg-forward
+  tag: 85470ae7e8fac9711682234ed39a36eec3d45a9b

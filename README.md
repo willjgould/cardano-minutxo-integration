@@ -42,6 +42,11 @@ the parent or by an ADA-only sibling. `serialisation` checks that both complete
 unsigned parent transactions survive a CBOR round-trip through the public API.
 `signing` requests signatures on the children before assembling and signing
 each parent, using generated test keys.
+`node-build` separately compiles the prototype node and its RPC dependency;
+it does not start a node or submit a transaction.
+`node` starts a fresh private node and checks that Dijkstra blocks advance.
+`node-transaction` additionally submits an ordinary ADA transfer and checks its
+resulting UTxO.
 
 `--offline` uses cached package metadata and source repositories. On a fresh
 checkout, omit it to fetch the pinned source dependencies first. The project
@@ -641,11 +646,107 @@ cryptographic signature verification and signed-parent CBOR round-trips.
 Fourmolu and `git diff --check` pass. These results establish local signing and
 serialization, not ownership of real inputs or acceptance by a node.
 
-Node submission remains a separate step after signing is green. This checkout
-has no configured active node executable or socket. A submission check needs a
-compatible local prototype node, funded inputs, and their signing keys. The
-archived runtime is only a reference; its prior results do not establish
-compatibility with the current incremental stack.
+Node submission remains a separate step after signing is green. A submission
+check needs a compatible local prototype node, funded inputs, and their signing
+keys. The archived runtime is only a reference; its prior results do not
+establish compatibility with the current incremental stack.
+
+## Local node build prerequisite
+
+```sh
+git submodule update --init cardano-node
+./scripts/check-minutxo node-build
+```
+
+The new `cardano-node` submodule pins upstream prototype revision
+`648fc48b045148a3b2acc5f3b04b039d50375bfc`. Its API baseline (`8749531d`) differs
+from our historical API baseline (`cc614415`) only in `cabal.project`. Its
+consensus pin (`02fa2487`) likewise differs from our `e5b82026` only in that
+project file. This provides a source-aligned starting point, rather than using
+the newer node and compatibility patches from the archived migration.
+
+`cabal.project.minutxo-node` imports the incremental project and adds the node,
+its trace libraries, and the current local `cardano-rpc` package. The API,
+ledger, and consensus pins remain unchanged. The additional constraints,
+`acts` flag, `ekg-forward` pin, and its `allow-older` setting come from the
+pinned node's own historical project. Optional systemd integration is disabled
+for a directly launched local node.
+
+The existing API and transaction commands retain their original project. Both
+projects reuse the incremental build directory; run their checks sequentially.
+No archived binaries, sibling checkouts, or source compatibility patches are
+used. This prerequisite does not start a node or submit a transaction.
+
+**Recorded result, 15 October 2026: GREEN on the first build.** Dependencies
+resolved and the node executable compiled without API, RPC, ledger, consensus,
+or node source changes. Log: `run-d5s6xb9j/node-build.log` under
+`.workspace/minutxo-incremental/checks/`. The resulting executable reports
+`cardano-node 11.1.0.164`, Git revision `648fc48b045148a3b2acc5f3b04b039d50375bfc`.
+There is no failing build to manufacture; this is a green infrastructure baseline.
+
+## Local node startup
+
+```sh
+./scripts/check-minutxo node
+```
+
+After the node build was green, this separate check added a small fixture
+generator and a process supervisor. It uses fresh local payment, staking,
+pool, KES, and VRF keys and the current API's genesis defaults. A private
+testnet starts with one funded stake pool, network magic 42, 0.1-second slots,
+500-slot epochs, and the Dijkstra transition at epoch 1.
+
+The node binds to loopback on an ephemeral port, has no configured peers, and
+uses a fresh private temporary directory for keys, databases, socket, and logs.
+The directory path is printed. The supervisor queries the node through the
+public API and requires two increasing block numbers in Dijkstra. It stops its
+own node afterward, including on failure, and retains the diagnostic files.
+There is no dependency on `cardano-cli` or `cardano-testnet`.
+
+**Recorded result, 15 October 2026: GREEN.** In `run-wrj381ms`, Dijkstra blocks
+advanced from 49 to 52 and the node stopped cleanly. The initial helper build
+(`run-dei5x515`) had an incorrect import for `unsafeBoundedRational`; correcting
+it to the API export fixed the test setup. No node or ledger implementation
+change was needed. This check does not submit transactions.
+
+## Ordinary ADA submission baseline
+
+```sh
+./scripts/check-minutxo node-transaction
+```
+
+Added after startup was green, this check starts another fresh node and queries
+its real genesis-funded UTxO through the public API. It builds and signs an
+ordinary transaction using the generated payment key, sends the remaining ADA
+to a fresh recipient after a fixed 1 ADA fee, and submits through
+`submitTxToNodeLocal`. The output uses the ordinary implicit-deposit form.
+
+Mempool acceptance is recorded in `ordinary-submitted.json`. Success additionally
+requires querying the chain's UTxO state and finding the exact expected recipient
+output while confirming that the original input is consumed. That evidence is
+saved as `ordinary-included.json` in the printed private node directory. The
+supervisor stops its node on success or failure. All funds are created in this
+isolated local chain; no external node is used.
+
+Nested transaction submission remains the next transaction capability after
+this baseline is green.
+
+**Recorded result, 15 October 2026: GREEN on the first submission run.**
+`run-wql7k2j3` reached advancing Dijkstra blocks, submitted transaction
+`d8afb769dcaf777be8dc5c8f40438dd729a183c7fa5f8ae8bf77b87aad7abdad`, and verified
+that its 900,000,000,000-lovelace input was consumed and its recipient received
+899,999,000,000 lovelace after the 1,000,000-lovelace fee. The node then stopped
+cleanly. A copy of the non-secret inclusion evidence and node log is saved
+alongside `node-transaction.log` under
+`.workspace/minutxo-incremental/checks/run-wql7k2j3/`.
+
+This establishes ordinary transaction submission on the prototype. No
+additional API, RPC, ledger, consensus, or node implementation fixes were
+needed for this baseline. The submodule pin, project, fixture, and checks make
+the baseline reproducible from this checkout.
+
+Regression checks also remain green: `dependencies --offline` in `run-vfmqaa4t`
+and `signing --offline` in `run-t6r_khgy`. Fourmolu and `git diff --check` pass.
 
 ## Working one step at a time
 
@@ -691,9 +792,10 @@ The intended progression is:
    minimum ADA for each output kind remain separate steps.
 8. Sign the children and then their parent in both nested funding examples
    (complete: the same check is green after the focused child-signing API fix).
-9. Submit to a compatible local prototype node using real test inputs and
-   manually determined fees and deposits; keep node setup separate from
-   transaction failures.
+9. Establish a compatible local prototype node and ordinary ADA submission
+   (complete: node build, startup, and ordinary transfer are green). Submit the
+   nested examples next using real inputs and manually determined fees and
+   deposits; keep node setup separate from transaction failures.
 10. Add automatic balancing, change, and collateral checks as separate
     capabilities. Exercise CLI, Plutus, wallet, and balancer paths with their
     own reproducers.

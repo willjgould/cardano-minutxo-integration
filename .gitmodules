@@ -18,3 +18,6 @@
 	path = cardano-balance-transaction
 	url = https://github.com/cardano-foundation/cardano-balance-transaction.git
 	branch = main
+[submodule "cardano-node"]
+	path = cardano-node
+	url = https://github.com/IntersectMBO/cardano-node.git
