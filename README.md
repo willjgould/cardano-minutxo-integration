@@ -13,14 +13,21 @@ components retain their original pins and have not been tested in this step.
 The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
-**Current checkpoint: GREEN — store-backed UTxO JSON round-trip.** The unchanged
+**Current checkpoint: GREEN — live owner-address query and UTxO JSON.**
+`./scripts/check-minutxo node-token-funding` passed with the added read
+assertions (`run-0m3dj956`). The address query returned exactly the two submitted
+store-backed token outputs; JSON preserved both outputs, including seven tokens
+and zero ADA each. Funding, deposit retention and total ADA checks also passed.
+No additional API, ledger or node implementation changes were needed.
+
+**Previous checkpoint: GREEN — store-backed UTxO JSON round-trip.** The unchanged
 `./scripts/check-minutxo utxo-json` passed (`run-ykon66uw`), preserving ordinary
 and store-backed output kinds and assets. Ordinary JSON keeps its `value`
 field; store-backed outputs use `applicationAssets`. The existing `read-back`
 regression also passed (`run-35985knr`). This is a local read check, using
 synthetic UTxOs without starting a node.
 
-**Previous checkpoint: GREEN — automatic fee/change for direct store-backed
+**Earlier checkpoint: GREEN — automatic fee/change for direct store-backed
 outputs.** The unchanged `./scripts/check-minutxo node-token-funding` passed
 (`run-7djmx9ww`), including node acceptance, inclusion, exact deposits, epoch
 retention and total ADA conservation. The API now applies minimum ADA checks
@@ -83,6 +90,8 @@ resulting UTxO.
 `node-token-funding` prepares two real token-only, store-backed inputs for the
 nested examples, paying an exact store deposit and requiring chain inclusion,
 recorded allocations, and conservation of total ADA across an epoch boundary.
+It then queries the token owner's address and checks the returned UTxO's JSON
+round-trip against the submitted token outputs.
 `node-nested-parent` runs that funding prerequisite, then submits one token-only
 child whose additional deposit and fee are funded by the parent.
 
@@ -457,6 +466,37 @@ representations and negative, fractional or overflowing quantities. Evidence,
 the API diff, and source hashes are saved under
 `.workspace/minutxo-incremental/checks/run-ykon66uw/`. These results cover local
 JSON conversion; they do not add live queries or deposit-store JSON support.
+
+## Live owner-address query and UTxO JSON
+
+```sh
+./scripts/check-minutxo node-token-funding
+```
+
+After the existing funding, inclusion and epoch-retention assertions pass,
+[TokenFunding.hs](checks/node/TokenFunding.hs) queries the token owner's
+address through the public API. The returned UTxO must equal the two submitted
+store-backed outputs exactly: seven native tokens and zero ADA each. The
+ordinary change belongs to another address and must be excluded.
+
+The check encodes that live UTxO through `Aeson.encode`, decodes the same bytes
+through `Aeson.eitherDecode`, and compares the complete result against the
+expected outputs. This preserves input references, addresses, output kinds,
+assets, and the absent datums and reference scripts. The exact encoded bytes
+are saved as `token-owner-utxo.json` in the printed private node directory.
+
+The shared funding prerequisite means both nested submission commands also
+run these read assertions. This adds live address-filter and token-only JSON
+coverage; the separate `utxo-json` check covers mixed ordinary/store-backed
+JSON locally. It does not exercise CLI output or deposit-store JSON.
+
+**Recorded result, 16 October 2026: GREEN on the first run** (`run-0m3dj956`,
+exit 0). Compilation, funding, exact deposit retention across an epoch, total
+ADA conservation, owner-address querying and JSON equality assertions all
+passed. The node stopped cleanly. No API, ledger or node implementation change
+was required. The encoded UTxO, funding evidence, node log, tested source hashes
+and check diff are retained under
+`.workspace/minutxo-incremental/checks/run-0m3dj956/`.
 
 ## Nested token-only output with separate deposit funding
 

@@ -27,8 +27,9 @@ import qualified AutoBalance
 import Control.Concurrent (threadDelay)
 import Control.Monad (unless)
 import Control.Monad.Trans.Except (runExceptT)
-import Data.Aeson (object, (.=))
+import Data.Aeson (eitherDecode, encode, object, (.=))
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
 import Data.Foldable (toList)
 import Data.Function ((&))
 import qualified Data.Map.Strict as Map
@@ -202,6 +203,33 @@ fundTokens directory socket = do
                     ]
                         <> evidence
             putStrLn "PASS: token-only funding included; exact deposits retained across an epoch and total ADA conserved"
+            let expectedTokenUTxO =
+                    Api.UTxO $
+                        Map.fromList [(Api.TxIn txId (Api.TxIx ix), tokenOutput) | ix <- [0, 1]]
+            verifyOwnerUTxOJson directory connection tokenOwnerAddress expectedTokenUTxO
+
+-- Query the independent token owner, excluding the ordinary change output.
+-- Compare against the submitted outputs before testing their JSON round-trip.
+verifyOwnerUTxOJson ::
+    FilePath ->
+    Api.LocalNodeConnectInfo ->
+    Api.AddressAny ->
+    Api.UTxO Api.DijkstraEra ->
+    IO ()
+verifyOwnerUTxOJson directory connection owner expected = do
+    putStrLn "RUN read assertions: query token-only store-backed outputs by owner address"
+    actual <- queryUTxO connection (Api.QueryUTxOByAddress (Set.singleton owner))
+    unless (actual == expected) $
+        fail $
+            "Owner-address query differs from the two submitted token outputs: " <> show actual
+    putStrLn "PASS: owner-address query returns exactly the two token-only store-backed outputs"
+    putStrLn "RUN read assertions: JSON round-trip the live owner-address UTxO"
+    let encoded = encode actual
+    LBS.writeFile (directory </> "token-owner-utxo.json") encoded
+    decoded <- either (fail . ("Live UTxO JSON decoding failed: " <>)) pure (eitherDecode encoded)
+    unless (decoded == expected) $
+        fail "Live UTxO JSON round-trip changed input references, addresses, output kinds or assets"
+    putStrLn "PASS: live UTxO JSON round-trip preserves both outputs, including store-backed kind, seven tokens each and zero ADA"
 
 awaitFunding ::
     Api.LocalNodeConnectInfo ->
