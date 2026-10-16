@@ -26,8 +26,7 @@ import System.IO (BufferMode (LineBuffering), hSetBuffering, stdout)
 
 -- In-memory test keys sign the same synthetic transactions as Nested. This
 -- verifies signatures and witness placement, not ownership of live inputs or
--- ledger acceptance. Child signing helpers exist in later upstream API history
--- but are absent from our older baseline; no low-level signing fallback is used.
+-- ledger acceptance. Child signing uses the API helpers before parent assembly.
 main :: IO ()
 main = do
     hSetBuffering stdout LineBuffering

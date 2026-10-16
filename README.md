@@ -4,22 +4,21 @@ This workspace tests how the minUTxO ledger change affects transaction-writing
 code in `cardano-api`, `cardano-cli`, `cardano-wallet`, and
 `cardano-balance-transaction`. Use this checkout and its declared submodules.
 
-The working branch is `minutxo-incremental`. The API is based on its historical
-prototype revision `cc614415bb588ab496ab34924c1b076bf1af59c3`, with focused
-compilation adaptations, store-backed output construction, read-back, and nested
-transaction construction for the existing `v2-minutxo` ledger pin. Other
-downstream components retain their original pins and have not been tested in
-this step.
+The working branch is `minutxo-incremental`. The API combines upstream Leios
+revision `717d326ccb6b0ee1982dfffd2d0cbd4876094666` with our focused minUTxO
+adaptations for store-backed output construction, read-back, and deposit
+declarations. The node and dependencies follow the matching upstream stack;
+the ledger retains Nicolas's `v2-minutxo` work. CLI, wallet, and balancing
+components retain their original pins and have not been tested in this step.
 The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
-**Current checkpoint:** Nicolas's ledger has been pulled to `0675bed39`.
-With the API declaration migration and exact deposit calculation,
-`node-token-funding` is GREEN: both token-only outputs are included, their
-allocations survive an epoch boundary, and total ADA is conserved.
-`node-nested-parent` is RED at submission: the node rejects the child's existing
-token input as missing. The sibling-funded submission check follows after that
-input-loading failure is fixed.
+**Current checkpoint: GREEN** on Nicolas's rebased ledger `e5da0be24` with the
+aligned upstream stack. The unchanged `node-nested-parent` check passed
+(`run-y3u_dr9h`): mempool acceptance, block inclusion, exact UTxO, deposit
+replacement, and total ADA conservation. All six local transaction checks also
+pass. The upstream child-input loading fix is now in the ledger pin; no local
+ledger patch is applied. Live sibling-funded submission remains a later step.
 
 ## Dependency baseline: green before and after minUTxO
 
@@ -1044,6 +1043,110 @@ red reproducer. The experiment's patch, adaptations, inclusion evidence, and
 restoration record are saved under
 `.workspace/minutxo-incremental/checks/run-ynzr22q3/`.
 
+## Pull Nicolas's rebased ledger
+
+On 16 October 2026, Nicolas's `v2-minutxo` branch was rebased from `0675bed39`
+to `e5da0be244308c217a9b0eecf221c797f4176f44`. The clean ledger checkout was
+aligned with that rewritten branch, preserving the old revision under
+`refs/backup/minutxo-before-rebase-20261016-0675bed39`. The parent submodule
+pointer and this result were left staged at this pull checkpoint; no ledger
+merge commit was created.
+
+The new history includes upstream `027026061`, so the child-input loading fix
+is now part of Nicolas's branch. It also updates the ledger package baseline,
+including `cardano-ledger-api` 1.16, ledger core 1.23, Dijkstra 0.5, and
+`cardano-protocol` 0.3. At this pull checkpoint, the integration's API and other
+dependency pins were unchanged.
+
+**Recorded result, 16 October 2026: RED at dependency resolution, exit 1**, using
+the same command:
+
+```sh
+./scripts/check-minutxo node-nested-parent
+```
+
+Run `run-yblpntxa` stopped with:
+
+```text
+rejecting: cardano-ledger-api-1.16.0.0
+  (conflict: cardano-api => cardano-ledger-api^>=1.15)
+```
+
+Compilation did not start, the node did not start, and no transaction assertions
+ran. This is a dependency-alignment prerequisite; it does not reproduce the old
+missing-child-input rejection or establish green on the new ledger. The log,
+summary, and repository revisions are retained in
+`.workspace/minutxo-incremental/checks/run-yblpntxa/`.
+
+## Align the stack with the rebased ledger
+
+The newer ledger requires a newer consensus/protocol interface, not just a
+relaxed API version bound. Its upstream ancestor `8a15ddc07` has exactly the
+same Git tree as official ledger `505fa72260632fca6df33e18e18719730bf9a460`.
+That identifies the matching upstream Leios stack:
+
+| Component | Revision |
+| --- | --- |
+| Nicolas's ledger | `e5da0be244308c217a9b0eecf221c797f4176f44` |
+| API upstream baseline | `717d326ccb6b0ee1982dfffd2d0cbd4876094666` |
+| API integration merge | `279943133` |
+| Node | `715b8d2a649e1b97263b3854127d3cff5b09ab8e` |
+| Consensus | `5cc95f4caf294751318f8637ab2fb60d5de6eb29` |
+| Network | `96ee6e0e689770b5a3d664c59f2d13b05c5d9c4d` |
+| Base | `c1e1ed8d7ae39c111c73fc5f59ac37ce5933b83c` |
+| Keys | `f89a91b41ff171dd062a0cae0e93b8b999fedf40` |
+| Config | `3ea0916679922c0694e4835d2491c3ae9146d037` |
+
+The projects use these pins, the upstream package-index dates and its targeted
+dependency-bound exceptions. The API merge retains our minUTxO adaptations;
+upstream now supplies the nested construction and signing implementation.
+No local ledger or node source patch was needed for this alignment.
+
+**Dependency result, 16 October 2026: GREEN**, using
+`./scripts/check-minutxo dependencies` (`run-91015a42`).
+
+**API compilation result: GREEN**, using `./scripts/check-minutxo build`
+(`run-vib_vaaz`). The ledger and matching consensus libraries compiled without
+source patches.
+
+Two integration regressions were exposed before the final green:
+
+- `node-nested-parent` (`run-npubchpk`) built successfully but stopped at node
+  startup. The merged API used the ledger's full testing cost model (369
+  parameters) for Dijkstra genesis, whose decoder requires 251 initial
+  parameters. Restoring the API's existing genesis-sized `testingCostModelV4`
+  fixed this; no transaction assertions ran in that failed attempt.
+- `transaction --offline` (`run-tdyqb8zg`) stopped during check compilation:
+  `Cardano.Api.Ledger.valueTxOutL` was missing from the merged reexports. Its
+  standalone export was restored for the implicit-deposit output interface.
+
+**Live nested-submission result: GREEN**, using the same
+`./scripts/check-minutxo node-nested-parent` command (`run-y3u_dr9h`). The node
+accepted and included parent transaction
+`980fec6f1b0fe1bb592479092ac445c4380de630ad19d3d92bfacd92f3261b77`.
+The child spent its seven-token, zero-ADA input and created three-token and
+four-token, zero-ADA outputs. Both parent and child inputs were consumed and
+the whole UTxO matched. The parent supplied the net deposit of 1,133,530
+lovelace, the Store balance changed from 2,267,060 to 3,400,590, and total ADA
+remained 1,000,000,400,000 lovelace. The funding prerequisite also verified
+deposit retention across an epoch. The node was stopped after the check.
+
+All existing local checks passed with `--offline`:
+
+| Check | Green run |
+| --- | --- |
+| `transaction` | `run-c3ip2dem` |
+| `store-backed` | `run-h98anvpl` |
+| `read-back` | `run-809q_lfm` |
+| `nested` (both examples) | `run-noymu1y9` |
+| `serialisation` (both examples) | `run-feknvmt8` |
+| `signing` (both examples) | `run-90lanaa7` |
+
+Logs and non-secret inclusion evidence are retained under
+`.workspace/minutxo-incremental/checks/`. The API merge is committed as
+`279943133`, and the parent records that commit alongside the aligned ledger,
+node, and dependency pins. Nothing has been pushed.
+
 ## Working one step at a time
 
 For each capability:
@@ -1060,11 +1163,11 @@ For each capability:
 
 At ledger pin `8352f9600`, the dependency, compilation, ordinary-output,
 store-backed construction, read-back, nested construction, nested CBOR round-trip,
-and signing checks were green. They remain green on `0675bed39` after the
-declaration migration. Ordinary submission and exact token-only input funding
-also pass, including Store retention and ADA conservation across an epoch.
-The new parent-funded nested submission check is red at child-input loading;
-construction and serialization do not establish node acceptance.
+and signing checks were green. They remained green on `0675bed39` after the
+declaration migration, while parent-funded nested submission was red at child
+input loading. On `e5da0be24` with the aligned stack, those local checks and the
+live parent-funded nested submission are green, including token funding, Store
+retention across an epoch, and total ADA conservation.
 Retain the existing checks as the sequence advances. Fixing one compiler error
 and encountering another is still RED; it is not a passing build. A check that
 already passes establishes a baseline; do not manufacture a failure. Each new
@@ -1094,10 +1197,10 @@ The intended progression is:
 9. Establish a compatible local prototype node and ordinary ADA submission
    (complete: node build, startup, and ordinary transfer are green). Fund real
    token-only inputs with `node-token-funding` (complete: inclusion, exact Store
-   allocations, epoch retention and total ADA are green). The parent-funded
-   nested submission check is now red at child-input loading. Fix and verify it
-   before adding the sibling-funded submission check, using explicitly calculated
-   deposits and fixture fees.
+   allocations, epoch retention and total ADA are green). Parent-funded nested
+   submission is now green with Nicolas's rebased ledger and the aligned stack.
+   Add sibling-funded submission next, using explicitly calculated deposits and
+   fixture fees.
 10. Add automatic balancing, change, and collateral checks as separate
     capabilities. Exercise CLI, Plutus, wallet, and balancer paths with their
     own reproducers.

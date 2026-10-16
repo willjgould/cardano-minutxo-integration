@@ -1,8 +1,6 @@
--- Reconstruct cardano-api cc614415bb588ab496ab34924c1b076bf1af59c3.
--- Source pins, index dates, constraints and allow-newer settings below are
--- copied from that revision's cabal.project; no new bound overrides are added.
--- Use this checkout for the API and ledger, so the same check can compare
--- Nicolas's pre-minUTxO ledger with his minUTxO tip.
+-- Match the upstream Leios stack used by node 715b8d2a6 and API 717d326cc.
+-- Their ledger pin 505fa722 has the same tree as Nicolas's upstream base
+-- 8a15ddc07. Keep the local ledger with minUTxO and our local API additions.
 
 repository cardano-haskell-packages
   url: https://chap.intersectmbo.org/
@@ -17,7 +15,7 @@ repository cardano-haskell-packages
 
 index-state:
   hackage.haskell.org 2026-09-02T14:05:07Z,
-  cardano-haskell-packages 2026-09-02T08:49:12Z
+  cardano-haskell-packages 2026-10-09T14:30:01Z
 
 packages:
   checks/transaction
@@ -40,10 +38,8 @@ packages:
   cardano-ledger-specs/eras/conway/impl
   cardano-ledger-specs/eras/dijkstra/impl
 
--- The historical API's ledger package selection uses published Byron
--- packages, including crypto-wrapper 1.7, rather than the local versions.
--- Keep its test-library sources too: consensus depends on these packages.
--- No test suites are enabled or run by this dependency check.
+-- Use the upstream stack's published Byron packages and crypto-wrapper 1.8.
+-- Consensus also needs test libraries, but this check runs no test suites.
 
 tests: False
 benchmarks: False
@@ -54,16 +50,13 @@ package crypton
 package bitvec
   flags: -simd
 
--- Historical API project policy, introduced before minUTxO.
--- Keep the prototype's memory-based crypton closure together.
+-- Upstream API/node policy for the matching crypton/ram stack.
 constraints:
-  any.crypton < 1.1,
-  any.crypton-x509-system < 1.6.8
+  any.crypton-x509-system < 1.6.8 || >= 1.7
 
 allow-newer:
   io-sim:time,
   io-classes:time,
-  cardano-crypto-class,
   cborg-json:aeson,
   criterion-measurement:aeson,
   deriving-aeson:aeson,
@@ -72,12 +65,26 @@ allow-newer:
   hedgehog-extras:aeson,
   microstache:aeson,
   monad-control:transformers,
-  http-api-data:text-iso8601
+  http-api-data:text-iso8601,
+  cardano-addresses:crypton,
+  -- These key-package bounds are relaxed by the matching upstream projects.
+  cardano-keys:cardano-ledger-core,
+  cardano-keys:cardano-ledger-shelley,
+  cardano-keys:cardano-protocol,
+  cardano-config:cardano-ledger-conway,
+  cardano-config:cardano-ledger-core,
+  cardano-config:cardano-ledger-dijkstra,
+  cardano-config:cardano-ledger-shelley
+
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/cardano-config
+  tag: 3ea0916679922c0694e4835d2491c3ae9146d037
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/cardano-base
-  tag: fbfb3f05d8092492f000264edca2d7a1a105741a
+  tag: c1e1ed8d7ae39c111c73fc5f59ac37ce5933b83c
   subdir:
     cardano-binary
     cardano-crypto-class
@@ -93,16 +100,15 @@ source-repository-package
 
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/kes-agent.git
-  tag: 4e7ec7b5102a030587413f4af770e87a15c9cb9c
+  location: https://github.com/IntersectMBO/cardano-keys
+  tag: f89a91b41ff171dd062a0cae0e93b8b999fedf40
   subdir:
-    kes-agent
-    kes-agent-crypto
+    cardano-keys
 
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-network
-  tag: 4b3ab7664f609a1aee0f0c24dcfcfd0ab899fc42
+  tag: 96ee6e0e689770b5a3d664c59f2d13b05c5d9c4d
   subdir:
     ouroboros-network
     cardano-diffusion
@@ -111,4 +117,4 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: e5b82026e4f3395fbb94f0af62f711655d96fec7
+  tag: 5cc95f4caf294751318f8637ab2fb60d5de6eb29
