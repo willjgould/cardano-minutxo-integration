@@ -13,7 +13,13 @@ components retain their original pins and have not been tested in this step.
 The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
-**Current checkpoint: GREEN — automatic fee/change balancing for both nested
+**Current checkpoint: RED — automatic fee/change for direct store-backed
+outputs.** `./scripts/check-minutxo node-token-funding` (`run-z4hvkbcm`) compiled,
+started the node, and failed at the balancer's explicit unsupported-output
+error. No transaction was submitted. Both nested commands use this funding
+prerequisite and will stop here until it is green.
+
+**Previous checkpoint: GREEN — automatic fee/change balancing for both nested
 examples.** `./scripts/check-minutxo node-nested-parent` (`run-48lzg7tu`) and
 `./scripts/check-minutxo node-nested-sibling` (`run-eufxdic_`) passed with the
 same API fix: automatic parent fee/change, preserved signed children and
@@ -21,7 +27,7 @@ deposit declarations, node acceptance, inclusion, and exact accounting. The
 parent check also passed its ordinary balancing control. Deposit pricing
 remains explicit; this step supports signed key-only children.
 
-**Previous checkpoint: GREEN** on Nicolas's rebased ledger `e5da0be24` with the
+**Earlier checkpoint: GREEN** on Nicolas's rebased ledger `e5da0be24` with the
 aligned upstream stack. The existing live examples now use separate payment
 owners: two for `node-nested-parent` (`run-4x_o48y2`) and three for
 `node-nested-sibling` (`run-7swr908a`). Both passed input ownership and witness
@@ -786,11 +792,13 @@ zero lovelace, and returns the remaining ADA as an ordinary change output.
 The fixture queries the node's protocol parameters and uses the ledger's
 `requiredUTxODeposit` to price each serialized store-backed output. It supplies
 their sum through `txNetUTxODepositChange` as
-`DeclaresNetUTxODepositAllocation`, deducting that amount and the fixed 1 ADA fee
-from change. This is explicit fixture balancing; the API's automatic balancing
-and store-backed minimum-deposit calculation remain unsupported. Omitting the
-deposit or returning its ADA as change would bypass the funding capability
-this check is intended to exercise.
+`DeclaresNetUTxODepositAllocation`. It now asks `makeTransactionBodyAutoBalance`
+to calculate the fee and change, supplying only the two token outputs and the
+live input UTxO. The returned body must preserve both outputs, the input and
+deposit declaration, and add exactly one ordinary ADA change output satisfying
+`input = fee + deposit + change`. Deposit pricing remains explicit. Earlier
+checkpoints used a fixed 1 ADA fee and manually calculated change; the new
+automatic-balancing step is recorded below.
 
 The signed transaction is retained as `token-funding.cbor` in the printed
 private node directory. A submission rejection is recorded separately in
@@ -1303,6 +1311,33 @@ total ADA remained 1,000,000,400,000 lovelace. Non-secret evidence, patches,
 and tested source hashes are retained under the run directory. Preparation
 still uses an explicit fixture fee; nested fee/change are automatic, while
 deposit pricing remains explicit.
+
+### Automatic fee and change for direct store-backed outputs
+
+The existing `node-token-funding` check now requests automatic fee/change for
+its two top-level store-backed outputs. It retains the explicit deposit
+calculation, native minting policy, and live funding input. No fee or change
+output is supplied to the balancer. The returned body must preserve the input,
+both zero-ADA token outputs and the deposit declaration, and add one ordinary
+ADA change output after paying the deposit and a positive fee. Submission,
+inclusion, allocation-map, epoch-retention and total-ADA assertions remain.
+
+**Recorded result, 16 October 2026: RED**, using
+`./scripts/check-minutxo node-token-funding` (`run-z4hvkbcm`). Compilation passed
+and Dijkstra blocks advanced from 64 to 66. The API then rejected the request:
+
+```text
+Automatic balancing failed: Balancing store-backed outputs is not supported.
+```
+
+No transaction was constructed or submitted; returned-body, inclusion and
+accounting assertions did not run. The private node stopped cleanly. The log,
+node evidence, check patch and source hashes are retained under
+`.workspace/minutxo-incremental/checks/run-z4hvkbcm/`. The API implementation is
+unchanged from the preceding nested green runs. Both nested commands share
+this funding prerequisite and will stop here while this step is red. Green
+must pass the same check and its retained assertions. Deposit pricing remains
+explicit; no fallback to manual balancing is provided.
 
 ## Working one step at a time
 

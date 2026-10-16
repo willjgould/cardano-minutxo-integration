@@ -12,6 +12,7 @@ import qualified Cardano.Api.Experimental.Tx as Exp
 import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Dijkstra.Core as Dijkstra
 import qualified Cardano.Ledger.Dijkstra.Rules as Dijkstra
 import qualified Cardano.Ledger.Dijkstra.UTxODeposit.TopTx as TopTx
 import qualified Cardano.Ledger.Keys as Keys
@@ -22,11 +23,13 @@ import qualified Cardano.Ledger.State as State
 import Cardano.Ledger.StrictlyPositiveCoin (mkStrictlyPositiveCoin)
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Network
 
+import qualified AutoBalance
 import Control.Concurrent (threadDelay)
 import Control.Monad (unless)
 import Control.Monad.Trans.Except (runExceptT)
 import Data.Aeson (object, (.=))
 import qualified Data.ByteString as BS
+import Data.Foldable (toList)
 import Data.Function ((&))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -41,6 +44,7 @@ import System.Timeout (timeout)
 -- Before submitting the nested examples, create two real token-only inputs.
 -- The genesis payment key funds and authorizes the native mint; an independent
 -- token owner receives the outputs and will sign the token child.
+-- Deposit pricing is explicit; the API must calculate the fee and change.
 fundTokens :: FilePath -> FilePath -> IO ()
 fundTokens directory socket = do
     hSetBuffering stdout LineBuffering
@@ -90,10 +94,8 @@ fundTokens directory socket = do
                     , Witness.AnyScriptWitnessSimple (Era.SScript policyScript)
                     )
         tokens = Api.valueFromList [(Api.AssetId policyId assetName, Api.Quantity 7)]
-        fee = 1_000_000
         -- Price the exact output encoding with the node's protocol parameters.
-        -- This fixture supplies the resulting amount explicitly to the API;
-        -- it does not exercise automatic transaction balancing.
+        -- Supply the deposit explicitly, leaving fee/change to the balancer.
         perOutputDeposit =
             Dijkstra.requiredUTxODeposit pparams $
                 mkSized
@@ -101,9 +103,6 @@ fundTokens directory socket = do
                     (Api.toShelleyTxOut era tokenOutput)
         deposit = perOutputDeposit <> perOutputDeposit
         inputCoin = Api.selectLovelace inputValue
-        -- Explicitly pay the store deposit; returning it as change would hide
-        -- missing ledger accounting. Each example gets a separate token input.
-        changeCoin = inputCoin - fee - deposit
         tokenOutput :: Api.TxOut Api.CtxUTxO Api.DijkstraEra
         tokenOutput =
             Api.TxOut
@@ -111,24 +110,35 @@ fundTokens directory socket = do
                 (Api.TxOutValueStoreBacked (Core.ApplicationAssets (Api.toMaryValue tokens)))
                 Api.TxOutDatumNone
                 Api.ReferenceScriptNone
-        changeOutput =
-            Api.TxOut
-                destination
-                (Api.lovelaceToTxOutValue era changeCoin)
-                Api.TxOutDatumNone
-                Api.ReferenceScriptNone
-        outputs = [tokenOutput, tokenOutput, changeOutput]
     positiveDeposit <- maybe (fail "Invalid positive store deposit") pure (mkStrictlyPositiveCoin deposit)
-    unsigned <-
-        either (fail . show) pure $
-            Exp.makeUnsignedTx Era.DijkstraEra $
-                Exp.defaultTxBodyContent
-                    { Exp.txNetUTxODepositChange = TopTx.DeclaresNetUTxODepositAllocation positiveDeposit
-                    }
-                    & Exp.setTxIns [(input, Exp.AnyKeyWitnessPlaceholder)]
-                    & Exp.setTxOuts (map (Exp.TxOut . Api.toShelleyTxOut era) outputs)
-                    & Exp.setTxMintValue mint
-                    & Exp.setTxFee fee
+    let content =
+            Exp.defaultTxBodyContent
+                { Exp.txNetUTxODepositChange = TopTx.DeclaresNetUTxODepositAllocation positiveDeposit
+                }
+                & Exp.setTxIns [(input, Exp.AnyKeyWitnessPlaceholder)]
+                & Exp.setTxOuts (map (Exp.TxOut . Api.toShelleyTxOut era) [tokenOutput, tokenOutput])
+                & Exp.setTxMintValue mint
+    putStrLn "RUN node assertions: automatically balance direct store-backed outputs with an explicit deposit"
+    (unsigned@(Exp.UnsignedTx balanced), _) <-
+        AutoBalance.balance connection pparams (Api.UTxO funded) content destination
+    let body = balanced ^. Core.bodyTxL
+        fee = body ^. Core.feeTxBodyL
+        outputs = map (Api.fromShelleyTxOut era) (toList (body ^. Core.outputsTxBodyL))
+    unless
+        ( body ^. Core.inputsTxBodyL == Set.singleton (Api.toShelleyTxIn input)
+            && body ^. Dijkstra.netUTxODepositChangeTxBodyL == TopTx.DeclaresNetUTxODepositAllocation positiveDeposit
+            && null (body ^. Dijkstra.subTransactionsTxBodyL)
+        )
+        $ fail "Automatic balancing must preserve the funding input and deposit without adding children"
+    changeOutput <- case outputs of
+        [first, second, change] | first == tokenOutput && second == tokenOutput -> pure change
+        _ -> fail "Automatic balancing must preserve both token outputs and add exactly one change output"
+    -- Verify the returned change independently, including the explicit deposit.
+    let changeCoin = inputCoin - fee - deposit
+        expectedChange =
+            Api.TxOut destination (Api.lovelaceToTxOutValue era changeCoin) Api.TxOutDatumNone Api.ReferenceScriptNone
+    unless (fee > 0 && changeCoin > 0 && changeOutput == expectedChange) $
+        fail "Automatically balanced funding must pay the fee and deposit and return the remaining ADA"
     let witness = Exp.makeKeyWitness Era.DijkstraEra unsigned (Api.WitnessPaymentKey payment)
         Exp.SignedTx signed = Exp.signTx Era.DijkstraEra [] [witness] unsigned
         transaction = Api.ShelleyTx era signed
@@ -149,6 +159,7 @@ fundTokens directory socket = do
             , "tokenOutputLovelace" .= (0 :: Int)
             , "tokenOwnerAddress" .= tokenOwnerAddressText
             , "inputLovelace" .= inputCoin
+            , "automaticFeeAndChangeVerified" .= True
             , "feeLovelace" .= fee
             , "storeDepositLovelace" .= deposit
             , "perOutputDepositLovelace" .= perOutputDeposit
