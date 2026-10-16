@@ -18,7 +18,8 @@ aligned upstream stack. The unchanged `node-nested-parent` check passed
 (`run-y3u_dr9h`): mempool acceptance, block inclusion, exact UTxO, deposit
 replacement, and total ADA conservation. All six local transaction checks also
 pass. The upstream child-input loading fix is now in the ledger pin; no local
-ledger patch is applied. Live sibling-funded submission remains a later step.
+ledger patch is applied. Live sibling-funded submission also passes
+(`run-o05gsqpp`), with two children supplying tokens and deposit ADA separately.
 
 ## Dependency baseline: green before and after minUTxO
 
@@ -1147,6 +1148,68 @@ Logs and non-secret inclusion evidence are retained under
 `279943133`, and the parent records that commit alongside the aligned ledger,
 node, and dependency pins. Nothing has been pushed.
 
+## Submit the sibling-funded example
+
+```sh
+./scripts/check-minutxo node-nested-sibling
+```
+
+[NestedSibling.hs](checks/node/NestedSibling.hs) submits two separately signed
+children in one parent transaction. The token child spends seven tokens and
+creates two store-backed outputs containing three and four tokens, with zero
+ADA in its input and outputs. It explicitly requests its additional capacity
+deposit from the parent. The ADA sibling spends an ordinary input worth exactly
+that additional deposit, creates no output, and has no deposit-store operation
+of its own. The parent records the allocation once; its own input pays only
+the fee and returns all remaining ADA as change.
+
+The check first runs the existing token-funding prerequisite, including Store
+retention across an epoch. It then submits an ordinary preparation transaction
+that splits the funding change into distinct sibling and parent ADA inputs.
+Preparation must be included with the exact UTxO, an unchanged Store, and
+conserved total ADA before nested submission starts. The deposit is calculated
+from the actual token outputs and the node's protocol parameters. Each of the
+preparation and nested transactions uses an explicit 1 ADA fixture fee.
+
+The nested check requires mempool acceptance and block inclusion, consumption
+of all three inputs, the exact token outputs and parent change, retention of
+the unused token input, replacement of the spent token's allocation with two
+new allocations, and unchanged total ADA across all pots. Evidence is saved as
+`sibling-funding-*.json` and `nested-sibling-*.json` in the printed private node
+directory, alongside both signed CBOR transactions. Preparation rejection and
+nested rejection are reported separately.
+
+The two live examples have separate modules and assembly functions.
+[NestedCommon.hs](checks/node/NestedCommon.hs) holds their unchanged token-child
+construction/signing and inclusion-query helpers. As with the parent-funded
+fixture, one payment key owns all inputs. This checks the funding arrangement;
+different owners coordinating, automatic balancing, and Plutus spending remain
+separate capabilities.
+
+**Recorded result, 16 October 2026: GREEN on the first run**, using
+`./scripts/check-minutxo node-nested-sibling --offline` (`run-o05gsqpp`).
+The existing implementation already supports this capability; no artificial
+red or API, ledger, consensus, or node patch was introduced. The included
+transaction is
+`fe811db1284d315fffb735729f5e7019708de6cf9fae877351f6a3a3f72e1509`.
+
+- Both children were embedded in the signed parent and all three inputs were
+  consumed. The token child spent zero ADA and produced the three-token and
+  four-token outputs with zero ADA.
+- The ADA sibling supplied 1,133,530 lovelace for the net deposit. The parent's
+  own net spend was exactly the 1,000,000-lovelace fee, with change of
+  899,993,599,410 lovelace.
+- The exact UTxO and allocation map matched. The Store balance increased from
+  2,267,060 to 3,400,590 lovelace, and total ADA remained 1,000,000,400,000
+  lovelace.
+
+Non-secret submission and inclusion evidence, signed CBOR, and node logs are
+retained alongside the check log under
+`.workspace/minutxo-incremental/checks/run-o05gsqpp/`. The node stopped after
+the check. The existing `node-nested-parent --offline` regression also passed
+(`run-i_ysch6h`) after extracting the shared helpers. Fourmolu, Python syntax,
+and whitespace checks passed.
+
 ## Working one step at a time
 
 For each capability:
@@ -1167,7 +1230,8 @@ and signing checks were green. They remained green on `0675bed39` after the
 declaration migration, while parent-funded nested submission was red at child
 input loading. On `e5da0be24` with the aligned stack, those local checks and the
 live parent-funded nested submission are green, including token funding, Store
-retention across an epoch, and total ADA conservation.
+retention across an epoch, and total ADA conservation. The sibling-funded live
+submission now passes on this same stack as well.
 Retain the existing checks as the sequence advances. Fixing one compiler error
 and encountering another is still RED; it is not a passing build. A check that
 already passes establishes a baseline; do not manufacture a failure. Each new
@@ -1198,9 +1262,9 @@ The intended progression is:
    (complete: node build, startup, and ordinary transfer are green). Fund real
    token-only inputs with `node-token-funding` (complete: inclusion, exact Store
    allocations, epoch retention and total ADA are green). Parent-funded nested
-   submission is now green with Nicolas's rebased ledger and the aligned stack.
-   Add sibling-funded submission next, using explicitly calculated deposits and
-   fixture fees.
+   submission and sibling-funded submission are both green with Nicolas's
+   rebased ledger and the aligned stack, using explicitly calculated deposits
+   and fixture fees.
 10. Add automatic balancing, change, and collateral checks as separate
     capabilities. Exercise CLI, Plutus, wallet, and balancer paths with their
     own reproducers.

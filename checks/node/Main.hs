@@ -11,6 +11,7 @@ import Data.Aeson (encode, object, (.=))
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Genesis
 import qualified NestedParent
+import qualified NestedSibling
 import qualified Submission
 import System.Environment (getArgs)
 import System.Exit (die)
@@ -25,7 +26,8 @@ main = do
         ["transfer", directory, socket] -> Submission.transfer directory socket
         ["fund-tokens", directory, socket] -> TokenFunding.fundTokens directory socket
         ["nested-parent", directory, socket] -> NestedParent.submitParentFunded directory socket
-        _ -> die "Usage: check-node prepare DIRECTORY | probe SOCKET | transfer DIRECTORY SOCKET | fund-tokens DIRECTORY SOCKET | nested-parent DIRECTORY SOCKET"
+        ["nested-sibling", directory, socket] -> NestedSibling.submitSiblingFunded directory socket
+        _ -> die "Usage: check-node prepare DIRECTORY | probe SOCKET | transfer DIRECTORY SOCKET | fund-tokens DIRECTORY SOCKET | nested-parent DIRECTORY SOCKET | nested-sibling DIRECTORY SOCKET"
 
 probe :: FilePath -> IO ()
 probe socket = do

@@ -30,6 +30,8 @@ def main():
                             help="After startup, mint and fund two token-only store-backed inputs")
     submission.add_argument("--submit-nested-parent", action="store_true",
                             help="Fund token inputs, then submit a child whose extra deposit is paid by its parent")
+    submission.add_argument("--submit-nested-sibling", action="store_true",
+                            help="Fund token inputs, then submit a token child whose extra deposit is paid by an ADA sibling")
     args = parser.parse_args()
     options = ["--project-file=cabal.project.minutxo-node",
                "--builddir=.workspace/minutxo-incremental/build"]
@@ -84,12 +86,15 @@ def main():
                             if args.submit_ada:
                                 subprocess.run([check, "transfer", str(directory), str(socket)],
                                                cwd=ROOT, check=True, timeout=150)
-                            if args.fund_tokens or args.submit_nested_parent:
+                            if args.fund_tokens or args.submit_nested_parent or args.submit_nested_sibling:
                                 subprocess.run([check, "fund-tokens", str(directory), str(socket)],
                                                cwd=ROOT, check=True, timeout=150)
                             if args.submit_nested_parent:
                                 subprocess.run([check, "nested-parent", str(directory), str(socket)],
                                                cwd=ROOT, check=True, timeout=150)
+                            if args.submit_nested_sibling:
+                                subprocess.run([check, "nested-sibling", str(directory), str(socket)],
+                                               cwd=ROOT, check=True, timeout=270)
                             return
                 time.sleep(1)
             raise RuntimeError(f"Dijkstra blocks did not advance within 180 seconds; see {directory / 'node.log'}")
