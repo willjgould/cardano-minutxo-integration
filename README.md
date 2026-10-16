@@ -13,10 +13,11 @@ components retain their original pins and have not been tested in this step.
 The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
-**Current checkpoint: RED — store-backed UTxO JSON round-trip.** Run
-`./scripts/check-minutxo utxo-json` (`run-y20syg08`). Compilation and the ordinary
-UTxO JSON control pass; encoding the mixed UTxO fails with the API's explicit
-unsupported-store-backed-JSON error. This is a local read check, using
+**Current checkpoint: GREEN — store-backed UTxO JSON round-trip.** The unchanged
+`./scripts/check-minutxo utxo-json` passed (`run-ykon66uw`), preserving ordinary
+and store-backed output kinds and assets. Ordinary JSON keeps its `value`
+field; store-backed outputs use `applicationAssets`. The existing `read-back`
+regression also passed (`run-35985knr`). This is a local read check, using
 synthetic UTxOs without starting a node.
 
 **Previous checkpoint: GREEN — automatic fee/change for direct store-backed
@@ -427,14 +428,35 @@ toJSON TxOutValue: store-backed output JSON is not supported
 ```
 
 The mixed UTxO was not successfully encoded or decoded; its equality assertion
-did not run. The API implementation is unchanged. Green must pass the same
-check through public JSON encoding and decoding, preserving the store-backed
+did not run. The API implementation was unchanged at this red checkpoint.
+Green must pass the same check through public JSON encoding and decoding, preserving the store-backed
 kind and application assets. This step does not query a live node, encode the
 deposit store, or exercise CLI, wallet or indexer readers. The log and tested
 source hashes are retained under `.workspace/minutxo-incremental/checks/run-y20syg08/`.
 
 The existing `./scripts/check-minutxo read-back` regression passed
 (`run-dvouk859`). Fourmolu, runner syntax and whitespace checks passed.
+
+**Recorded result, 16 October 2026: GREEN** (`run-ykon66uw`, exit 0). The same
+check now encodes and decodes both UTxOs and passes both full-equality
+assertions. The check, runner and Cabal manifest are unchanged from the red
+commit `0b51760`.
+
+The API encodes store-backed outputs with a top-level `applicationAssets`
+field, following the ledger's discriminator and retaining the API's asset-map
+format. Ordinary outputs keep their existing `value` field. Both transaction
+and UTxO output decoders preserve the output kind; standalone store-backed
+values use an `applicationAssets` wrapper. Decoding reuses the existing
+quantity validation and rejects ambiguous value fields and store-backed
+representations before Dijkstra.
+
+The existing `read-back` regression passed (`run-35985knr`). Supplemental local
+checks passed for both output contexts, standalone values, the unchanged
+ordinary JSON schema, and rejection of ambiguous, nested and pre-Dijkstra
+representations and negative, fractional or overflowing quantities. Evidence,
+the API diff, and source hashes are saved under
+`.workspace/minutxo-incremental/checks/run-ykon66uw/`. These results cover local
+JSON conversion; they do not add live queries or deposit-store JSON support.
 
 ## Nested token-only output with separate deposit funding
 
