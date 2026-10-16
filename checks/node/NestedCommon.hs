@@ -1,12 +1,16 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE TypeFamilies #-}
 
-module NestedCommon (awaitInclusion, signTokenContribution, splitTokenOutput) where
+module NestedCommon (awaitInclusion, signTokenContribution, splitTokenOutput, verifyDistinctOwners, verifyOwnerWitness) where
 
 import qualified Cardano.Api as Api
 import qualified Cardano.Api.Experimental.Tx as Exp
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Dijkstra.UTxODeposit.SubTx as SubTx
+import qualified Cardano.Ledger.Hashes as Hashes
+import qualified Cardano.Ledger.Keys as Keys
+import Cardano.Ledger.State (verifyWitVKey)
 import qualified Cardano.Ledger.State as State
 import Cardano.Ledger.StrictlyPositiveCoin (StrictlyPositiveCoin)
 
@@ -16,6 +20,35 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
 import qualified TokenFunding as Funding
+
+verifyDistinctOwners :: [Api.SigningKey Api.PaymentKey] -> IO ()
+verifyDistinctOwners owners =
+    unless (Set.size (Set.fromList (map (Api.verificationKeyHash . Api.getVerificationKey) owners)) == length owners) $
+        fail "Each participant must have a distinct payment key"
+
+-- Check the actual body's input owner and its sole witness, at either level.
+-- A valid signature alone would not establish ownership of the live input.
+verifyOwnerWitness ::
+    Api.SigningKey Api.PaymentKey ->
+    Map.Map Api.TxIn (Api.TxOut Api.CtxUTxO Api.DijkstraEra) ->
+    Core.Tx level (Api.ShelleyLedgerEra Api.DijkstraEra) ->
+    IO ()
+verifyOwnerWitness owner utxo transaction = do
+    let expectedHash@(Api.PaymentKeyHash keyHash) = Api.verificationKeyHash (Api.getVerificationKey owner)
+        body = transaction ^. Core.bodyTxL
+        witnesses = transaction ^. Core.witsTxL . Core.addrTxWitsL
+        bodyHash = Hashes.extractHash (Hashes.hashAnnotated body)
+    () <- case Set.toList (body ^. Core.inputsTxBodyL) of
+        [input] -> case Map.lookup (Api.fromShelleyTxIn input) utxo of
+            Just (Api.TxOut (Api.AddressInEra (Api.ShelleyAddressInEra _) address) _ _ _) ->
+                unless (Api.shelleyPayAddrToPaymentKeyHash address == Just expectedHash) $
+                    fail "Transaction input is not owned by its intended signer"
+            _ -> fail "Expected a live input at a Shelley payment address"
+        _ -> fail "Expected one input owned by this participant"
+    unless (Set.size witnesses == 1 && Set.map Keys.witVKeyHash witnesses == Set.singleton (Keys.asWitness keyHash)) $
+        fail "Transaction must carry only its own owner's key witness"
+    unless (all (verifyWitVKey bodyHash) witnesses) $
+        fail "Owner signature does not verify against its own transaction body"
 
 -- Split seven tokens into three and four; neither output contains ADA.
 splitTokenOutput :: Api.TxOut Api.CtxUTxO Api.DijkstraEra -> IO [Api.TxOut Api.CtxUTxO Api.DijkstraEra]

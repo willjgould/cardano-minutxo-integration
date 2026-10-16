@@ -26,8 +26,9 @@ import Data.Function ((&))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import qualified Data.Text.IO as Text
 import Lens.Micro ((^.))
-import NestedCommon (awaitInclusion, signTokenContribution, splitTokenOutput)
+import NestedCommon (awaitInclusion, signTokenContribution, splitTokenOutput, verifyDistinctOwners, verifyOwnerWitness)
 import Submission (writeEvidence)
 import System.FilePath ((</>))
 import System.IO (BufferMode (LineBuffering), hSetBuffering, stdout)
@@ -36,13 +37,20 @@ import qualified TokenFunding as Funding
 
 -- Two signed children supply tokens and deposit ADA separately. The parent's
 -- own input pays only the fee; it records the net deposit exactly once.
--- All inputs use the fixture's payment key, as in the parent-funded check.
+-- Token owner, ADA sibling, and parent each sign only their own body.
 submitSiblingFunded :: FilePath -> FilePath -> IO ()
 submitSiblingFunded directory socket = do
     hSetBuffering stdout LineBuffering
     payment <-
         Api.readFileTextEnvelope (Api.File (directory </> "payment.skey"))
             >>= either (fail . show) pure
+    tokenOwner <-
+        Api.readFileTextEnvelope (Api.File (directory </> "token-owner.skey"))
+            >>= either (fail . show) pure
+    siblingOwner <-
+        Api.readFileTextEnvelope (Api.File (directory </> "sibling-owner.skey"))
+            >>= either (fail . show) pure
+    verifyDistinctOwners [payment, tokenOwner, siblingOwner]
     let connection =
             Api.LocalNodeConnectInfo
                 { Api.localConsensusModeParams = Api.CardanoModeParams (Api.EpochSlots 50)
@@ -92,8 +100,8 @@ submitSiblingFunded directory socket = do
     unless (changeCoin > 0) $ fail "Parent input does not cover the fixture fee and change"
 
     putStrLn "RUN node assertions: submit token and ADA siblings with the parent paying only the fee"
-    tokenContribution <- signTokenContribution payment tokenInput tokenOutputs positiveDeposit
-    adaContribution <- signAdaContribution payment siblingInput
+    tokenContribution <- signTokenContribution tokenOwner tokenInput tokenOutputs positiveDeposit
+    adaContribution <- signAdaContribution siblingOwner siblingInput
     transaction <- buildParent payment parentInput changeOutput positiveDeposit fee tokenContribution adaContribution
 
     let Exp.SignedSubTx tokenChild = tokenContribution
@@ -117,6 +125,10 @@ submitSiblingFunded directory socket = do
             , "tokenChildTxId" .= Api.serialiseToRawBytesHexText tokenId
             , "adaChildTxId" .= Api.serialiseToRawBytesHexText adaId
             , "childCount" .= (2 :: Int)
+            , "parentOwnerKeyHash" .= Api.serialiseToRawBytesHexText (Api.verificationKeyHash (Api.getVerificationKey payment))
+            , "tokenOwnerKeyHash" .= Api.serialiseToRawBytesHexText (Api.verificationKeyHash (Api.getVerificationKey tokenOwner))
+            , "siblingOwnerKeyHash" .= Api.serialiseToRawBytesHexText (Api.verificationKeyHash (Api.getVerificationKey siblingOwner))
+            , "inputOwnershipAndWitnessesVerified" .= True
             , "tokenInput" .= show tokenInput
             , "siblingInput" .= show siblingInput
             , "parentInput" .= show parentInput
@@ -136,11 +148,14 @@ submitSiblingFunded directory socket = do
     -- to the parent cannot turn this into another parent-funded example.
     case transaction of
         Api.ShelleyTx _ signed -> do
+            verifyOwnerWitness payment original signed
             let body = signed ^. Core.bodyTxL
             unless (body ^. Core.inputsTxBodyL == Set.singleton (Api.toShelleyTxIn parentInput)) $
                 fail "Parent must spend only its own fee-paying input"
             unless (toList (body ^. Dijkstra.subTransactionsTxBodyL) == [tokenChild, adaChild]) $
                 fail "Parent must contain the separately signed token and ADA siblings"
+            verifyOwnerWitness tokenOwner original tokenChild
+            verifyOwnerWitness siblingOwner original adaChild
             unless (toList (body ^. Core.outputsTxBodyL) == [Api.toShelleyTxOut era changeOutput]) $
                 fail "Parent must return all its ADA except the fee"
     BS.writeFile (directory </> "nested-sibling.cbor") (Api.serialiseToCBOR transaction)
@@ -183,11 +198,15 @@ prepareAdaInputs ::
     IO (Funding.LiveState, Api.TxIn, Api.TxIn)
 prepareAdaInputs directory connection payment before input (Api.TxOut address value _ _) deposit = do
     putStrLn "RUN prerequisite: create separate sibling-deposit and parent-fee inputs"
+    siblingAddressText <- Text.strip <$> Text.readFile (directory </> "sibling-owner-address.txt")
+    siblingAddress <-
+        maybe (fail "Invalid ADA sibling address") pure $
+            Api.deserialiseAddress (Api.AsAddressInEra Api.AsDijkstraEra) siblingAddressText
     let era = Api.ShelleyBasedEraDijkstra
         inputValue = Api.txOutValueToValue value
         inputCoin = Api.selectLovelace inputValue
         fee = 1_000_000
-        outputs = [adaOutput address deposit, adaOutput address (inputCoin - deposit - fee)]
+        outputs = [adaOutput siblingAddress deposit, adaOutput address (inputCoin - deposit - fee)]
         Api.UTxO original = Api.fromLedgerUTxO era (before ^. State.utxoL)
     unless (inputValue == Api.lovelaceToValue inputCoin) $
         fail "ADA preparation input must contain only ADA"

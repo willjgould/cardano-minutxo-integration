@@ -24,12 +24,15 @@ import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import Lens.Micro ((.~))
 import System.FilePath ((</>))
 
--- Generate one private stake pool and one funded payment address. The caller
+-- Generate one private stake pool, one funded payment address and independent
+-- owners for the token child and ADA sibling. The caller
 -- supplies a fresh, private directory and runs this executable from the root
 -- checkout, so the templates come from the declared node submodule.
 prepare :: FilePath -> IO ()
 prepare directory = do
     payment <- Api.generateSigningKey Api.AsPaymentKey
+    tokenOwner <- Api.generateSigningKey Api.AsPaymentKey
+    siblingOwner <- Api.generateSigningKey Api.AsPaymentKey
     stake <- Api.generateSigningKey Api.AsStakeKey
     pool <- Api.generateSigningKey Api.AsStakePoolKey
     kes <- Api.generateSigningKey Api.AsKesKey
@@ -42,11 +45,14 @@ prepare directory = do
         poolHash@(Api.StakePoolKeyHash ledgerPoolHash) = Api.verificationKeyHash poolKey
         stakeHash@(Api.StakeKeyHash ledgerStakeHash) = Api.verificationKeyHash (Api.getVerificationKey stake)
         stakeCredential = Api.StakeCredentialByKey stakeHash
-        address =
+        ownerAddress signingKey =
             Api.makeShelleyAddress
                 network
-                (Api.PaymentCredentialByKey (Api.verificationKeyHash (Api.getVerificationKey payment)))
+                (Api.PaymentCredentialByKey (Api.verificationKeyHash (Api.getVerificationKey signingKey)))
                 (Api.StakeAddressByValue stakeCredential)
+        address = ownerAddress payment
+        tokenOwnerAddress = ownerAddress tokenOwner
+        siblingOwnerAddress = ownerAddress siblingOwner
         poolParameters =
             Certificate.toShelleyPoolParams $
                 Certificate.StakePoolParameters
@@ -95,12 +101,16 @@ prepare directory = do
                 (Certificate.KESPeriod 0)
                 (Certificate.OperationalCertificateIssueCounter 0 poolKey)
     writeEnvelope "payment.skey" payment
+    writeEnvelope "token-owner.skey" tokenOwner
+    writeEnvelope "sibling-owner.skey" siblingOwner
     writeEnvelope "stake.skey" stake
     writeEnvelope "pool.skey" pool
     writeEnvelope "node.kes.skey" kes
     writeEnvelope "node.vrf.skey" vrf
     writeEnvelope "node.opcert" certificate
     Text.writeFile (directory </> "address.txt") (Api.serialiseAddress address <> "\n")
+    Text.writeFile (directory </> "token-owner-address.txt") (Api.serialiseAddress tokenOwnerAddress <> "\n")
+    Text.writeFile (directory </> "sibling-owner-address.txt") (Api.serialiseAddress siblingOwnerAddress <> "\n")
     writeJSON directory "shelley-genesis.json" shelley
     writeJSON directory "alonzo-genesis.json" Api.alonzoGenesisDefaults
     writeJSON directory "conway-genesis.json" Api.conwayGenesisDefaults

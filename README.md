@@ -13,13 +13,19 @@ components retain their original pins and have not been tested in this step.
 The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
-**Current checkpoint: GREEN** on Nicolas's rebased ledger `e5da0be24` with the
-aligned upstream stack. The unchanged `node-nested-parent` check passed
-(`run-y3u_dr9h`): mempool acceptance, block inclusion, exact UTxO, deposit
-replacement, and total ADA conservation. All six local transaction checks also
-pass. The upstream child-input loading fix is now in the ledger pin; no local
-ledger patch is applied. Live sibling-funded submission also passes
-(`run-o05gsqpp`), with two children supplying tokens and deposit ADA separately.
+**Current checkpoint: RED — automatic parent fee/change balancing.** Run
+`./scripts/check-minutxo node-nested-parent`. The ordinary balancing control
+passes, then the nested request fails with the API's explicit unsupported
+error (`run-t_7qtmm2`). Nested submission and inclusion are not reached.
+
+**Previous checkpoint: GREEN** on Nicolas's rebased ledger `e5da0be24` with the
+aligned upstream stack. The existing live examples now use separate payment
+owners: two for `node-nested-parent` (`run-4x_o48y2`) and three for
+`node-nested-sibling` (`run-7swr908a`). Both passed input ownership and witness
+checks, mempool acceptance, block inclusion, exact UTxO, deposit replacement,
+and total ADA conservation. The six local transaction checks passed at the
+previous checkpoint. The upstream child-input loading fix is in the ledger
+pin; no local ledger patch is applied.
 
 ## Dependency baseline: green before and after minUTxO
 
@@ -979,9 +985,17 @@ three and four tokens. The other funded token output remains untouched.
 The child requests only the additional capacity deposit: the prices of its two
 new outputs minus the recorded allocation released by its consumed input.
 The parent spends the funding transaction's ordinary ADA change, declares that
-net deposit, pays a fixed 1 ADA fee, and returns the remaining ADA. The child
-is signed before it is embedded in the signed parent. Both use the fixture's
-payment key; different owners collaborating remain a separate scenario.
+net deposit, and asks `makeTransactionBodyAutoBalance` to calculate its fee and
+change. Deposit pricing remains explicit. The child is signed by the token
+owner before it is embedded in the parent, which is
+signed by a different payment key. The check verifies each input's ownership
+and requires exactly that owner's valid witness on its own transaction body;
+balancing must preserve the signed child and the deposit declaration.
+
+First, an ordinary 10 ADA payment exercises the same balancer using a live
+ADA input. This construction-only control verifies the computed fee, change,
+and ADA conservation, saving `ordinary-autobalance.json`. It is not submitted,
+so the input remains available for the nested example.
 
 Success requires block inclusion, the exact whole UTxO (including consumption
 of both inputs), and the expected deposit store: remove the spent token input's
@@ -1180,13 +1194,14 @@ directory, alongside both signed CBOR transactions. Preparation rejection and
 nested rejection are reported separately.
 
 The two live examples have separate modules and assembly functions.
-[NestedCommon.hs](checks/node/NestedCommon.hs) holds their unchanged token-child
-construction/signing and inclusion-query helpers. As with the parent-funded
-fixture, one payment key owns all inputs. This checks the funding arrangement;
-different owners coordinating, automatic balancing, and Plutus spending remain
-separate capabilities.
+[NestedCommon.hs](checks/node/NestedCommon.hs) holds their token-child,
+ownership/witness, and inclusion-query helpers. The token owner, ADA sibling,
+and parent use three distinct payment keys. Each signs only its own body, and
+the check verifies ownership of its live input and its sole valid witness.
+The harness holds all three keys; exchanging independently prepared children
+between participants, automatic balancing, and Plutus spending remain untested.
 
-**Recorded result, 16 October 2026: GREEN on the first run**, using
+**Initial single-owner result, 16 October 2026: GREEN on the first run**, using
 `./scripts/check-minutxo node-nested-sibling --offline` (`run-o05gsqpp`).
 The existing implementation already supports this capability; no artificial
 red or API, ledger, consensus, or node patch was introduced. The included
@@ -1209,6 +1224,42 @@ retained alongside the check log under
 the check. The existing `node-nested-parent --offline` regression also passed
 (`run-i_ysch6h`) after extracting the shared helpers. Fourmolu, Python syntax,
 and whitespace checks passed.
+
+**Separate-owner replacement, 16 October 2026: GREEN.** The same commands,
+`node-nested-parent --offline` and `node-nested-sibling --offline`, passed as
+`run-4x_o48y2` and `run-7swr908a`. Each live input matched its intended owner,
+and each body carried exactly that owner's valid witness. Both transactions
+were accepted and included, with the existing UTxO, deposit, and ADA assertions
+passing. Non-secret evidence is retained under those run directories. No
+implementation fix was needed. Earlier attempts stopped before assertions
+because of Cabal's offline-mode refusal during reconfiguration and a type
+annotation error in the new test helper; those were build failures, not
+transaction failures.
+
+### Automatic parent fee and change: red
+
+The existing `node-nested-parent` check now calls
+`makeTransactionBodyAutoBalance` instead of supplying a fixed fee and computed
+change. The selected inputs, explicit deposit calculation, signed token child,
+and inclusion/accounting assertions remain. The sibling example still uses
+explicit balancing.
+
+**Recorded result, 16 October 2026: RED** using
+`./scripts/check-minutxo node-nested-parent` (`run-t_7qtmm2`). Compilation, node
+startup, and token funding passed. The ordinary construction-only control
+passed with an automatically calculated 392-lovelace fee under the private
+node's parameters, positive change, and conserved ADA. The nested request then
+failed directly:
+
+```text
+Automatic balancing failed: Balancing sub-transactions or deposit-store operations is not supported.
+```
+
+The node stopped cleanly; no nested transaction was submitted. The control
+report and node evidence are retained with the run log. Green will require the
+same check to preserve the signed child/deposit declaration, return correct
+change, and pass node inclusion and accounting. No API or ledger fix is
+included in this red step.
 
 ## Working one step at a time
 

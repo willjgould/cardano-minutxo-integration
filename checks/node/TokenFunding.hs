@@ -39,7 +39,8 @@ import System.IO (BufferMode (LineBuffering), hSetBuffering, stdout)
 import System.Timeout (timeout)
 
 -- Before submitting the nested examples, create two real token-only inputs.
--- The genesis payment key owns the outputs and authorizes the native mint.
+-- The genesis payment key funds and authorizes the native mint; an independent
+-- token owner receives the outputs and will sign the token child.
 fundTokens :: FilePath -> FilePath -> IO ()
 fundTokens directory socket = do
     hSetBuffering stdout LineBuffering
@@ -52,6 +53,11 @@ fundTokens directory socket = do
         maybe (fail "Invalid genesis payment address") pure $
             Api.deserialiseAddress Api.AsAddressAny addressText
     destination <- either (fail . show) pure (Api.anyAddressInEra Api.DijkstraEra source)
+    tokenOwnerAddressText <- Text.strip <$> Text.readFile (directory </> "token-owner-address.txt")
+    tokenOwnerAddress <-
+        maybe (fail "Invalid token owner address") pure $
+            Api.deserialiseAddress Api.AsAddressAny tokenOwnerAddressText
+    tokenDestination <- either (fail . show) pure (Api.anyAddressInEra Api.DijkstraEra tokenOwnerAddress)
     let connection =
             Api.LocalNodeConnectInfo
                 { Api.localConsensusModeParams = Api.CardanoModeParams (Api.EpochSlots 50)
@@ -101,7 +107,7 @@ fundTokens directory socket = do
         tokenOutput :: Api.TxOut Api.CtxUTxO Api.DijkstraEra
         tokenOutput =
             Api.TxOut
-                destination
+                tokenDestination
                 (Api.TxOutValueStoreBacked (Core.ApplicationAssets (Api.toMaryValue tokens)))
                 Api.TxOutDatumNone
                 Api.ReferenceScriptNone
@@ -141,6 +147,7 @@ fundTokens directory socket = do
             , "policyId" .= Api.serialiseToRawBytesHexText policyId
             , "tokensPerOutput" .= (7 :: Int)
             , "tokenOutputLovelace" .= (0 :: Int)
+            , "tokenOwnerAddress" .= tokenOwnerAddressText
             , "inputLovelace" .= inputCoin
             , "feeLovelace" .= fee
             , "storeDepositLovelace" .= deposit
