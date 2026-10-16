@@ -13,11 +13,12 @@ components retain their original pins and have not been tested in this step.
 The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
-**Current checkpoint: RED — automatic fee/change for direct store-backed
-outputs.** `./scripts/check-minutxo node-token-funding` (`run-z4hvkbcm`) compiled,
-started the node, and failed at the balancer's explicit unsupported-output
-error. No transaction was submitted. Both nested commands use this funding
-prerequisite and will stop here until it is green.
+**Current checkpoint: GREEN — automatic fee/change for direct store-backed
+outputs.** The unchanged `./scripts/check-minutxo node-token-funding` passed
+(`run-7djmx9ww`), including node acceptance, inclusion, exact deposits, epoch
+retention and total ADA conservation. The API now applies minimum ADA checks
+only to implicit-deposit outputs. Both nested regressions also passed
+(`run-vz9bb5wf` and `run-hfxirq3_`). Deposit pricing remains explicit.
 
 **Previous checkpoint: GREEN — automatic fee/change balancing for both nested
 examples.** `./scripts/check-minutxo node-nested-parent` (`run-48lzg7tu`) and
@@ -1339,6 +1340,33 @@ this funding prerequisite and will stop here while this step is red. Green
 must pass the same check and its retained assertions. Deposit pricing remains
 explicit; no fallback to manual balancing is provided.
 
+**Green, 16 October 2026:** the same command and unchanged check passed as
+`run-7djmx9ww`. The API no longer rejects direct store-backed outputs in its
+UTxO-aware balancer. Its output minimum-ADA check now follows the ledger:
+implicit-deposit outputs retain their existing minimum, while store-backed
+outputs are covered by the separate deposit declaration. The ledger validates
+that declaration; fee and balance arithmetic are unchanged. Generated change
+remains an ordinary implicit-deposit output, and deposit pricing is explicit.
+
+The node accepted and included transaction
+`db69f82bc0057556604c2ff25dd630895d54d5864141b879a0f7498a7bae2fef`.
+The API calculated a 619-lovelace fee and 899,997,732,321 lovelace of change,
+after the explicit 2,267,060-lovelace deposit. Both seven-token outputs retained
+zero ADA. The original input was consumed, the exact outputs and allocation map
+matched, both deposits survived the next epoch, and total ADA remained
+1,000,000,400,000 lovelace. Evidence, the focused API patch and source hashes
+confirming the check is unchanged from red are retained under the run directory.
+
+Both unchanged nested regression commands also passed with automatic token
+funding: `./scripts/check-minutxo node-nested-parent` (`run-vz9bb5wf`) and
+`./scripts/check-minutxo node-nested-sibling` (`run-hfxirq3_`). The parent check's
+ordinary balancing control passed. Both nested transactions preserved their
+signed children and deposits, passed distinct-owner witness checks, were
+included, and matched the exact UTxO, allocation map and total ADA assertions.
+Their non-secret evidence and tested source hashes are retained with each run.
+Fourmolu and whitespace checks passed. No ledger or check-source changes were
+needed for this green step.
+
 ## Working one step at a time
 
 For each capability:
@@ -1392,11 +1420,11 @@ The intended progression is:
    token-only inputs with `node-token-funding` (complete: inclusion, exact Store
    allocations, epoch retention and total ADA are green). Parent-funded nested
    submission and sibling-funded submission are both green with Nicolas's
-   rebased ledger and the aligned stack, using explicitly calculated deposits
-   and fixture fees.
-10. Add automatic balancing, change, and collateral checks as separate
-    capabilities. Exercise CLI, Plutus, wallet, and balancer paths with their
-    own reproducers.
+   rebased ledger and the aligned stack.
+10. Automatic fee/change balancing is green for direct store-backed outputs
+    and both nested examples, with explicit deposit pricing. Add deposit
+    calculation and collateral checks as separate capabilities. Exercise CLI,
+    Plutus, wallet, and balancer paths with their own reproducers.
 
 Later items are future work, not claims of implemented support. Keep missing
 support as a failure; do not add fallback behavior to make a reproducer run.
