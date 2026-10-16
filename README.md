@@ -13,14 +13,20 @@ components retain their original pins and have not been tested in this step.
 The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
-**Current checkpoint: GREEN — automatic fee/change for direct store-backed
+**Current checkpoint: RED — store-backed UTxO JSON round-trip.** Run
+`./scripts/check-minutxo utxo-json` (`run-y20syg08`). Compilation and the ordinary
+UTxO JSON control pass; encoding the mixed UTxO fails with the API's explicit
+unsupported-store-backed-JSON error. This is a local read check, using
+synthetic UTxOs without starting a node.
+
+**Previous checkpoint: GREEN — automatic fee/change for direct store-backed
 outputs.** The unchanged `./scripts/check-minutxo node-token-funding` passed
 (`run-7djmx9ww`), including node acceptance, inclusion, exact deposits, epoch
 retention and total ADA conservation. The API now applies minimum ADA checks
 only to implicit-deposit outputs. Both nested regressions also passed
 (`run-vz9bb5wf` and `run-hfxirq3_`). Deposit pricing remains explicit.
 
-**Previous checkpoint: GREEN — automatic fee/change balancing for both nested
+**Earlier checkpoint: GREEN — automatic fee/change balancing for both nested
 examples.** `./scripts/check-minutxo node-nested-parent` (`run-48lzg7tu`) and
 `./scripts/check-minutxo node-nested-sibling` (`run-eufxdic_`) passed with the
 same API fix: automatic parent fee/change, preserved signed children and
@@ -61,6 +67,8 @@ the API library; `transaction` builds and runs the local unsigned-body check
 for ordinary implicit-deposit outputs. `store-backed` separately checks the
 API's ability to construct a store-backed output in an unsigned body.
 `read-back` checks that the constructed output can be read back through the API.
+`utxo-json` checks the public JSON round-trip for an ordinary UTxO and a mixed
+UTxO containing an ordinary output and a token-only store-backed output.
 `nested` requests a token-only child with deposit funding supplied either by
 the parent or by an ADA-only sibling. `serialisation` checks that both complete
 unsigned parent transactions survive a CBOR round-trip through the public API.
@@ -395,6 +403,38 @@ Fourmolu's formatting check passes for the single changed Haskell file. This
 establishes output-kind and application-assets preservation through body
 construction and read-back. Serialization, minimum ADA, balancing, and node
 acceptance still require separate checks.
+
+## UTxO JSON round-trip
+
+```sh
+./scripts/check-minutxo utxo-json
+```
+
+[UTxOJson.hs](checks/transaction/UTxOJson.hs) exercises the public `ToJSON` and
+`FromJSON` instances of `Api.UTxO Api.DijkstraEra` through `Aeson.encode` and
+`Aeson.eitherDecode`. The local fixture uses the same typed UTxO returned by
+node queries. It first checks an ordinary 3 ADA output as a control, then a
+mixed UTxO containing that output and a store-backed output with seven native
+tokens and zero ADA. Full equality requires preservation of both input
+references, addresses, output kinds and assets, plus the absent datum and
+reference script. No JSON schema is supplied by the test.
+
+**Recorded result, 16 October 2026: RED** (`run-y20syg08`, exit 1). Compilation
+and the ordinary UTxO control passed. Encoding the mixed UTxO failed directly:
+
+```text
+toJSON TxOutValue: store-backed output JSON is not supported
+```
+
+The mixed UTxO was not successfully encoded or decoded; its equality assertion
+did not run. The API implementation is unchanged. Green must pass the same
+check through public JSON encoding and decoding, preserving the store-backed
+kind and application assets. This step does not query a live node, encode the
+deposit store, or exercise CLI, wallet or indexer readers. The log and tested
+source hashes are retained under `.workspace/minutxo-incremental/checks/run-y20syg08/`.
+
+The existing `./scripts/check-minutxo read-back` regression passed
+(`run-dvouk859`). Fourmolu, runner syntax and whitespace checks passed.
 
 ## Nested token-only output with separate deposit funding
 
