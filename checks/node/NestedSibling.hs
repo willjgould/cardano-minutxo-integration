@@ -18,6 +18,7 @@ import qualified Cardano.Ledger.Dijkstra.UTxODeposit.TopTx as TopTx
 import qualified Cardano.Ledger.State as State
 import Cardano.Ledger.StrictlyPositiveCoin (StrictlyPositiveCoin, mkStrictlyPositiveCoin)
 
+import qualified AutoBalance
 import Control.Monad (unless)
 import Data.Aeson (object, (.=))
 import qualified Data.ByteString as BS
@@ -38,6 +39,7 @@ import qualified TokenFunding as Funding
 -- Two signed children supply tokens and deposit ADA separately. The parent's
 -- own input pays only the fee; it records the net deposit exactly once.
 -- Token owner, ADA sibling, and parent each sign only their own body.
+-- The API calculates the parent's fee/change from all three selected inputs.
 submitSiblingFunded :: FilePath -> FilePath -> IO ()
 submitSiblingFunded directory socket = do
     hSetBuffering stdout LineBuffering
@@ -81,7 +83,6 @@ submitSiblingFunded directory socket = do
                     (Api.toShelleyTxOut era output)
         allocations = map price tokenOutputs
         netDeposit = mconcat allocations - released
-        fee = 1_000_000
     positiveDeposit <-
         maybe (fail "The child split must require a positive additional deposit") pure $
             mkStrictlyPositiveCoin netDeposit
@@ -95,14 +96,22 @@ submitSiblingFunded directory socket = do
     siblingCoin <- adaInputCoin original siblingInput
     unless (siblingCoin == netDeposit) $
         fail "The ADA sibling input must fund exactly the child's additional deposit"
-    let changeCoin = parentCoin - fee
-        changeOutput = adaOutput address changeCoin
-    unless (changeCoin > 0) $ fail "Parent input does not cover the fixture fee and change"
-
-    putStrLn "RUN node assertions: submit token and ADA siblings with the parent paying only the fee"
+    putStrLn "RUN node assertions: automatically balance token and ADA siblings with the parent paying only the fee"
     tokenContribution <- signTokenContribution tokenOwner tokenInput tokenOutputs positiveDeposit
     adaContribution <- signAdaContribution siblingOwner siblingInput
-    transaction <- buildParent payment parentInput changeOutput positiveDeposit fee tokenContribution adaContribution
+    let selectedUTxO = Api.UTxO (Map.restrictKeys original (Set.fromList [parentInput, tokenInput, siblingInput]))
+    transaction <- buildParent connection pparams selectedUTxO payment parentInput address positiveDeposit tokenContribution adaContribution
+    (fee, changeOutput) <- case transaction of
+        Api.ShelleyTx _ signed ->
+            let body = signed ^. Core.bodyTxL
+             in case toList (body ^. Core.outputsTxBodyL) of
+                    [output] -> pure (body ^. Core.feeTxBodyL, Api.fromShelleyTxOut era output)
+                    _ -> fail "Automatic balancing must create exactly one parent change output"
+    -- Check the API's result independently: the sibling already covers the
+    -- net deposit, so the parent's own ADA must pay only the calculated fee.
+    let changeCoin = parentCoin - fee
+    unless (fee > 0 && changeCoin > 0 && changeOutput == adaOutput address changeCoin) $
+        fail "Automatically balanced parent must return all its ADA except the fee"
 
     let Exp.SignedSubTx tokenChild = tokenContribution
         Exp.SignedSubTx adaChild = adaContribution
@@ -129,6 +138,7 @@ submitSiblingFunded directory socket = do
             , "tokenOwnerKeyHash" .= Api.serialiseToRawBytesHexText (Api.verificationKeyHash (Api.getVerificationKey tokenOwner))
             , "siblingOwnerKeyHash" .= Api.serialiseToRawBytesHexText (Api.verificationKeyHash (Api.getVerificationKey siblingOwner))
             , "inputOwnershipAndWitnessesVerified" .= True
+            , "automaticFeeAndChangeVerified" .= True
             , "tokenInput" .= show tokenInput
             , "siblingInput" .= show siblingInput
             , "parentInput" .= show parentInput
@@ -152,12 +162,12 @@ submitSiblingFunded directory socket = do
             let body = signed ^. Core.bodyTxL
             unless (body ^. Core.inputsTxBodyL == Set.singleton (Api.toShelleyTxIn parentInput)) $
                 fail "Parent must spend only its own fee-paying input"
+            unless (body ^. Dijkstra.netUTxODepositChangeTxBodyL == TopTx.DeclaresNetUTxODepositAllocation positiveDeposit) $
+                fail "Automatic balancing must preserve the explicit parent deposit declaration"
             unless (toList (body ^. Dijkstra.subTransactionsTxBodyL) == [tokenChild, adaChild]) $
                 fail "Parent must contain the separately signed token and ADA siblings"
             verifyOwnerWitness tokenOwner original tokenChild
             verifyOwnerWitness siblingOwner original adaChild
-            unless (toList (body ^. Core.outputsTxBodyL) == [Api.toShelleyTxOut era changeOutput]) $
-                fail "Parent must return all its ADA except the fee"
     BS.writeFile (directory </> "nested-sibling.cbor") (Api.serialiseToCBOR transaction)
     result <- Api.submitTxToNodeLocal connection (Api.TxInMode era transaction)
     case result of
@@ -277,25 +287,24 @@ signAdaContribution payment input = do
 -- The parent declares the allocation once and pays only the fee from its own
 -- input. Both children are signed before being embedded in the signed parent.
 buildParent ::
+    Api.LocalNodeConnectInfo ->
+    Core.PParams (Api.ShelleyLedgerEra Api.DijkstraEra) ->
+    Api.UTxO Api.DijkstraEra ->
     Api.SigningKey Api.PaymentKey ->
     Api.TxIn ->
-    Api.TxOut Api.CtxUTxO Api.DijkstraEra ->
+    Api.AddressInEra Api.DijkstraEra ->
     StrictlyPositiveCoin ->
-    Coin ->
     Exp.SignedSubTx ->
     Exp.SignedSubTx ->
     IO (Api.Tx Api.DijkstraEra)
-buildParent payment input change deposit fee tokenChild adaChild = do
-    unsigned <-
-        either (fail . show) pure $
-            Exp.makeUnsignedTx Era.DijkstraEra $
-                Exp.defaultTxBodyContent
-                    { Exp.txNetUTxODepositChange = TopTx.DeclaresNetUTxODepositAllocation deposit
-                    }
-                    & Exp.setTxIns [(input, Exp.AnyKeyWitnessPlaceholder)]
-                    & Exp.setTxOuts [Exp.TxOut (Api.toShelleyTxOut Api.ShelleyBasedEraDijkstra change)]
-                    & Exp.setTxFee fee
-                    & Exp.setTxSignedSubTransactions [tokenChild, adaChild]
+buildParent connection pparams utxo payment input changeAddress deposit tokenChild adaChild = do
+    let content =
+            Exp.defaultTxBodyContent
+                { Exp.txNetUTxODepositChange = TopTx.DeclaresNetUTxODepositAllocation deposit
+                }
+                & Exp.setTxIns [(input, Exp.AnyKeyWitnessPlaceholder)]
+                & Exp.setTxSignedSubTransactions [tokenChild, adaChild]
+    (unsigned, _) <- AutoBalance.balance connection pparams utxo content changeAddress
     let witness = Exp.makeKeyWitness Era.DijkstraEra unsigned (Api.WitnessPaymentKey payment)
         Exp.SignedTx signed = Exp.signTx Era.DijkstraEra [] [witness] unsigned
     pure (Api.ShelleyTx Api.ShelleyBasedEraDijkstra signed)

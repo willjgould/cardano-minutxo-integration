@@ -13,10 +13,13 @@ components retain their original pins and have not been tested in this step.
 The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
-**Current checkpoint: RED — automatic parent fee/change balancing.** Run
-`./scripts/check-minutxo node-nested-parent`. The ordinary balancing control
-passes, then the nested request fails with the API's explicit unsupported
-error (`run-t_7qtmm2`). Nested submission and inclusion are not reached.
+**Current checkpoint: GREEN — automatic fee/change balancing for both nested
+examples.** `./scripts/check-minutxo node-nested-parent` (`run-48lzg7tu`) and
+`./scripts/check-minutxo node-nested-sibling` (`run-eufxdic_`) passed with the
+same API fix: automatic parent fee/change, preserved signed children and
+deposit declarations, node acceptance, inclusion, and exact accounting. The
+parent check also passed its ordinary balancing control. Deposit pricing
+remains explicit; this step supports signed key-only children.
 
 **Previous checkpoint: GREEN** on Nicolas's rebased ledger `e5da0be24` with the
 aligned upstream stack. The existing live examples now use separate payment
@@ -1182,8 +1185,12 @@ retention across an epoch. It then submits an ordinary preparation transaction
 that splits the funding change into distinct sibling and parent ADA inputs.
 Preparation must be included with the exact UTxO, an unchanged Store, and
 conserved total ADA before nested submission starts. The deposit is calculated
-from the actual token outputs and the node's protocol parameters. Each of the
-preparation and nested transactions uses an explicit 1 ADA fixture fee.
+from the actual token outputs and the node's protocol parameters. Preparation
+uses an explicit 1 ADA fixture fee. The nested transaction uses
+`makeTransactionBodyAutoBalance` with all three selected input UTxOs and both
+signed children to calculate the parent's fee and change. The check requires
+the parent to return all its own ADA except that fee, preserving both children
+and the explicit deposit declaration.
 
 The nested check requires mempool acceptance and block inclusion, consumption
 of all three inputs, the exact token outputs and parent change, retention of
@@ -1199,7 +1206,7 @@ ownership/witness, and inclusion-query helpers. The token owner, ADA sibling,
 and parent use three distinct payment keys. Each signs only its own body, and
 the check verifies ownership of its live input and its sole valid witness.
 The harness holds all three keys; exchanging independently prepared children
-between participants, automatic balancing, and Plutus spending remain untested.
+between participants and Plutus spending remain untested.
 
 **Initial single-owner result, 16 October 2026: GREEN on the first run**, using
 `./scripts/check-minutxo node-nested-sibling --offline` (`run-o05gsqpp`).
@@ -1236,13 +1243,13 @@ because of Cabal's offline-mode refusal during reconfiguration and a type
 annotation error in the new test helper; those were build failures, not
 transaction failures.
 
-### Automatic parent fee and change: red
+### Automatic parent fee and change
 
 The existing `node-nested-parent` check now calls
 `makeTransactionBodyAutoBalance` instead of supplying a fixed fee and computed
 change. The selected inputs, explicit deposit calculation, signed token child,
-and inclusion/accounting assertions remain. The sibling example still uses
-explicit balancing.
+and inclusion/accounting assertions remain. At this red checkpoint the sibling
+example still used explicit balancing.
 
 **Recorded result, 16 October 2026: RED** using
 `./scripts/check-minutxo node-nested-parent` (`run-t_7qtmm2`). Compilation, node
@@ -1260,6 +1267,42 @@ report and node evidence are retained with the run log. Green will require the
 same check to preserve the signed child/deposit declaration, return correct
 change, and pass node inclusion and accounting. No API or ledger fix is
 included in this red step.
+
+**Green, 16 October 2026:** the same command and unchanged check passed as
+`run-48lzg7tu`. The API's UTxO-aware balancer now permits signed key-only children
+with an explicit net deposit. The rebased ledger already accounts for child
+inputs/outputs and that deposit, while the serialized signed children already
+contribute to the fee. The fix replaces the blanket rejection with scoped
+checks; it introduces no new ledger arithmetic. Estimation without real UTxOs,
+nested script execution, and parent store-backed outputs remain unsupported.
+
+Under the private node's parameters, the API calculated a 706-lovelace fee and
+899,995,598,704 lovelace of parent change after the 1,133,530-lovelace net deposit.
+The separately signed child and deposit declaration were preserved. The node
+accepted and included transaction
+`d5a693e26e86bd751ff4a75ac0f8db16f425e2c6081889db79115eee0038423d`; both inputs
+were consumed, the whole UTxO and deposit allocation map matched, and total ADA
+remained 1,000,000,400,000 lovelace. The ordinary control also passed. Evidence,
+the API patch, and tested source hashes are retained under the run directory.
+Fourmolu and whitespace checks passed; no ledger or check-source changes were
+needed for green.
+
+**Sibling verification, 16 October 2026: GREEN.** The existing sibling check now
+uses the same automatic-balancing helper, supplying all three selected inputs
+and both independently signed children. `./scripts/check-minutxo node-nested-sibling`
+passed as `run-eufxdic_` with the same API patch; no further implementation fix
+was needed. The sibling supplied the full 1,133,530-lovelace net deposit. The
+API calculated an 859-lovelace fee and 899,994,598,551 lovelace of parent
+change; the parent's net spend was exactly that fee. The token child still
+spent and produced zero ADA. Both signed children and the deposit declaration
+were preserved, and all three distinct owners' input and witness checks passed.
+The node accepted and included transaction
+`ea67d54efec2329c439b98ea52b99a4538f05a24648f001ac6ce3cbccbe47dd7`.
+All three inputs were consumed, the exact UTxO and deposit map matched, and
+total ADA remained 1,000,000,400,000 lovelace. Non-secret evidence, patches,
+and tested source hashes are retained under the run directory. Preparation
+still uses an explicit fixture fee; nested fee/change are automatic, while
+deposit pricing remains explicit.
 
 ## Working one step at a time
 
