@@ -1,5 +1,5 @@
 import: cabal.project.minutxo-node
 
--- Live CLI reads use the same API, ledger and node as the submission checks.
+-- Live CLI reads and writes use the same API, ledger and node as the other checks.
 packages:
   cardano-cli/cardano-cli

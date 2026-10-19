@@ -32,6 +32,8 @@ def main():
                             help="After startup, mint and fund two token-only store-backed inputs")
     submission.add_argument("--query-cli-utxo", action="store_true",
                             help="Fund token inputs, then verify CLI JSON and text UTxO queries")
+    submission.add_argument("--submit-cli-transaction", action="store_true",
+                            help="Use the CLI to build, sign and submit a token-only output, then verify inclusion and backing")
     submission.add_argument("--auto-deposit", action="store_true",
                             help="Automatically price a top-level token-only output's deposit, then submit and verify it")
     submission.add_argument("--release-deposit", action="store_true",
@@ -41,12 +43,13 @@ def main():
     submission.add_argument("--submit-nested-sibling", action="store_true",
                             help="Fund token inputs, then submit a token child whose extra deposit is paid by an ADA sibling")
     args = parser.parse_args()
-    project = "cabal.project.minutxo-node-cli" if args.query_cli_utxo else "cabal.project.minutxo-node"
+    needs_cli = args.query_cli_utxo or args.submit_cli_transaction
+    project = "cabal.project.minutxo-node-cli" if needs_cli else "cabal.project.minutxo-node"
     options = [f"--project-file={project}",
                "--builddir=.workspace/minutxo-incremental/build"]
     if args.offline:
         options.append("--offline")
-    targets = [NODE, CHECK, CLI] if args.query_cli_utxo else [NODE, CHECK]
+    targets = [NODE, CHECK, CLI] if needs_cli else [NODE, CHECK]
     subprocess.run(["cabal", "build", *options, *targets], cwd=ROOT, check=True)
 
     def binary(target):
@@ -55,7 +58,7 @@ def main():
         ).strip()
 
     node, check = binary(NODE), binary(CHECK)
-    cli = binary(CLI) if args.query_cli_utxo else None
+    cli = binary(CLI) if needs_cli else None
     # A short, private path keeps the Unix socket within the platform limit.
     os.umask(0o077)
     directory = Path(tempfile.mkdtemp(prefix="minutxo-node-"))
@@ -100,6 +103,9 @@ def main():
                             if args.auto_deposit:
                                 subprocess.run([check, "auto-deposit", str(directory), str(socket)],
                                                cwd=ROOT, check=True, timeout=150)
+                            if args.submit_cli_transaction:
+                                subprocess.run([check, "cli-transaction", cli, str(directory), str(socket)],
+                                               cwd=ROOT, check=True, timeout=180)
                             if args.fund_tokens or args.query_cli_utxo or args.release_deposit or args.submit_nested_parent or args.submit_nested_sibling:
                                 subprocess.run([check, "fund-tokens", str(directory), str(socket)],
                                                cwd=ROOT, check=True, timeout=150)

@@ -14,7 +14,14 @@ Wallet and balancing components retain their original pins and remain untested.
 The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
-**Current checkpoint: GREEN — CLI store-backed output construction.**
+**Current checkpoint: GREEN — live CLI build, sign and submit.**
+`./scripts/check-minutxo node-cli-transaction` passed on its first run
+(`run-xa_8bbi8`). The CLI automatically calculated backing, fee and change,
+signed and submitted a seven-token, zero-ADA store-backed output. The private
+node included it; exact UTxO, deposit allocation and conserved total ADA were
+verified independently. No further CLI, API, ledger or node changes were needed.
+
+**Earlier checkpoint: GREEN — CLI store-backed output construction.**
 The unchanged `./scripts/check-minutxo cli-store-backed` now passes
 (`run-wppay04w`), after failing at the missing option in `run-n61ryq54`.
 The CLI's new `--tx-out-store-backed` option constructs and encodes an output
@@ -162,6 +169,9 @@ round-trip against the submitted token outputs.
 `node-cli-utxo` runs that same funding prerequisite, then queries both owners
 with the CLI and verifies exact JSON and text output for the store-backed
 tokens and ordinary ADA change.
+`node-cli-transaction` uses the CLI to build, sign and submit a token-only
+store-backed output from an ordinary ADA input, then independently verifies
+its inclusion, automatic backing, fee and change through node queries.
 `node-auto-deposit` separately creates one token-only output from the fresh
 chain's ordinary ADA input, asking the builder to calculate its backing without
 a caller-supplied deposit declaration.
@@ -718,6 +728,42 @@ patches and boundary-check evidence accompany the green run.
 The shared parser exposes the option on `build`, `build-raw` and
 `build-estimate`; this step verifies transaction behavior only for `build-raw`.
 It does not add a deposit declaration or establish node acceptance.
+
+## Live CLI transaction construction and submission
+
+```sh
+./scripts/check-minutxo node-cli-transaction
+```
+
+[CliTransaction.hs](checks/node/CliTransaction.hs) runs against a fresh private
+Dijkstra node using
+`cabal.project.minutxo-node-cli`. The CLI's `dijkstra transaction build`
+spends the ordinary genesis ADA input and mints seven `offer` tokens under a
+simple signature policy. It requests one token-only output with
+`--tx-out-store-backed` and supplies an ordinary `--change-address`, leaving
+the deposit, fee and change amount for the builder to calculate.
+
+The CLI then signs with the genesis payment key and submits to the private
+node. The Haskell check reads the CLI-produced transaction to verify its exact
+outputs, mint, selected input and deposit declaration, and compares the signed
+body with the unsigned body. Expected backing is priced independently using
+the node's protocol parameters. Node queries must show the input consumed,
+the token output and exact ADA change included, the correct deposit-store
+allocation and conserved total ADA. API calls provide the read-only oracle;
+they do not build, balance, sign or submit this transaction.
+
+Commands, stdout, stderr, transaction envelopes and verification evidence are
+retained in the printed private node directory; the runner saves the complete
+log and exit status under `.workspace/minutxo-incremental/checks/`.
+
+**Recorded result, 19 October 2026: GREEN on the first run**, exit 0
+(`run-xa_8bbi8`). Compilation, startup, CLI build/sign/submit and inclusion
+assertions all passed. The builder calculated a 1,133,530-lovelace deposit,
+a 516-lovelace fee and 899,998,865,954 lovelace of ordinary change. The token
+output retained exactly seven tokens and zero ADA. The complete UTxO and
+deposit store matched, and total ADA was unchanged. The node stopped cleanly.
+This adds verification of the existing implementation, without a new product
+fix. The run directory retains source revisions, hashes and CLI evidence.
 
 ## Nested token-only output with separate deposit funding
 
@@ -2005,8 +2051,9 @@ The intended progression is:
     and both nested examples, with explicit deposit pricing. Automatic backing
     for new direct outputs funded by implicit-deposit inputs is now green under
     `node-auto-deposit`. Automatic nested deposits and refunds remain separate.
-    Live CLI UTxO reads and spending a deposit release are green. Collateral,
-    CLI writing, Plutus, wallet, and balancer paths need their own reproducers.
+    Live CLI UTxO reads, basic CLI build/sign/submit with automatic backing,
+    and spending a deposit release are green. Further CLI workflows, live
+    collateral, Plutus, wallet, and balancer paths need their own reproducers.
 
 Later items are future work, not claims of implemented support. Keep missing
 support as a failure; do not add fallback behavior to make a reproducer run.
