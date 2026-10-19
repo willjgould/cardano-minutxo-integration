@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module AutoBalance (balance, checkOrdinary) where
+module AutoBalance (balance, balanceWithChangeOutput, checkOrdinary) where
 
 import qualified Cardano.Api as Api
 import qualified Cardano.Api.Experimental.Tx as Exp
@@ -31,7 +31,17 @@ balance ::
     Exp.TxBodyContent (Api.ShelleyLedgerEra Api.DijkstraEra) ->
     Api.AddressInEra Api.DijkstraEra ->
     IO (Exp.UnsignedTx (Api.ShelleyLedgerEra Api.DijkstraEra), Exp.TxBodyContent (Api.ShelleyLedgerEra Api.DijkstraEra))
-balance connection pparams utxo content address = do
+balance = balanceWithChangeOutput Exp.ImplicitDepositChange
+
+balanceWithChangeOutput ::
+    Exp.ChangeOutputKind ->
+    Api.LocalNodeConnectInfo ->
+    Core.PParams (Api.ShelleyLedgerEra Api.DijkstraEra) ->
+    Api.UTxO Api.DijkstraEra ->
+    Exp.TxBodyContent (Api.ShelleyLedgerEra Api.DijkstraEra) ->
+    Api.AddressInEra Api.DijkstraEra ->
+    IO (Exp.UnsignedTx (Api.ShelleyLedgerEra Api.DijkstraEra), Exp.TxBodyContent (Api.ShelleyLedgerEra Api.DijkstraEra))
+balanceWithChangeOutput changeKind connection pparams utxo content address = do
     systemStart <-
         runExceptT (Api.queryNodeLocalState connection Network.VolatileTip Api.QuerySystemStart)
             >>= either (fail . show) pure
@@ -39,7 +49,8 @@ balance connection pparams utxo content address = do
         runExceptT (Api.queryNodeLocalState connection Network.VolatileTip Api.QueryEraHistory)
             >>= either (fail . show) pure
     either (fail . ("Automatic balancing failed: " <>) . Api.displayError) pure $
-        Exp.makeTransactionBodyAutoBalance @Api.DijkstraEra
+        Exp.makeTransactionBodyAutoBalanceWithChangeOutput @Api.DijkstraEra
+            changeKind
             systemStart
             (Api.toLedgerEpochInfo history)
             pparams

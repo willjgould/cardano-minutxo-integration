@@ -14,7 +14,17 @@ Wallet and balancing components retain their original pins and remain untested.
 The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
-**Current checkpoint: GREEN — automatic backing for a top-level token-only output.**
+**Current checkpoint: GREEN — return a deposit release as store-backed change.**
+`./scripts/check-minutxo node-deposit-release` now replaces its implicit ADA
+change with store-backed change. The same updated check went red at the API's
+store-backed change rejection (`run-dheyj1s4`) and green after its focused fix
+(`run-kphc_vbi`). The node accepted and included both new store-backed outputs:
+14 tokens with zero ADA, and 154,583 lovelace of application ADA backed by a
+separate 978,370-lovelace deposit. The release paid the 577-lovelace fee; exact
+UTxO, both store allocations and total ADA were verified. This example retains
+positive ADA change and does not manufacture an empty output.
+
+**Earlier checkpoint: GREEN — automatic backing for a top-level token-only output.**
 The unchanged `./scripts/check-minutxo node-auto-deposit` passed
 (`run-6uj0lqcl`). The API calculated the 1,133,530-lovelace backing declaration,
 a 516-lovelace fee and exact ADA change. The node accepted and included the
@@ -22,7 +32,7 @@ transaction, with the exact UTxO, store allocation and total ADA verified.
 Automatic pricing covers new top-level outputs funded by implicit-deposit
 inputs; explicit declarations are preserved.
 
-**Previous checkpoint: RED — the builder did not calculate backing.**
+**Earlier checkpoint: RED — the builder did not calculate backing.**
 `./scripts/check-minutxo node-auto-deposit` compiled and reached its transaction
 assertions (`run-dmbei_uy`). The balancer returned no deposit declaration in
 either the unsigned body or returned body content, although the requested
@@ -1640,19 +1650,28 @@ Inputs:  7 tokens + 0 ADA       7 tokens + 0 ADA
          [recorded deposit]    [recorded deposit]
                        \     /
 Outputs:          14 tokens + 0 ADA        ADA change
-                  [one new deposit]       [ordinary output]
+                  [new store deposit]     [new store deposit]
 
-Net release = both recorded deposits - the new required deposit
+Net release = both recorded deposits - both new required deposits
 Net release = fee + ADA change
 ```
 
 Only the two token inputs are selected, and only their owner's key signs.
 There is no additional ADA input, mint, withdrawal, certificate, or child.
-The old deposits come from the live allocation map; the new deposit is priced
-from the exact output and current protocol parameters. The test explicitly
-declares the net release and points its settlement at output 1, the ADA change.
-The existing API calculates the fee and change, which must exactly consume the
-release and satisfy the ordinary change output's minimum ADA requirement.
+The old deposits come from the live allocation map. Both new deposits are
+priced from the outputs and current protocol parameters. For change, the
+fixture prices the expected encoded coin width before balancing, then requires
+that price to match the exact final output. The test explicitly declares the
+net release and points its settlement at output 1, the ADA change.
+
+The API's `makeTransactionBodyAutoBalanceWithChangeOutput StoreBackedChange`
+calculates the fee and application ADA change. Both must exactly consume the
+net release after reserving the two new deposits. The change has less ADA than
+an equivalent implicit output would require, but its backing is held separately
+in the store. It contains positive ADA; this example does not force an empty
+output. The default `makeTransactionBodyAutoBalance` still uses implicit change.
+Store-backed change currently requires an explicit declaration that includes
+its final backing; automatic change-deposit pricing is not part of this step.
 
 The check requires node acceptance and block inclusion, then compares the
 entire UTxO (including untouched funding), the exact deposit allocation map,
@@ -1665,7 +1684,12 @@ This specifically tests whether released ADA can fund the same transaction's
 fee as well as its change. It is stronger than returning the full release to
 an output while paying the fee from a separate ADA input.
 
-**Recorded result, 19 October 2026: RED at node submission, exit 1**
+The historical red/green pair below used implicit ADA change. The current
+example replaces that change with store-backed ADA, following Nicolas's
+clarification that empty application assets are also supported and do not
+require implicit minUTxO.
+
+**Original implicit-change result, 19 October 2026: RED at node submission, exit 1**
 (`run-e8lnj7mk`). Compilation, funding, epoch retention, live UTxO reads,
 automatic fee/change, and the release transaction's owner signature passed.
 The accounting was:
@@ -1694,7 +1718,7 @@ changed for this check. Signed CBOR, balanced/rejected JSON, funding evidence,
 node log, source hashes and the reproducer patch are retained beside the check
 log under `.workspace/minutxo-incremental/checks/run-e8lnj7mk/`.
 
-**Recorded result, 19 October 2026: GREEN, exit 0** (`run-q5edeq47`), using the
+**Original implicit-change result, 19 October 2026: GREEN, exit 0** (`run-q5edeq47`), using the
 same command, transaction source, funding prerequisite, and assertions.
 `validateTopTxSettlement` now requires the selected output to cover
 `max(0, attributed top-level release - top-level fee)`. It derives the parent's
@@ -1722,6 +1746,57 @@ test suite, which contains deliberate placeholders, is green. See
 and scope. The live evidence, all three ledger test logs, source hashes, and
 the ledger patch are retained under
 `.workspace/minutxo-incremental/checks/run-q5edeq47/`.
+
+**Store-backed change result, 19 October 2026: RED during balancing, exit 1**
+(`run-dheyj1s4`). With the change representation selectable, the updated
+`node-deposit-release` compiled and completed funding, epoch retention and read
+checks. Balancing then failed at the existing `checkNonNegative` rejection:
+`Automatic balancing failed: Balancing store-backed outputs is not supported.`
+The release transaction was neither signed nor submitted. Its explicit request
+reserved 1,133,530 lovelace for the merged output and 978,370 for store-backed
+change, leaving a net release of 155,160 lovelace. The check patch, API request
+interface, source hashes, funding evidence and node log are retained in that
+run directory.
+
+**Store-backed change result, 19 October 2026: GREEN, exit 0**
+(`run-kphc_vbi`), using the same command and unchanged check, helper, funding
+and runner sources. The API now validates store-backed application assets as
+nonnegative and retains the requested output even when those assets are empty.
+It applies no implicit ADA minimum to that change. Existing implicit-change
+behavior is preserved, including omission of empty implicit change.
+
+| Quantity | Lovelace |
+| --- | ---: |
+| Recorded deposits of the two consumed outputs | 2,267,060 |
+| Backing of the merged 14-token output | 1,133,530 |
+| Backing of the ADA change output | 978,370 |
+| Net release after both new allocations | 155,160 |
+| Automatically calculated fee | 577 |
+| Store-backed application ADA change | 154,583 |
+| Minimum ADA of an equivalent implicit output, for comparison only | 969,750 |
+
+The node accepted and included transaction
+`065fd369b571ac205d000f16f55cbb4ff3dfd1cd85589073d4af9395799b787c`.
+The full UTxO matched expectations, the old allocation records were replaced
+by exactly the two new allocations, and store balance became 2,111,900 lovelace.
+Total ADA remained 1,000,000,400,000 lovelace. The check also required the exact
+final change output's price to equal the declared backing. No additional ADA
+input, fee override, ledger change or node change was needed.
+
+Six supplemental public-API construction checks passed: retained genuinely
+empty store-backed change with exact backing and a nonzero fee, initial and
+post-fee deficits, a missing explicit declaration, unchanged default and
+explicit implicit-change behavior, and rejection of a store-backed request in
+Conway. These establish construction behavior; the empty-output case was not
+submitted to a node. Their source, build command and output are retained with
+the live transaction CBOR, inclusion/store evidence, API patch, and red/green
+source comparison under `.workspace/minutxo-incremental/checks/run-kphc_vbi/`.
+
+Regressions also passed: `node-auto-deposit` (`run-2x26oywm`),
+`node-nested-parent` (`run-l6jeh7px`) and `node-nested-sibling`
+(`run-v51x3qh9`). They verify the existing implicit-change paths through
+signing, node acceptance and inclusion, exact deposit accounting and total ADA
+conservation. The nested runs also repeat epoch-retention and API read checks.
 
 ## Automatic backing for a top-level token-only output
 
