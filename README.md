@@ -14,15 +14,22 @@ Wallet and balancing components retain their original pins and remain untested.
 The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
-**Current checkpoint: RED — spend a net deposit release without an ADA input.**
-`./scripts/check-minutxo node-deposit-release` (`run-e8lnj7mk`) compiled, funded
-and confirmed two token-only inputs, then balanced their consolidation using
-the 1,133,530-lovelace release for a 575-lovelace fee and 1,132,955-lovelace ADA
-change. The node rejected it with `InsufficientSettlementOutput`: the ledger
-requires the designated output to contain the entire release. Release
-submission and inclusion are not green; no API or ledger fix is applied.
+**Current checkpoint: GREEN — spend a net deposit release without an ADA input.**
+The unchanged `./scripts/check-minutxo node-deposit-release` passed
+(`run-q5edeq47`) with a focused ledger settlement change. The node accepted and
+included the consolidation: its 1,133,530-lovelace release paid a 575-lovelace
+fee and returned 1,132,955 lovelace as ADA change. The complete UTxO, exact store
+allocation replacement, and total ADA matched expectations. Twelve focused
+settlement tests and all 13 existing spending tests also passed.
 
-**Previous checkpoint: GREEN — CLI build prerequisite.** The unchanged
+**Previous checkpoint: RED — release could not pay its own fee.**
+`run-e8lnj7mk` reached node submission but failed with
+`InsufficientSettlementOutput`, because the original ledger rule required the
+entire release in the designated output. The green change credits the TopTx
+fee against only its attributed release; local child settlements remain fully
+covered. This changes prototype settlement policy, with no API adaptation.
+
+**Earlier checkpoint: GREEN — CLI build prerequisite.** The unchanged
 `./scripts/check-minutxo cli-build` passes (`run-ywd3hpnn`) after aligning CLI
 11.3.0.0 with API 11.8.0.0 and adapting three CLI files to the ledger's output
 types. The executable's version and Dijkstra UTxO query help also run. This
@@ -1614,6 +1621,35 @@ store and total-ADA assertions have not run. No API, ledger or node source was
 changed for this check. Signed CBOR, balanced/rejected JSON, funding evidence,
 node log, source hashes and the reproducer patch are retained beside the check
 log under `.workspace/minutxo-incremental/checks/run-e8lnj7mk/`.
+
+**Recorded result, 19 October 2026: GREEN, exit 0** (`run-q5edeq47`), using the
+same command, transaction source, funding prerequisite, and assertions.
+`validateTopTxSettlement` now requires the selected output to cover
+`max(0, attributed top-level release - top-level fee)`. It derives the parent's
+share before applying the fee credit once. Local child releases still require
+full output coverage; exact declarations, Store transfers, selector requirements
+and output-index validation are unchanged. A positive parent share still needs
+a valid selector even if the fee consumes the full share.
+
+The node accepted and included transaction
+`e3bfa2751dc85fae436f463ed9b1e90bc7510646ef5992d60c81b1f4bee318c2`.
+The amounts matched the red run's table above. Both token inputs were consumed,
+all 14 tokens survived in the merged output, and the unrelated ordinary ADA
+input remained untouched. Store balance fell from 2,267,060 to 1,133,530 lovelace,
+with exactly one remaining allocation. Total ADA was 1,000,000,400,000 lovelace
+before and after inclusion. The funding, epoch-retention, owner-address query,
+and JSON regression assertions also passed during this run.
+
+The new ledger `DS-TX-SETTLEMENT-FEE` group ran 12 examples: six failed under the
+original rule, and all passed with the change. It covers shortfalls, zero/large
+fees, invalid or missing selectors, local/delegated child releases, mixed shares,
+and exact declarations. All 13 existing `DS-TX-PRESENCE-ACTIVITY-SPENDING`
+examples also passed. These focused results do not imply that the entire ledger
+test suite, which contains deliberate placeholders, is green. See
+`cardano-ledger-specs/docs/dijkstra-deposit-store-verification.md` for the commands
+and scope. The live evidence, all three ledger test logs, source hashes, and
+the ledger patch are retained under
+`.workspace/minutxo-incremental/checks/run-q5edeq47/`.
 
 ## Working one step at a time
 
