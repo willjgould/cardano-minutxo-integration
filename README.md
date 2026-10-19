@@ -14,7 +14,14 @@ Wallet and balancing components retain their original pins and remain untested.
 The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
-**Current checkpoint: GREEN — spend a net deposit release without an ADA input.**
+**Current checkpoint: GREEN — live CLI UTxO reads.**
+`./scripts/check-minutxo node-cli-utxo` passed on its first run
+(`run-tl29_hne`). CLI JSON and text preserve the two store-backed outputs with
+seven tokens and zero ADA each, and distinguish the ordinary ADA change with
+its exact amount. Funding, epoch retention and API read assertions also passed.
+This adds verification; no further CLI, API, ledger or node changes were needed.
+
+**Previous checkpoint: GREEN — spend a net deposit release without an ADA input.**
 The unchanged `./scripts/check-minutxo node-deposit-release` passed
 (`run-q5edeq47`) with a focused ledger settlement change. The node accepted and
 included the consolidation: its 1,133,530-lovelace release paid a 575-lovelace
@@ -22,7 +29,7 @@ fee and returned 1,132,955 lovelace as ADA change. The complete UTxO, exact stor
 allocation replacement, and total ADA matched expectations. Twelve focused
 settlement tests and all 13 existing spending tests also passed.
 
-**Previous checkpoint: RED — release could not pay its own fee.**
+**Earlier checkpoint: RED — release could not pay its own fee.**
 `run-e8lnj7mk` reached node submission but failed with
 `InsufficientSettlementOutput`, because the original ledger rule required the
 entire release in the designated output. The green change credits the TopTx
@@ -33,7 +40,7 @@ covered. This changes prototype settlement policy, with no API adaptation.
 `./scripts/check-minutxo cli-build` passes (`run-ywd3hpnn`) after aligning CLI
 11.3.0.0 with API 11.8.0.0 and adapting three CLI files to the ledger's output
 types. The executable's version and Dijkstra UTxO query help also run. This
-proves compilation; no live CLI read assertions have run yet.
+checkpoint proved compilation; the live CLI reads are verified separately above.
 
 **Earlier checkpoint: GREEN — live owner-address query and UTxO JSON.**
 `./scripts/check-minutxo node-token-funding` passed with the added read
@@ -116,6 +123,9 @@ nested examples, paying an exact store deposit and requiring chain inclusion,
 recorded allocations, and conservation of total ADA across an epoch boundary.
 It then queries the token owner's address and checks the returned UTxO's JSON
 round-trip against the submitted token outputs.
+`node-cli-utxo` runs that same funding prerequisite, then queries both owners
+with the CLI and verifies exact JSON and text output for the store-backed
+tokens and ordinary ADA change.
 `node-nested-parent` runs that funding prerequisite, then submits one token-only
 child whose additional deposit and fee are funded by the parent.
 `node-deposit-release` runs the same funding prerequisite, then consolidates
@@ -534,8 +544,8 @@ and check diff are retained under
 This check builds `cardano-cli:exe:cardano-cli` using
 `cabal.project.minutxo-cli`, which imports the existing incremental API/ledger
 project and adds the declared CLI submodule. It uses the declared submodule
-pins and existing dependency bounds. Live CLI UTxO queries will be a separate step after this
-prerequisite is green.
+pins and existing dependency bounds. Live CLI UTxO queries are a separate step,
+recorded in the following section after this prerequisite passed.
 
 **Recorded result, 19 October 2026: RED at dependency resolution**, exit 1
 (`run-zx_4uivn`). The CLI pin `4d3dbdba2` provides version 9.0.0.1:
@@ -581,6 +591,49 @@ tested source hashes, build log and executable checks are saved under
 `.workspace/minutxo-incremental/checks/run-ywd3hpnn/`. API, ledger and node source
 and pins are unchanged. Live CLI query behavior remains a separate check;
 compilation alone does not establish that it works.
+
+## Live CLI UTxO reads
+
+```sh
+./scripts/check-minutxo node-cli-utxo
+```
+
+This check builds the checkout's CLI, node and funding helper together using
+`cabal.project.minutxo-node-cli`, starts a fresh private Dijkstra node, and runs
+the existing token-funding prerequisite. After inclusion, deposit retention
+across an epoch and the API owner-address assertions pass,
+[cli_utxo.py](checks/node/cli_utxo.py) runs `cardano-cli dijkstra query utxo`
+against that node, separately for the token owner and the ADA owner, using both
+`--output-json` and `--output-text`.
+
+- The token owner's JSON must contain exactly the two submitted outputs, each
+  with seven `offer` tokens, zero ADA, the correct address and reference, and
+  `applicationAssets` rather than `value`. It must also match the independently
+  verified API query. Text must contain exactly the same two references and
+  token amounts, each labelled `(store-backed)`, with no lovelace term.
+- The funding owner's JSON must contain exactly the ordinary ADA change
+  output, with the exact balanced amount under `value`. Text must show that
+  amount in lovelace, without a store-backed label.
+
+Zero ADA is omitted from both asset maps and text; the check does not require
+a literal `0 lovelace`. Exact comparisons ensure that the store's backing
+deposit is not presented as spendable output ADA. All datums and reference
+scripts in this fixture are absent. This step covers CLI UTxO reads, rather
+than CLI transaction construction or querying the deposit store itself.
+
+The four CLI commands, their stdout and stderr, and `cli-utxo-verified.json`
+are retained in the printed private node directory. The runner saves the
+complete log and exit status under `.workspace/minutxo-incremental/checks/`.
+
+**Recorded result, 19 October 2026: GREEN on the first run**, exit 0
+(`run-tl29_hne`). The combined build, fresh Dijkstra node, funding and epoch
+retention, API owner query and JSON assertions, and all four CLI queries passed.
+Both token outputs retained seven tokens and zero ADA; ordinary change remained
+899,997,732,321 lovelace. The private node stopped cleanly. No additional
+implementation changes or dependency-bound relaxations were required. Commands,
+CLI outputs, funding evidence, node log, source revisions and hashes, and the
+check patch are retained under
+`.workspace/minutxo-incremental/checks/run-tl29_hne/`.
 
 ## Nested token-only output with separate deposit funding
 

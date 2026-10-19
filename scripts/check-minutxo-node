@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import signal
 import subprocess
+import sys
 import tempfile
 import time
 
@@ -14,6 +15,7 @@ import time
 ROOT = Path(__file__).resolve().parents[1]
 NODE = "cardano-node:exe:cardano-node"
 CHECK = "minutxo-node:exe:check-node"
+CLI = "cardano-cli:exe:cardano-cli"
 
 
 def terminate(signum, _frame):
@@ -28,6 +30,8 @@ def main():
                             help="After startup, submit and verify one ordinary ADA transfer")
     submission.add_argument("--fund-tokens", action="store_true",
                             help="After startup, mint and fund two token-only store-backed inputs")
+    submission.add_argument("--query-cli-utxo", action="store_true",
+                            help="Fund token inputs, then verify CLI JSON and text UTxO queries")
     submission.add_argument("--release-deposit", action="store_true",
                             help="Fund token inputs, then consolidate them using only the deposit release for fee/change")
     submission.add_argument("--submit-nested-parent", action="store_true",
@@ -35,11 +39,13 @@ def main():
     submission.add_argument("--submit-nested-sibling", action="store_true",
                             help="Fund token inputs, then submit a token child whose extra deposit is paid by an ADA sibling")
     args = parser.parse_args()
-    options = ["--project-file=cabal.project.minutxo-node",
+    project = "cabal.project.minutxo-node-cli" if args.query_cli_utxo else "cabal.project.minutxo-node"
+    options = [f"--project-file={project}",
                "--builddir=.workspace/minutxo-incremental/build"]
     if args.offline:
         options.append("--offline")
-    subprocess.run(["cabal", "build", *options, NODE, CHECK], cwd=ROOT, check=True)
+    targets = [NODE, CHECK, CLI] if args.query_cli_utxo else [NODE, CHECK]
+    subprocess.run(["cabal", "build", *options, *targets], cwd=ROOT, check=True)
 
     def binary(target):
         return subprocess.check_output(
@@ -47,6 +53,7 @@ def main():
         ).strip()
 
     node, check = binary(NODE), binary(CHECK)
+    cli = binary(CLI) if args.query_cli_utxo else None
     # A short, private path keeps the Unix socket within the platform limit.
     os.umask(0o077)
     directory = Path(tempfile.mkdtemp(prefix="minutxo-node-"))
@@ -88,8 +95,13 @@ def main():
                             if args.submit_ada:
                                 subprocess.run([check, "transfer", str(directory), str(socket)],
                                                cwd=ROOT, check=True, timeout=150)
-                            if args.fund_tokens or args.release_deposit or args.submit_nested_parent or args.submit_nested_sibling:
+                            if args.fund_tokens or args.query_cli_utxo or args.release_deposit or args.submit_nested_parent or args.submit_nested_sibling:
                                 subprocess.run([check, "fund-tokens", str(directory), str(socket)],
+                                               cwd=ROOT, check=True, timeout=150)
+                            if args.query_cli_utxo:
+                                print("RUN CLI read assertions: token-only store-backed outputs and ordinary ADA change", flush=True)
+                                subprocess.run([sys.executable, str(ROOT / "checks/node/cli_utxo.py"),
+                                                cli, str(directory), str(socket)],
                                                cwd=ROOT, check=True, timeout=150)
                             if args.release_deposit:
                                 subprocess.run([check, "release-deposit", str(directory), str(socket)],
