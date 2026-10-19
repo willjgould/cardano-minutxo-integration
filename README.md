@@ -14,7 +14,14 @@ Wallet and balancing components retain their original pins and remain untested.
 The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
-**Current checkpoint: GREEN — return a deposit release as store-backed change.**
+**Current checkpoint: RED — CLI store-backed output construction.**
+`./scripts/check-minutxo cli-store-backed` passed its CLI build and ordinary
+output construction/inspection control, then failed with
+`Invalid option '--tx-out-store-backed'` (`run-n61ryq54`). This proposed option
+exposes the missing CLI output-kind selection. No store-backed body was
+created; its inspection assertions have not run. This is an offline step.
+
+**Earlier checkpoint: GREEN — return a deposit release as store-backed change.**
 `./scripts/check-minutxo node-deposit-release` now replaces its implicit ADA
 change with store-backed change. The same updated check went red at the API's
 store-backed change rejection (`run-dheyj1s4`) and green after its focused fix
@@ -141,6 +148,8 @@ each parent, using generated test keys.
 it does not start a node or submit a transaction.
 `cli-build` separately builds the declared CLI submodule against the local API
 and ledger. It does not start a node or query UTxOs.
+`cli-store-backed` checks offline CLI construction of a token-only store-backed
+output, with an implicit-output control and inspection through the CLI viewer.
 `node` starts a fresh private node and checks that Dijkstra blocks advance.
 `node-transaction` additionally submits an ordinary ADA transfer and checks its
 resulting UTxO.
@@ -663,6 +672,37 @@ implementation changes or dependency-bound relaxations were required. Commands,
 CLI outputs, funding evidence, node log, source revisions and hashes, and the
 check patch are retained under
 `.workspace/minutxo-incremental/checks/run-tl29_hne/`.
+
+## CLI store-backed output construction
+
+```sh
+./scripts/check-minutxo cli-store-backed
+```
+
+[cli_store_backed.py](checks/transaction/cli_store_backed.py) builds the declared
+CLI using `cabal.project.minutxo-cli`. It first constructs and inspects an
+implicit-output control with `dijkstra transaction build-raw --tx-out`, then
+requests the same seven tokens and zero ADA using the proposed per-output
+option `--tx-out-store-backed`. Both requests use a synthetic input and an
+explicit fee of 200,000 lovelace.
+
+The check inspects each written transaction using
+`cardano-cli debug transaction view --tx-file ... --output-json`. It requires
+the exact address, assets, input and fee, with `application assets` identifying
+the store-backed output and `amount` identifying the implicit control.
+This milestone covers unsigned construction and encoding only. The synthetic
+body has no deposit declaration and is not submitted or claimed ledger-valid.
+Commands, stdout, stderr, transaction files and decoded JSON are saved in the
+printed check directory. An unsupported option must fail directly.
+
+**Recorded result, 19 October 2026: RED at argument parsing, exit 1**
+(`run-n61ryq54`). The separate `cli-build` prerequisite passed (`run-64mhrchm`),
+and the new check's ordinary construction/view assertions passed. The CLI then
+rejected `--tx-out-store-backed`; no store-backed transaction file was created
+and its view assertions did not run. Source inspection confirms that the
+current output parser has no kind selector and Dijkstra output construction
+always uses an implicit deposit. No CLI, API or ledger implementation changed.
+Revisions, source hashes and the staged check patch accompany the run log.
 
 ## Nested token-only output with separate deposit funding
 

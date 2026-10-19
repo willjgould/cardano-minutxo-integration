@@ -44,7 +44,7 @@ def run(command, log):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("step", nargs="?", choices=("dependencies", "build", "transaction", "store-backed", "read-back", "utxo-json", "nested", "serialisation", "signing", "node-build", "cli-build", "node", "node-transaction", "node-token-funding", "node-cli-utxo", "node-auto-deposit", "node-deposit-release", "node-nested-parent", "node-nested-sibling"),
+    parser.add_argument("step", nargs="?", choices=("dependencies", "build", "transaction", "store-backed", "read-back", "utxo-json", "nested", "serialisation", "signing", "node-build", "cli-build", "cli-store-backed", "node", "node-transaction", "node-token-funding", "node-cli-utxo", "node-auto-deposit", "node-deposit-release", "node-nested-parent", "node-nested-sibling"),
                         default="dependencies",
                         help="Resolve dependencies (default), compile the API/CLI/node, or run a transaction/node check")
     parser.add_argument("--offline", action="store_true", help="Use cached Cabal packages only")
@@ -88,6 +88,11 @@ def main():
     checks = ROOT / ".workspace/minutxo-incremental/checks"
     checks.mkdir(parents=True, exist_ok=True)
     report = Path(tempfile.mkdtemp(prefix="run-", dir=checks))
+    if args.step == "cli-store-backed":
+        command = [sys.executable, str(ROOT / "checks/transaction/cli_store_backed.py"),
+                   "--directory", str(report)]
+        if args.offline:
+            command.append("--offline")
     print(f"Logs: {report}", flush=True)
     print(f"\nRUN {args.step}", flush=True)
     with (report / f"{args.step}.log").open("w") as log:
