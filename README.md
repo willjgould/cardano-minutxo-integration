@@ -14,12 +14,13 @@ Wallet and balancing components retain their original pins and remain untested.
 The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
-**Current checkpoint: RED — CLI store-backed output construction.**
-`./scripts/check-minutxo cli-store-backed` passed its CLI build and ordinary
-output construction/inspection control, then failed with
-`Invalid option '--tx-out-store-backed'` (`run-n61ryq54`). This proposed option
-exposes the missing CLI output-kind selection. No store-backed body was
-created; its inspection assertions have not run. This is an offline step.
+**Current checkpoint: GREEN — CLI store-backed output construction.**
+The unchanged `./scripts/check-minutxo cli-store-backed` now passes
+(`run-wppay04w`), after failing at the missing option in `run-n61ryq54`.
+The CLI's new `--tx-out-store-backed` option constructs and encodes an output
+containing seven tokens and zero ADA; CLI inspection preserves its output kind,
+address, assets, input and fee. This is an offline construction step, without
+balancing, signing or submission.
 
 **Earlier checkpoint: GREEN — return a deposit release as store-backed change.**
 `./scripts/check-minutxo node-deposit-release` now replaces its implicit ADA
@@ -682,7 +683,7 @@ check patch are retained under
 [cli_store_backed.py](checks/transaction/cli_store_backed.py) builds the declared
 CLI using `cabal.project.minutxo-cli`. It first constructs and inspects an
 implicit-output control with `dijkstra transaction build-raw --tx-out`, then
-requests the same seven tokens and zero ADA using the proposed per-output
+requests the same seven tokens and zero ADA using the per-output
 option `--tx-out-store-backed`. Both requests use a synthetic input and an
 explicit fee of 200,000 lovelace.
 
@@ -699,10 +700,24 @@ printed check directory. An unsupported option must fail directly.
 (`run-n61ryq54`). The separate `cli-build` prerequisite passed (`run-64mhrchm`),
 and the new check's ordinary construction/view assertions passed. The CLI then
 rejected `--tx-out-store-backed`; no store-backed transaction file was created
-and its view assertions did not run. Source inspection confirms that the
-current output parser has no kind selector and Dijkstra output construction
-always uses an implicit deposit. No CLI, API or ledger implementation changed.
+and its view assertions did not run. At that checkpoint, the output parser had
+no kind selector and Dijkstra output construction always used an implicit
+deposit. No CLI, API or ledger implementation changed in the red step.
 Revisions, source hashes and the staged check patch accompany the run log.
+
+**Recorded result, 19 October 2026: GREEN, exit 0** (`run-wppay04w`).
+The same check and assertions pass after the CLI carries the requested output
+kind through parsing and Dijkstra output construction. The new option uses
+the existing per-output datum and reference-script options. Additional offline
+checks verified mixed output ordering and metadata attachment, an empty
+store-backed output, implicit collateral return, ordinary Conway construction
+and a clear rejection of store-backed outputs in Conway. The affected help
+snapshots were regenerated and compared with CLI output. Logs, source hashes,
+patches and boundary-check evidence accompany the green run.
+
+The shared parser exposes the option on `build`, `build-raw` and
+`build-estimate`; this step verifies transaction behavior only for `build-raw`.
+It does not add a deposit declaration or establish node acceptance.
 
 ## Nested token-only output with separate deposit funding
 
