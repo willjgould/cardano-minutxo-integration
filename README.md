@@ -14,15 +14,23 @@ Wallet and balancing components retain their original pins and remain untested.
 The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
-**Current checkpoint: RED — automatic backing for a top-level token-only output.**
+**Current checkpoint: GREEN — automatic backing for a top-level token-only output.**
+The unchanged `./scripts/check-minutxo node-auto-deposit` passed
+(`run-6uj0lqcl`). The API calculated the 1,133,530-lovelace backing declaration,
+a 516-lovelace fee and exact ADA change. The node accepted and included the
+transaction, with the exact UTxO, store allocation and total ADA verified.
+Automatic pricing covers new top-level outputs funded by implicit-deposit
+inputs; explicit declarations are preserved.
+
+**Previous checkpoint: RED — the builder did not calculate backing.**
 `./scripts/check-minutxo node-auto-deposit` compiled and reached its transaction
 assertions (`run-dmbei_uy`). The balancer returned no deposit declaration in
 either the unsigned body or returned body content, although the requested
 output needs 1,133,530 lovelace of backing. Its change omitted that deduction.
-The declaration assertion failed before signing or submission. No API fix has
-been applied; the new check is staged for review.
+The declaration assertion failed before signing or submission. That red result
+is retained alongside the green run of the same check.
 
-**Previous checkpoint: GREEN — live CLI UTxO reads.**
+**Earlier checkpoint: GREEN — live CLI UTxO reads.**
 `./scripts/check-minutxo node-cli-utxo` passed on its first run
 (`run-tl29_hne`). CLI JSON and text preserve the two store-backed outputs with
 seven tokens and zero ADA each, and distinguish the ordinary ADA change with
@@ -1729,11 +1737,10 @@ The caller supplies neither a deposit amount nor a deposit declaration to
 `makeTransactionBodyAutoBalance`; it leaves the declaration at the API's
 default `NoUTxODepositDeclaration`.
 
-This is a new automation requirement. The existing API supports fee/change
-balancing around an explicit deposit, but does not currently price it for the
-caller. The check requires an exact positive allocation in both the returned
-unsigned body and the returned body content. It calculates the expected backing
-independently using the ledger's pricing function and the node's protocol
+This adds automatic deposit pricing to the existing fee/change balancing around
+explicit deposits. The check requires an exact positive allocation in both the
+returned unsigned body and the returned body content. It calculates the expected
+backing independently using the ledger's pricing function and the node's protocol
 parameters, solely as an assertion: that amount is never passed to the builder.
 
 The same check then verifies preservation of the selected input and requested
@@ -1764,6 +1771,51 @@ The private node stopped cleanly. The log, declaration/change evidence, node
 log, tested revisions and source hashes, and check patch are retained under
 `.workspace/minutxo-incremental/checks/run-dmbei_uy/`. No API, ledger, node or
 CLI source or pin changed for this red step.
+
+**Recorded result, 19 October 2026: GREEN, exit 0** (`run-6uj0lqcl`), using the
+same command, transaction source, runner and assertions as the red run.
+The API now prices requested outputs with the ledger's `requiredUTxODeposit`
+function and exact serialized sizes before calculating fees and change. The
+inferred declaration flows into both the unsigned body and returned body content.
+
+| Green transaction quantity | Lovelace |
+| --- | ---: |
+| Calculated store backing | 1,133,530 |
+| Calculated fee, including the declaration | 516 |
+| Ordinary ADA change | 899,998,865,954 |
+
+The node accepted and included transaction
+`dfd92a2ccb6e0d27d1a6317d89579b22f8236fbd0c72c6021073e51ad5f79add`.
+The seven-token output still contains zero ADA. The complete UTxO matches the
+requested output, ordinary change and untouched inputs; the store contains
+exactly one 1,133,530-lovelace allocation. Total ADA remains 1,000,000,400,000
+lovelace. The node stopped cleanly. Source hashes confirm that the red check
+and its prerequisite sources were unchanged.
+
+Inference applies only in Dijkstra when the declaration is absent and there is
+at least one direct store-backed output. All selected spending inputs must be
+known implicit-deposit outputs, and there must be no children. Reference and
+unselected UTxOs do not affect that decision. Unsupported inference and missing
+selected inputs fail directly; no historical refund is guessed or repriced.
+Explicit declarations, including explicit zero, are preserved. A zero protocol
+byte price still produces an explicit zero declaration. Existing transactions
+without new store-backed outputs retain their previous balancing behavior.
+
+Eleven supplemental construction checks passed: differing output sizes and
+their total backing, fee/change accounting, preservation of explicit allocation
+and zero declarations, ordinary outputs, unselected/reference UTxOs, selected
+store-backed inputs, children, missing inputs, insufficient backing, and zero
+byte price. Their source, build command and log are retained with the live
+transaction CBOR, inclusion and accounting evidence, tested API patch and
+source hashes under `.workspace/minutxo-incremental/checks/run-6uj0lqcl/`.
+The implementation change is confined to the API's experimental `Fee.hs`.
+
+The existing `node-nested-parent` (`run-i054_cuf`), `node-nested-sibling`
+(`run-tq5hpu4f`) and `node-deposit-release` (`run-6qbr06f9`) regressions also
+passed. They cover explicit allocation and release declarations, ordinary
+balancing, signed children, node acceptance and inclusion, exact deposits,
+total ADA conservation, epoch retention and API owner-address JSON reads.
+Their logs and transaction evidence are retained in those run directories.
 
 ## Working one step at a time
 
@@ -1821,7 +1873,8 @@ The intended progression is:
    rebased ledger and the aligned stack.
 10. Automatic fee/change balancing is green for direct store-backed outputs
     and both nested examples, with explicit deposit pricing. Automatic backing
-    for a direct token-only output is now red under `node-auto-deposit`.
+    for new direct outputs funded by implicit-deposit inputs is now green under
+    `node-auto-deposit`. Automatic nested deposits and refunds remain separate.
     Live CLI UTxO reads and spending a deposit release are green. Collateral,
     CLI writing, Plutus, wallet, and balancer paths need their own reproducers.
 
