@@ -9,6 +9,7 @@ import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Network
 import Control.Monad.Trans.Except (runExceptT)
 import Data.Aeson (encode, object, (.=))
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified DepositRelease
 import qualified Genesis
 import qualified NestedParent
 import qualified NestedSibling
@@ -25,9 +26,10 @@ main = do
         ["probe", socket] -> probe socket
         ["transfer", directory, socket] -> Submission.transfer directory socket
         ["fund-tokens", directory, socket] -> TokenFunding.fundTokens directory socket
+        ["release-deposit", directory, socket] -> DepositRelease.releaseDeposit directory socket
         ["nested-parent", directory, socket] -> NestedParent.submitParentFunded directory socket
         ["nested-sibling", directory, socket] -> NestedSibling.submitSiblingFunded directory socket
-        _ -> die "Usage: check-node prepare DIRECTORY | probe SOCKET | transfer DIRECTORY SOCKET | fund-tokens DIRECTORY SOCKET | nested-parent DIRECTORY SOCKET | nested-sibling DIRECTORY SOCKET"
+        _ -> die "Usage: check-node prepare DIRECTORY | probe SOCKET | transfer DIRECTORY SOCKET | fund-tokens DIRECTORY SOCKET | release-deposit DIRECTORY SOCKET | nested-parent DIRECTORY SOCKET | nested-sibling DIRECTORY SOCKET"
 
 probe :: FilePath -> IO ()
 probe socket = do

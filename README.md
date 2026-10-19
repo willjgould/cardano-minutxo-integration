@@ -14,13 +14,21 @@ Wallet and balancing components retain their original pins and remain untested.
 The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
-**Current checkpoint: GREEN — CLI build prerequisite.** The unchanged
+**Current checkpoint: RED — spend a net deposit release without an ADA input.**
+`./scripts/check-minutxo node-deposit-release` (`run-e8lnj7mk`) compiled, funded
+and confirmed two token-only inputs, then balanced their consolidation using
+the 1,133,530-lovelace release for a 575-lovelace fee and 1,132,955-lovelace ADA
+change. The node rejected it with `InsufficientSettlementOutput`: the ledger
+requires the designated output to contain the entire release. Release
+submission and inclusion are not green; no API or ledger fix is applied.
+
+**Previous checkpoint: GREEN — CLI build prerequisite.** The unchanged
 `./scripts/check-minutxo cli-build` passes (`run-ywd3hpnn`) after aligning CLI
 11.3.0.0 with API 11.8.0.0 and adapting three CLI files to the ledger's output
 types. The executable's version and Dijkstra UTxO query help also run. This
 proves compilation; no live CLI read assertions have run yet.
 
-**Previous checkpoint: GREEN — live owner-address query and UTxO JSON.**
+**Earlier checkpoint: GREEN — live owner-address query and UTxO JSON.**
 `./scripts/check-minutxo node-token-funding` passed with the added read
 assertions (`run-0m3dj956`). The address query returned exactly the two submitted
 store-backed token outputs; JSON preserved both outputs, including seven tokens
@@ -103,6 +111,9 @@ It then queries the token owner's address and checks the returned UTxO's JSON
 round-trip against the submitted token outputs.
 `node-nested-parent` runs that funding prerequisite, then submits one token-only
 child whose additional deposit and fee are funded by the parent.
+`node-deposit-release` runs the same funding prerequisite, then consolidates
+both token outputs, asking the net deposit release to pay the fee and ADA change
+without selecting an ordinary ADA input.
 
 `--offline` uses cached package metadata and source repositories. On a fresh
 checkout, omit it to fetch the pinned source dependencies first. The project
@@ -1534,6 +1545,75 @@ included, and matched the exact UTxO, allocation map and total ADA assertions.
 Their non-secret evidence and tested source hashes are retained with each run.
 Fourmolu and whitespace checks passed. No ledger or check-source changes were
 needed for this green step.
+
+## Spend a deposit release in the same transaction
+
+```sh
+./scripts/check-minutxo node-deposit-release
+```
+
+The private node first creates the same two store-backed token outputs used by
+the nested checks. `checks/node/DepositRelease.hs` then builds a single top-level
+transaction:
+
+```text
+Inputs:  7 tokens + 0 ADA       7 tokens + 0 ADA
+         [recorded deposit]    [recorded deposit]
+                       \     /
+Outputs:          14 tokens + 0 ADA        ADA change
+                  [one new deposit]       [ordinary output]
+
+Net release = both recorded deposits - the new required deposit
+Net release = fee + ADA change
+```
+
+Only the two token inputs are selected, and only their owner's key signs.
+There is no additional ADA input, mint, withdrawal, certificate, or child.
+The old deposits come from the live allocation map; the new deposit is priced
+from the exact output and current protocol parameters. The test explicitly
+declares the net release and points its settlement at output 1, the ADA change.
+The existing API calculates the fee and change, which must exactly consume the
+release and satisfy the ordinary change output's minimum ADA requirement.
+
+The check requires node acceptance and block inclusion, then compares the
+entire UTxO (including untouched funding), the exact deposit allocation map,
+the reduced store balance, and total ADA. A rejection is a failure, even if
+construction and automatic balancing passed. The supervisor stops its private
+node and retains its logs, signed CBOR, balancing evidence, and any submission
+or inclusion evidence in the printed directory.
+
+This specifically tests whether released ADA can fund the same transaction's
+fee as well as its change. It is stronger than returning the full release to
+an output while paying the fee from a separate ADA input.
+
+**Recorded result, 19 October 2026: RED at node submission, exit 1**
+(`run-e8lnj7mk`). Compilation, funding, epoch retention, live UTxO reads,
+automatic fee/change, and the release transaction's owner signature passed.
+The accounting was:
+
+| Item | Lovelace |
+| --- | ---: |
+| Recorded deposits of the two consumed outputs | 2,267,060 |
+| Required deposit of the merged output | 1,133,530 |
+| Net release | 1,133,530 |
+| Automatically calculated fee | 575 |
+| ADA change at settlement output 1 | 1,132,955 |
+
+The node rejected the transaction with
+`InsufficientSettlementOutput ... (TxIx 1) (Coin 1132955) (Coin 1133530)`.
+In the pinned ledger, `validateTopTxSettlement` and `validateSettlementOutput`
+in `eras/dijkstra/impl/src/Cardano/Ledger/Dijkstra/Rules/DepositStore/Accounting.hs`
+require the designated output to contain at least the full net release. This
+transaction uses 575 lovelace of that release for its fee, so the designated
+output is short by exactly the fee. There was no other reported validation
+failure. This is a settlement-policy restriction to discuss with Nicolas,
+not evidence that all releases are unsupported or that balancing is wrong.
+
+The transaction was not accepted or included; its post-inclusion UTxO, deposit
+store and total-ADA assertions have not run. No API, ledger or node source was
+changed for this check. Signed CBOR, balanced/rejected JSON, funding evidence,
+node log, source hashes and the reproducer patch are retained beside the check
+log under `.workspace/minutxo-incremental/checks/run-e8lnj7mk/`.
 
 ## Working one step at a time
 
