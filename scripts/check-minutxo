@@ -44,7 +44,7 @@ def run(command, log):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("step", nargs="?", choices=("dependencies", "build", "transaction", "store-backed", "read-back", "utxo-json", "nested", "serialisation", "signing", "node-build", "cli-build", "node", "node-transaction", "node-token-funding", "node-cli-utxo", "node-deposit-release", "node-nested-parent", "node-nested-sibling"),
+    parser.add_argument("step", nargs="?", choices=("dependencies", "build", "transaction", "store-backed", "read-back", "utxo-json", "nested", "serialisation", "signing", "node-build", "cli-build", "node", "node-transaction", "node-token-funding", "node-cli-utxo", "node-auto-deposit", "node-deposit-release", "node-nested-parent", "node-nested-sibling"),
                         default="dependencies",
                         help="Resolve dependencies (default), compile the API/CLI/node, or run a transaction/node check")
     parser.add_argument("--offline", action="store_true", help="Use cached Cabal packages only")
@@ -66,7 +66,7 @@ def main():
     command = (["cabal", "run", *options, TRANSACTION_TARGETS[args.step]]
                if args.step in TRANSACTION_TARGETS
                else ["cabal", "build", *options, target])
-    if args.step in ("node", "node-transaction", "node-token-funding", "node-cli-utxo", "node-deposit-release", "node-nested-parent", "node-nested-sibling"):
+    if args.step in ("node", "node-transaction", "node-token-funding", "node-cli-utxo", "node-auto-deposit", "node-deposit-release", "node-nested-parent", "node-nested-sibling"):
         command = [str(ROOT / "scripts/check-minutxo-node")]
         if args.step == "node-transaction":
             command.append("--submit-ada")
@@ -74,6 +74,8 @@ def main():
             command.append("--fund-tokens")
         if args.step == "node-cli-utxo":
             command.append("--query-cli-utxo")
+        if args.step == "node-auto-deposit":
+            command.append("--auto-deposit")
         if args.step == "node-deposit-release":
             command.append("--release-deposit")
         if args.step == "node-nested-parent":

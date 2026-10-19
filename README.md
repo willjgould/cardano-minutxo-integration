@@ -14,14 +14,22 @@ Wallet and balancing components retain their original pins and remain untested.
 The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
-**Current checkpoint: GREEN — live CLI UTxO reads.**
+**Current checkpoint: RED — automatic backing for a top-level token-only output.**
+`./scripts/check-minutxo node-auto-deposit` compiled and reached its transaction
+assertions (`run-dmbei_uy`). The balancer returned no deposit declaration in
+either the unsigned body or returned body content, although the requested
+output needs 1,133,530 lovelace of backing. Its change omitted that deduction.
+The declaration assertion failed before signing or submission. No API fix has
+been applied; the new check is staged for review.
+
+**Previous checkpoint: GREEN — live CLI UTxO reads.**
 `./scripts/check-minutxo node-cli-utxo` passed on its first run
 (`run-tl29_hne`). CLI JSON and text preserve the two store-backed outputs with
 seven tokens and zero ADA each, and distinguish the ordinary ADA change with
 its exact amount. Funding, epoch retention and API read assertions also passed.
 This adds verification; no further CLI, API, ledger or node changes were needed.
 
-**Previous checkpoint: GREEN — spend a net deposit release without an ADA input.**
+**Earlier checkpoint: GREEN — spend a net deposit release without an ADA input.**
 The unchanged `./scripts/check-minutxo node-deposit-release` passed
 (`run-q5edeq47`) with a focused ledger settlement change. The node accepted and
 included the consolidation: its 1,133,530-lovelace release paid a 575-lovelace
@@ -126,6 +134,9 @@ round-trip against the submitted token outputs.
 `node-cli-utxo` runs that same funding prerequisite, then queries both owners
 with the CLI and verifies exact JSON and text output for the store-backed
 tokens and ordinary ADA change.
+`node-auto-deposit` separately creates one token-only output from the fresh
+chain's ordinary ADA input, asking the builder to calculate its backing without
+a caller-supplied deposit declaration.
 `node-nested-parent` runs that funding prerequisite, then submits one token-only
 child whose additional deposit and fee are funded by the parent.
 `node-deposit-release` runs the same funding prerequisite, then consolidates
@@ -1704,6 +1715,56 @@ and scope. The live evidence, all three ledger test logs, source hashes, and
 the ledger patch are retained under
 `.workspace/minutxo-incremental/checks/run-q5edeq47/`.
 
+## Automatic backing for a top-level token-only output
+
+```sh
+./scripts/check-minutxo node-auto-deposit
+```
+
+[AutomaticDeposit.hs](checks/node/AutomaticDeposit.hs) selects the fresh node's
+ordinary genesis ADA input and requests one store-backed output containing
+seven freshly minted `offer` tokens and zero ADA, addressed to the independent
+token owner. There are no subtransactions or store-backed inputs to release.
+The caller supplies neither a deposit amount nor a deposit declaration to
+`makeTransactionBodyAutoBalance`; it leaves the declaration at the API's
+default `NoUTxODepositDeclaration`.
+
+This is a new automation requirement. The existing API supports fee/change
+balancing around an explicit deposit, but does not currently price it for the
+caller. The check requires an exact positive allocation in both the returned
+unsigned body and the returned body content. It calculates the expected backing
+independently using the ledger's pricing function and the node's protocol
+parameters, solely as an assertion: that amount is never passed to the builder.
+
+The same check then verifies preservation of the selected input and requested
+output, ordinary ADA change after deducting both backing and fee, signing,
+node acceptance, block inclusion, the exact store allocation and total ADA
+conservation. A failure at construction means those later assertions have not
+run. The existing explicit-deposit funding and nested checks remain separate.
+
+**Recorded result, 19 October 2026: RED at the deposit declaration assertion**,
+exit 1 (`run-dmbei_uy`). Dependencies and compilation passed; the fresh node
+produced advancing Dijkstra blocks and the balancer returned successfully.
+Both returned representations contained `TopTx.NoUTxODepositDeclaration`
+instead of `TopTx.DeclaresNetUTxODepositAllocation (Coin 1133530)`.
+
+| Observed quantity | Lovelace |
+| --- | ---: |
+| Selected ordinary ADA input | 900,000,000,000 |
+| Required backing, calculated independently by the check | 1,133,530 |
+| Fee returned by the current builder | 507 |
+| Change returned by the current builder | 899,999,999,493 |
+| Change after deducting backing at that same fee | 899,998,865,963 |
+
+The returned change is too large by exactly the backing requirement. Adding a
+declaration may also change the final fee; the check derives its expectation
+from the actual returned fee rather than hard-coding 507. Signing, submission,
+inclusion and store assertions did not run, and no transaction was submitted.
+The private node stopped cleanly. The log, declaration/change evidence, node
+log, tested revisions and source hashes, and check patch are retained under
+`.workspace/minutxo-incremental/checks/run-dmbei_uy/`. No API, ledger, node or
+CLI source or pin changed for this red step.
+
 ## Working one step at a time
 
 For each capability:
@@ -1759,9 +1820,10 @@ The intended progression is:
    submission and sibling-funded submission are both green with Nicolas's
    rebased ledger and the aligned stack.
 10. Automatic fee/change balancing is green for direct store-backed outputs
-    and both nested examples, with explicit deposit pricing. Add deposit
-    calculation and collateral checks as separate capabilities. Exercise CLI,
-    Plutus, wallet, and balancer paths with their own reproducers.
+    and both nested examples, with explicit deposit pricing. Automatic backing
+    for a direct token-only output is now red under `node-auto-deposit`.
+    Live CLI UTxO reads and spending a deposit release are green. Collateral,
+    CLI writing, Plutus, wallet, and balancer paths need their own reproducers.
 
 Later items are future work, not claims of implemented support. Keep missing
 support as a failure; do not add fallback behavior to make a reproducer run.

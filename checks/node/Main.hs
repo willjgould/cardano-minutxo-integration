@@ -6,6 +6,7 @@ module Main where
 import qualified Cardano.Api as Api
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Network
 
+import qualified AutomaticDeposit
 import Control.Monad.Trans.Except (runExceptT)
 import Data.Aeson (encode, object, (.=))
 import qualified Data.ByteString.Lazy.Char8 as LBS
@@ -26,10 +27,11 @@ main = do
         ["probe", socket] -> probe socket
         ["transfer", directory, socket] -> Submission.transfer directory socket
         ["fund-tokens", directory, socket] -> TokenFunding.fundTokens directory socket
+        ["auto-deposit", directory, socket] -> AutomaticDeposit.createTokenOutput directory socket
         ["release-deposit", directory, socket] -> DepositRelease.releaseDeposit directory socket
         ["nested-parent", directory, socket] -> NestedParent.submitParentFunded directory socket
         ["nested-sibling", directory, socket] -> NestedSibling.submitSiblingFunded directory socket
-        _ -> die "Usage: check-node prepare DIRECTORY | probe SOCKET | transfer DIRECTORY SOCKET | fund-tokens DIRECTORY SOCKET | release-deposit DIRECTORY SOCKET | nested-parent DIRECTORY SOCKET | nested-sibling DIRECTORY SOCKET"
+        _ -> die "Usage: check-node prepare DIRECTORY | probe SOCKET | transfer DIRECTORY SOCKET | fund-tokens DIRECTORY SOCKET | auto-deposit DIRECTORY SOCKET | release-deposit DIRECTORY SOCKET | nested-parent DIRECTORY SOCKET | nested-sibling DIRECTORY SOCKET"
 
 probe :: FilePath -> IO ()
 probe socket = do

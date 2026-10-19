@@ -32,6 +32,8 @@ def main():
                             help="After startup, mint and fund two token-only store-backed inputs")
     submission.add_argument("--query-cli-utxo", action="store_true",
                             help="Fund token inputs, then verify CLI JSON and text UTxO queries")
+    submission.add_argument("--auto-deposit", action="store_true",
+                            help="Automatically price a top-level token-only output's deposit, then submit and verify it")
     submission.add_argument("--release-deposit", action="store_true",
                             help="Fund token inputs, then consolidate them using only the deposit release for fee/change")
     submission.add_argument("--submit-nested-parent", action="store_true",
@@ -94,6 +96,9 @@ def main():
                             print(f"PASS: Dijkstra blocks advanced from {first_block} to {tip['block']}", flush=True)
                             if args.submit_ada:
                                 subprocess.run([check, "transfer", str(directory), str(socket)],
+                                               cwd=ROOT, check=True, timeout=150)
+                            if args.auto_deposit:
+                                subprocess.run([check, "auto-deposit", str(directory), str(socket)],
                                                cwd=ROOT, check=True, timeout=150)
                             if args.fund_tokens or args.query_cli_utxo or args.release_deposit or args.submit_nested_parent or args.submit_nested_sibling:
                                 subprocess.run([check, "fund-tokens", str(directory), str(socket)],
