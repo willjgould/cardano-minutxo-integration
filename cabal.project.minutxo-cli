@@ -1,0 +1,5 @@
+import: cabal.project.minutxo-incremental
+
+-- Build the declared CLI submodule against this checkout's API and ledger.
+packages:
+  cardano-cli/cardano-cli

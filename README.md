@@ -8,19 +8,26 @@ The working branch is `minutxo-incremental`. The API combines upstream Leios
 revision `717d326ccb6b0ee1982dfffd2d0cbd4876094666` with our focused minUTxO
 adaptations for store-backed output construction, read-back, and deposit
 declarations. The node and dependencies follow the matching upstream stack;
-the ledger retains Nicolas's `v2-minutxo` work. CLI, wallet, and balancing
-components retain their original pins and have not been tested in this step.
+the ledger retains Nicolas's `v2-minutxo` work. The CLI now follows the node's
+upstream pin `40f41676`, with focused adaptations for the minUTxO output types.
+Wallet and balancing components retain their original pins and remain untested.
 The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
-**Current checkpoint: GREEN — live owner-address query and UTxO JSON.**
+**Current checkpoint: GREEN — CLI build prerequisite.** The unchanged
+`./scripts/check-minutxo cli-build` passes (`run-ywd3hpnn`) after aligning CLI
+11.3.0.0 with API 11.8.0.0 and adapting three CLI files to the ledger's output
+types. The executable's version and Dijkstra UTxO query help also run. This
+proves compilation; no live CLI read assertions have run yet.
+
+**Previous checkpoint: GREEN — live owner-address query and UTxO JSON.**
 `./scripts/check-minutxo node-token-funding` passed with the added read
 assertions (`run-0m3dj956`). The address query returned exactly the two submitted
 store-backed token outputs; JSON preserved both outputs, including seven tokens
 and zero ADA each. Funding, deposit retention and total ADA checks also passed.
 No additional API, ledger or node implementation changes were needed.
 
-**Previous checkpoint: GREEN — store-backed UTxO JSON round-trip.** The unchanged
+**Earlier checkpoint: GREEN — store-backed UTxO JSON round-trip.** The unchanged
 `./scripts/check-minutxo utxo-json` passed (`run-ykon66uw`), preserving ordinary
 and store-backed output kinds and assets. Ordinary JSON keeps its `value`
 field; store-backed outputs use `applicationAssets`. The existing `read-back`
@@ -84,6 +91,8 @@ unsigned parent transactions survive a CBOR round-trip through the public API.
 each parent, using generated test keys.
 `node-build` separately compiles the prototype node and its RPC dependency;
 it does not start a node or submit a transaction.
+`cli-build` separately builds the declared CLI submodule against the local API
+and ledger. It does not start a node or query UTxOs.
 `node` starts a fresh private node and checks that Dijkstra blocks advance.
 `node-transaction` additionally submits an ordinary ADA transfer and checks its
 resulting UTxO.
@@ -497,6 +506,63 @@ passed. The node stopped cleanly. No API, ledger or node implementation change
 was required. The encoded UTxO, funding evidence, node log, tested source hashes
 and check diff are retained under
 `.workspace/minutxo-incremental/checks/run-0m3dj956/`.
+
+## CLI build prerequisite
+
+```sh
+./scripts/check-minutxo cli-build
+```
+
+This check builds `cardano-cli:exe:cardano-cli` using
+`cabal.project.minutxo-cli`, which imports the existing incremental API/ledger
+project and adds the declared CLI submodule. It uses the declared submodule
+pins and existing dependency bounds. Live CLI UTxO queries will be a separate step after this
+prerequisite is green.
+
+**Recorded result, 19 October 2026: RED at dependency resolution**, exit 1
+(`run-zx_4uivn`). The CLI pin `4d3dbdba2` provides version 9.0.0.1:
+
+```text
+rejecting: cardano-cli-9.0.0.1
+(conflict: cardano-api==11.8.0.0, cardano-cli => cardano-api^>=9.0)
+```
+
+Compilation did not start, no node was launched, and no CLI read assertions
+ran. This demonstrates an outdated CLI baseline, not a minUTxO query failure.
+The command, complete log, project snapshot and tested source hashes are saved
+under `.workspace/minutxo-incremental/checks/run-zx_4uivn/`.
+
+The current node's [project](cardano-node/cabal.project) pins upstream CLI
+`40f4167614dc15168f463396db3ae9f5bc381449`, described there as Leios with CLI
+11.3.0.0 merged. At the dependency-red checkpoint this was an untested alignment
+candidate. The subsequent alignment uses that exact revision on the CLI's local
+`minutxo-incremental` branch, preserving its previous branch.
+
+**Recorded result, 19 October 2026: RED at compilation after alignment**
+(`run-volt1wpb`, exit 1). Dependency resolution passed without additional bound
+relaxations. Compilation exposed the minUTxO interface changes: the old
+`mkBasicTxOut` constructor no longer exists, and `valueTxOutL` applies to an
+implicit-deposit output rather than the outer output type. The CLI executable
+did not build and no read assertions ran.
+
+**Recorded result, 19 October 2026: GREEN** (`run-ywd3hpnn`, exit 0), using the
+same command, runner and project as the original red. The focused CLI changes
+are limited to three files:
+
+- Ordinary output construction uses `mkBasicTxOutWithImplicitDeposit`. Its
+  parser still creates ordinary outputs; the added store-backed case fails
+  explicitly instead of leaving an incomplete pattern match.
+- Friendly output rendering selects ordinary values or application assets
+  according to the output kind, retaining the existing ordinary `amount` field.
+- Text UTxO rendering makes the same distinction and labels store-backed
+  outputs. JSON UTxO queries already use the API's JSON encoder.
+
+The compiled executable reports CLI 11.3.0.0 and successfully runs
+`dijkstra query utxo --help`. Fourmolu and whitespace checks pass. The CLI diff,
+tested source hashes, build log and executable checks are saved under
+`.workspace/minutxo-incremental/checks/run-ywd3hpnn/`. API, ledger and node source
+and pins are unchanged. Live CLI query behavior remains a separate check;
+compilation alone does not establish that it works.
 
 ## Nested token-only output with separate deposit funding
 
