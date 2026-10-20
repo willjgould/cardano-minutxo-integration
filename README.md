@@ -14,7 +14,25 @@ Wallet and balancing components retain their original pins and remain untested.
 The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
-**Current checkpoint: GREEN — live CLI build, sign and submit.**
+**Current checkpoint: RED — awaiting Nicolas's fee-release fix.**
+The ledger is pinned to Nicolas's published revision
+`e5da0be244308c217a9b0eecf221c797f4176f44`, without our local fee-release patch.
+`./scripts/check-minutxo node-deposit-release` remains the unchanged reproducer:
+it asks released backing to cover the transaction fee after reserving backing
+for both new outputs. On 20 October 2026, `run-58ujxarj` built successfully,
+passed funding, epoch retention and live read checks, then failed at submission
+with `InsufficientSettlementOutput`: output 1 contains 154,583 lovelace but the
+rule requires the full 155,160-lovelace release, including the 577 spent on the
+fee. The release transaction was rejected; inclusion assertions did not run.
+
+The earlier release greens below used our local ledger patch; they do not
+describe this checkout. Wait for Nicolas's published fix, update the ledger
+submodule pin, and rerun the same check before recording green again.
+This ledger pin is available from Nicolas's repository. Historical parent
+commits that referenced the local ledger patch still require that unpublished
+commit; their history has not been rewritten.
+
+**Earlier checkpoint: GREEN — live CLI build, sign and submit.**
 `./scripts/check-minutxo node-cli-transaction` passed on its first run
 (`run-xa_8bbi8`). The CLI automatically calculated backing, fee and change,
 signed and submitted a seven-token, zero-ADA store-backed output. The private
