@@ -12,7 +12,7 @@
 	branch = minutxo-incremental
 [submodule "cardano-wallet"]
 	path = cardano-wallet
-	url = https://github.com/cardano-foundation/cardano-wallet.git
+	url = https://github.com/willjgould/cardano-wallet.git
 	branch = master
 [submodule "cardano-balance-transaction"]
 	path = cardano-balance-transaction
