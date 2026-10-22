@@ -48,7 +48,7 @@ def run(command, log):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("step", nargs="?", choices=("dependencies", "plutus-dependencies", "plutus-build", "plutus-compiler-dependencies", "plutus-compiler-build", *PLUTUS_CONTEXT_CHECKS, "build", "transaction", "store-backed", "read-back", "utxo-json", "nested", "serialisation", "signing", "node-build", "cli-build", "cli-store-backed", "node", "node-transaction", "node-token-funding", "node-cli-utxo", "node-cli-transaction", "node-auto-deposit", "node-deposit-release", "node-nested-parent", "node-nested-sibling"),
+    parser.add_argument("step", nargs="?", choices=("dependencies", "plutus-dependencies", "plutus-build", "plutus-compiler-dependencies", "plutus-compiler-build", "plutus-node-dependencies", "plutus-node-build", *PLUTUS_CONTEXT_CHECKS, "build", "transaction", "store-backed", "read-back", "utxo-json", "nested", "serialisation", "signing", "node-build", "cli-build", "cli-store-backed", "node", "node-transaction", "node-token-funding", "node-cli-utxo", "node-cli-transaction", "node-auto-deposit", "node-deposit-release", "node-nested-parent", "node-nested-sibling", "node-plutus-ordinary", "node-plutus-store-backed", "node-plutus-negative"),
                         default="dependencies",
                         help="Resolve dependencies (default), compile a target, or check a Plutus context/transaction/node")
     parser.add_argument("--offline", action="store_true", help="Use cached Cabal packages only")
@@ -58,6 +58,8 @@ def main():
         "plutus-build": "cabal.project.minutxo-plutus",
         "plutus-compiler-dependencies": "cabal.project.minutxo-plutus-compiler",
         "plutus-compiler-build": "cabal.project.minutxo-plutus-compiler",
+        "plutus-node-dependencies": "cabal.project.minutxo-plutus-node",
+        "plutus-node-build": "cabal.project.minutxo-plutus-node",
         **dict.fromkeys(PLUTUS_CONTEXT_CHECKS, "cabal.project.minutxo-plutus"),
         "node-build": "cabal.project.minutxo-node",
         "cli-build": "cabal.project.minutxo-cli",
@@ -66,13 +68,15 @@ def main():
                "--builddir=.workspace/minutxo-incremental/build"]
     if args.offline:
         options.append("--offline")
-    if args.step in ("dependencies", "plutus-dependencies", "plutus-compiler-dependencies"):
+    if args.step in ("dependencies", "plutus-dependencies", "plutus-compiler-dependencies", "plutus-node-dependencies"):
         options.append("--dry-run")
     target = {
         "plutus-dependencies": "cardano-ledger-dijkstra:test:tests",
         "plutus-build": "cardano-ledger-dijkstra:test:tests",
         "plutus-compiler-dependencies": "plutus-preprocessor:lib:plutus-preprocessor",
         "plutus-compiler-build": "plutus-preprocessor:lib:plutus-preprocessor",
+        "plutus-node-dependencies": "minutxo-plutus-node:exe:check-plutus-node",
+        "plutus-node-build": "minutxo-plutus-node:exe:check-plutus-node",
         **dict.fromkeys(PLUTUS_CONTEXT_CHECKS, "cardano-ledger-dijkstra:test:tests"),
         "node-build": "cardano-node:exe:cardano-node",
         "cli-build": "cardano-cli:exe:cardano-cli",
@@ -80,6 +84,8 @@ def main():
     command = (["cabal", "run", *options, TRANSACTION_TARGETS[args.step]]
                if args.step in TRANSACTION_TARGETS
                else ["cabal", "build", *options, target])
+    if args.step == "plutus-node-build":
+        command.extend(["cardano-node:exe:cardano-node", "minutxo-node:exe:check-node"])
     if args.step in PLUTUS_CONTEXT_CHECKS:
         command = [
             "cabal", "test", *options, target,
@@ -88,7 +94,7 @@ def main():
             "--test-option=--fail-on=empty,pending",
             f"--test-option=--match={PLUTUS_CONTEXT_CHECKS[args.step]}",
         ]
-    if args.step in ("node", "node-transaction", "node-token-funding", "node-cli-utxo", "node-cli-transaction", "node-auto-deposit", "node-deposit-release", "node-nested-parent", "node-nested-sibling"):
+    if args.step in ("node", "node-transaction", "node-token-funding", "node-cli-utxo", "node-cli-transaction", "node-auto-deposit", "node-deposit-release", "node-nested-parent", "node-nested-sibling", "node-plutus-ordinary", "node-plutus-store-backed", "node-plutus-negative"):
         command = [str(ROOT / "scripts/check-minutxo-node")]
         if args.step == "node-transaction":
             command.append("--submit-ada")
@@ -106,6 +112,12 @@ def main():
             command.append("--submit-nested-parent")
         if args.step == "node-nested-sibling":
             command.append("--submit-nested-sibling")
+        if args.step == "node-plutus-ordinary":
+            command.append("--plutus-ordinary")
+        if args.step == "node-plutus-store-backed":
+            command.append("--plutus-store-backed")
+        if args.step == "node-plutus-negative":
+            command.append("--plutus-negative")
         if args.offline:
             command.append("--offline")
 

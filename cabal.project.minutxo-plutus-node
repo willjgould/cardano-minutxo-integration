@@ -1,0 +1,10 @@
+import: cabal.project.minutxo-node
+
+packages:
+  checks/plutus
+  checks/plutus-node
+
+-- Plinth's caseData compiler requires the literal branch list. GHC full
+-- laziness otherwise floats V4 decoder lists out of the imported unfoldings.
+package plutus-ledger-api
+  ghc-options: -fno-full-laziness

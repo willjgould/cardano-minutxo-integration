@@ -2033,6 +2033,14 @@ Each context check should report **1 example, 0 failures** and **GREEN**.
 No running node is required. Logs are saved under
 `.workspace/minutxo-incremental/checks/`.
 
+The live execution checks start and stop their own private node:
+
+```sh
+./scripts/check-minutxo node-plutus-ordinary
+./scripts/check-minutxo node-plutus-store-backed
+./scripts/check-minutxo node-plutus-negative
+```
+
 The historical commands below use `--offline`, which is suitable for an
 up-to-date build but can fail during dependency reconfiguration with the
 selected Cabal 3.16.1.0. Its offline guard treats configured packages with a
@@ -2091,6 +2099,35 @@ No Plutus assertions ran.
 up to date from the previous compilation. This establishes the existing test
 target's build prerequisite only. The global log permission issue returned
 when running a test; see the focused test evidence below.
+
+### Sources and dependencies
+
+A Plutus fork or submodule is not needed for the initial investigation.
+The inspected `.workspace/minutxo-incremental/build/cache/plan.json` selects
+`plutus-core`, `plutus-ledger-api` and `plutus-tx` version `1.71.0.0` from
+published CHaP packages. The root project fixes package-index dates and already
+builds against the declared ledger submodule.
+
+Changes to ledger-to-script translation belong in
+[`Dijkstra/TxInfo.hs`](cardano-ledger-specs/eras/dijkstra/impl/src/Cardano/Ledger/Dijkstra/TxInfo.hs).
+The existing V4 translator preserves the full value of implicit outputs and
+the application assets of store-backed outputs. Both become the existing
+Plutus output record, without a backing-kind or deposit field.
+
+Writing a validator against that interface also does not require a Plutus
+fork. The ledger's
+[`plutus-preprocessor`](cardano-ledger-specs/libs/plutus-preprocessor/plutus-preprocessor.cabal)
+provides V4 script compilation examples. Its compiler/plugin dependencies
+were established separately in the compiler prerequisite project. The live
+validator project now selects those published packages as well, with the
+compiler settings documented below. Dependency resolution and compilation
+remain separate from behavior checks.
+
+Modified Plutus source becomes necessary if evidence calls for changing its
+context types, encoding, compiler or evaluator. A local fork could then be
+added as a declared, pinned submodule. Existing published context interfaces
+must retain their semantics; see the
+[Plutus language-version documentation](https://plutus.cardano.intersectmbo.org/docs/working-with-scripts/ledger-language-version).
 
 ### Mixed-output context check
 
@@ -2168,6 +2205,122 @@ in its own check package and uses the same compiler.
 **Compiler build baseline:** `run-6x0prhbp` exited 0, compiling the existing V4
 fixtures as well as the compiler plugin. This establishes compilation support,
 not application-validator execution.
+
+The separate `minutxo-plutus-validator` and `minutxo-plutus-node` packages use
+`cabal.project.minutxo-plutus-node`, which imports the declared node project.
+Their manifests were added and resolved before adding validator or transaction
+code:
+
+```sh
+./scripts/check-minutxo plutus-node-dependencies
+./scripts/check-minutxo plutus-node-build
+```
+
+The dependency dry run passed in `run-vyn3mcit`; no assertions ran.
+
+The first node/validator build, `run-8474qhsx`, failed because the fixture
+imported `unsafeDataAsI` from the wrong module. After correcting that import,
+`run-tv67sfcw` exposed a Plinth compiler failure while compiling the standard
+V4 context decoder: `Unexpected expression where a list constructor was
+expected`. Applying the
+[documented Plinth GHC settings](https://plutus.cardano.intersectmbo.org/docs/using-plinth/extensions-flags-pragmas)
+to the validator alone left the same error in `run-ubbj76xr`.
+
+The selected `plutus-ledger-api` interface had already floated the decoder's
+`caseData` branch list into an imported constant, which this compiler does not
+unfold. The fix applies `-fno-full-laziness` to that dependency in the
+Plutus node project. The package version, standard V4 context API and validator
+rule remain unchanged. **The same build passed in `run-95knpz2a`**, including
+the application validator, its node check, and the local node. These are
+compilation checks; no transaction assertions ran.
+
+### Ordinary V4 execution
+
+After the build passed, the next check was introduced:
+
+```sh
+./scripts/check-minutxo node-plutus-ordinary
+```
+
+It starts a fresh local Dijkstra node, mints seven tokens into a script output
+with five ADA and inline datum 0, then spends it into the same script with the
+same value and datum 1. An ordinary sponsor input pays the fee and a separate
+ordinary input supplies collateral. The validator checks the token quantity,
+exactly one continuation at the same address, unchanged full value, and the
+datum increment. It does not inspect backing or calculate minUTxO.
+
+The check requires positive evaluated execution units, successful submission,
+the exact included UTxO, unchanged collateral, an empty deposit store and
+conserved total ADA. Evidence is retained in the printed node directory.
+
+**Observed green baseline:** `run-c7gusoud` exited 0. Both transactions were
+accepted and included. The spend used 43,822,523 execution steps and 245,734
+memory units; its fee was 20,386 lovelace. The included continuation contains
+seven tokens and 5,000,000 lovelace with datum 1. The whole UTxO matches,
+collateral is unchanged and the deposit store remains empty.
+
+### Token-only V4 execution
+
+Introduced after ordinary execution passed:
+
+```sh
+./scripts/check-minutxo node-plutus-store-backed
+```
+
+This uses the same validator implementation with a store-backed script input
+and continuation, both containing seven tokens and zero ADA. The builder
+funds the initial backing separately, reads the recorded allocation, and
+prices the continuing output. The check requires equal allocations before
+declaring zero net backing change. Sponsor inputs pay the fee and supply
+ordinary collateral. The included deposit store must move the allocation
+from the spent input to its continuation, with conserved total ADA.
+
+**Observed green baseline:** compilation passed in `run-knc_dx6a`, then the
+live check passed in `run-x6k32mwp`. The token-only script input and continuation
+each require 1,043,020 lovelace of backing, held in the deposit store. The
+recorded allocation moved to the continuation exactly. The spend used the same
+43,822,523 execution steps and 245,734 memory units as the ordinary case.
+Its script output contains zero ADA; the sponsor paid the 20,386-lovelace fee,
+and the 10,000,000-lovelace ordinary collateral remained unspent.
+
+The two fresh chains mint under different payment keys, so their asset
+parameters and resulting script hashes differ. They use the same validator
+implementation. No Plutus fork, context extension or ledger change was needed.
+The validator is a single-state-input integration fixture, not a general
+production contract or a migration policy for releasing attached ADA.
+
+### Application-rule rejection
+
+Introduced after the token-only spend passed:
+
+```sh
+./scripts/check-minutxo node-plutus-negative
+```
+
+Fund one token-only script input and balance its valid continuation with datum
+1. Against the same unspent input and compiled validator, change only the
+requested continuation datum to 2. Require evaluation to fail at the expected
+spending witness, with the expected script hash and the `PT5` trace emitted by
+`PlutusTx.Prelude.check False`. Other errors do not count as success.
+
+Verify that the node's UTxO and deposit store are unchanged, then sign and
+submit the original valid transaction and require inclusion. The invalid
+candidate is never submitted; this check does not demonstrate collateral
+consumption after phase-two failure.
+
+**Observed green baseline:** compilation passed in `run-6e9y7pja`, then
+`run-9_eo4ypv` exited 0. Witness index 0 failed in the expected validator with
+exactly `["PT5"]`; the live UTxO and 1,043,020-lovelace deposit allocation
+remained unchanged. The original valid continuation was then accepted and
+included with datum 1, seven tokens, zero attached ADA, and unchanged
+collateral. Both outcomes use the same compiled script hash and funded input.
+After adding both cases, the ordinary live baseline was rerun against the
+final harness: `run-k8jy32nh` also exited 0 with successful inclusion.
+
+These execution checks passed without transaction-support changes. The
+observed red/green fix in this sequence was the compiler configuration;
+do not describe an already-passing execution baseline as a repaired ledger
+failure. The separate fee-from-released-backing checkpoint remains red.
 
 ## Working one step at a time
 

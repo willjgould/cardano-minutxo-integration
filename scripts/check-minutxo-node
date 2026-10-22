@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 NODE = "cardano-node:exe:cardano-node"
 CHECK = "minutxo-node:exe:check-node"
 CLI = "cardano-cli:exe:cardano-cli"
+PLUTUS_CHECK = "minutxo-plutus-node:exe:check-plutus-node"
 
 
 def terminate(signum, _frame):
@@ -42,14 +43,25 @@ def main():
                             help="Fund token inputs, then submit a child whose extra deposit is paid by its parent")
     submission.add_argument("--submit-nested-sibling", action="store_true",
                             help="Fund token inputs, then submit a token child whose extra deposit is paid by an ADA sibling")
+    submission.add_argument("--plutus-ordinary", action="store_true",
+                            help="Execute a V4 validator spending an ordinary output and verify inclusion")
+    submission.add_argument("--plutus-store-backed", action="store_true",
+                            help="Execute the same V4 application rule with zero-ADA script outputs and verify backing")
+    submission.add_argument("--plutus-negative", action="store_true",
+                            help="Reject an invalid token-only datum transition, then include the valid spend")
     args = parser.parse_args()
     needs_cli = args.query_cli_utxo or args.submit_cli_transaction
+    needs_plutus = args.plutus_ordinary or args.plutus_store_backed or args.plutus_negative
     project = "cabal.project.minutxo-node-cli" if needs_cli else "cabal.project.minutxo-node"
+    if needs_plutus:
+        project = "cabal.project.minutxo-plutus-node"
     options = [f"--project-file={project}",
                "--builddir=.workspace/minutxo-incremental/build"]
     if args.offline:
         options.append("--offline")
     targets = [NODE, CHECK, CLI] if needs_cli else [NODE, CHECK]
+    if needs_plutus:
+        targets.append(PLUTUS_CHECK)
     subprocess.run(["cabal", "build", *options, *targets], cwd=ROOT, check=True)
 
     def binary(target):
@@ -59,6 +71,7 @@ def main():
 
     node, check = binary(NODE), binary(CHECK)
     cli = binary(CLI) if needs_cli else None
+    plutus_check = binary(PLUTUS_CHECK) if needs_plutus else None
     # A short, private path keeps the Unix socket within the platform limit.
     os.umask(0o077)
     directory = Path(tempfile.mkdtemp(prefix="minutxo-node-"))
@@ -97,6 +110,15 @@ def main():
                         elif tip["block"] > first_block:
                             (directory / "ready-tip.json").write_text(json.dumps(tip, indent=2) + "\n")
                             print(f"PASS: Dijkstra blocks advanced from {first_block} to {tip['block']}", flush=True)
+                            if args.plutus_ordinary:
+                                subprocess.run([plutus_check, "ordinary", str(directory), str(socket)],
+                                               cwd=ROOT, check=True, timeout=270)
+                            if args.plutus_store_backed:
+                                subprocess.run([plutus_check, "store-backed", str(directory), str(socket)],
+                                               cwd=ROOT, check=True, timeout=270)
+                            if args.plutus_negative:
+                                subprocess.run([plutus_check, "store-backed-negative", str(directory), str(socket)],
+                                               cwd=ROOT, check=True, timeout=270)
                             if args.submit_ada:
                                 subprocess.run([check, "transfer", str(directory), str(socket)],
                                                cwd=ROOT, check=True, timeout=150)
