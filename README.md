@@ -1603,7 +1603,8 @@ ownership/witness, and inclusion-query helpers. The token owner, ADA sibling,
 and parent use three distinct payment keys. Each signs only its own body, and
 the check verifies ownership of its live input and its sole valid witness.
 The harness holds all three keys; exchanging independently prepared children
-between participants and Plutus spending remain untested.
+between participants remains untested. A later check below demonstrates
+parent-funded nested Plutus spending with a child signed before parent balancing.
 
 **Initial single-owner result, 16 October 2026: GREEN on the first run**, using
 `./scripts/check-minutxo node-nested-sibling --offline` (`run-o05gsqpp`).
@@ -1670,8 +1671,9 @@ included in this red step.
 with an explicit net deposit. The rebased ledger already accounts for child
 inputs/outputs and that deposit, while the serialized signed children already
 contribute to the fee. The fix replaces the blanket rejection with scoped
-checks; it introduces no new ledger arithmetic. Estimation without real UTxOs,
-nested script execution, and parent store-backed outputs remain unsupported.
+checks; it introduces no new ledger arithmetic. At this checkpoint, estimation
+without real UTxOs, nested script execution, and parent store-backed outputs
+remained unsupported. Later checks below extend this coverage.
 
 Under the private node's parameters, the API calculated a 706-lovelace fee and
 899,995,598,704 lovelace of parent change after the 1,133,530-lovelace net deposit.
@@ -2014,9 +2016,21 @@ Their logs and transaction evidence are retained in those run directories.
 
 ## Plutus mixed-output investigation
 
-This separate sequence investigates Plutus with implicit and store-backed
-outputs while the fee-from-released-backing check remains red. Dependency
-resolution, compilation and application behavior are recorded separately.
+**Status: the separate Plutus sequence has green dependencies, compilation,
+mixed-output and mixed spending-input V4 context translation, and ordinary
+and token-only store-backed V4 execution through node submission and inclusion.
+The same token-only validator rejects an invalid datum transition. A separately
+signed child also evaluates locally and is included with parent-funded backing,
+but source review found missing ledger enforcement of child Plutus execution.**
+The question is whether scripts can enforce application rules when implicit
+and store-backed inputs and outputs coexist, using the existing script context.
+Keep deposit-store mechanics in the ledger while testing that application
+assets and payment conditions remain meaningful.
+
+The user authorized a separate Plutus sequence on 20 October 2026 while the
+existing `node-deposit-release` checkpoint remains red. Within this sequence,
+each new check follows the previous check's green result. This work was kept
+staged for review until commits were requested on 22 October 2026.
 
 ### Running the checks
 
@@ -2039,6 +2053,7 @@ The live execution checks start and stop their own private node:
 ./scripts/check-minutxo node-plutus-ordinary
 ./scripts/check-minutxo node-plutus-store-backed
 ./scripts/check-minutxo node-plutus-negative
+./scripts/check-minutxo node-plutus-nested-parent
 ```
 
 The historical commands below use `--offline`, which is suitable for an
@@ -2322,6 +2337,153 @@ observed red/green fix in this sequence was the compiler configuration;
 do not describe an already-passing execution baseline as a repaired ledger
 failure. The separate fee-from-released-backing checkpoint remains red.
 
+### Nested V4 execution with parent-funded backing
+
+```sh
+./scripts/check-minutxo node-plutus-nested-parent
+```
+
+This check uses the same application validator in a subtransaction. Its script
+input and continuation contain seven tokens and zero attached ADA. Advancing
+the inline datum from 23 to 24 increases its encoded size, so the continuation
+requires more backing than the input's recorded allocation. The child requests
+that exact difference from the parent.
+
+Before signing, the harness evaluates the actual V4 child context at index zero
+using the ledger's nested-context constructor. It measures execution under the
+protocol maximum, rebuilds the child with the measured budget and script
+integrity hash, then signs once with a key distinct from the parent's key. A
+child key guard makes that signature mandatory for this authored transaction.
+The application validator itself is unchanged and is not an owner-bound
+production contract.
+
+The parent supplies the additional backing and fee, with separate ordinary
+collateral. Assertions require the complete signed child to remain byte-for-byte
+unchanged through balancing, parent signing and CBOR round-trip. Final checks
+cover local execution in the actual nested context, submission, inclusion, the exact whole UTxO,
+deposit allocations, ADA conservation and unchanged collateral. The declaration
+is calculated by the harness before signing; this is not an automatic nested
+backing feature in the API.
+
+**Prerequisites, 21 October 2026:** adding the existing pinned
+`plutus-ledger-api` as a direct harness dependency passed the separate dry run
+in `run-w3u40vrq`. The initial builds `run-6rtonh22` and `run-c55bt_st` failed
+on harness type annotations/refinement for the V4 context and CBOR decoder.
+After correcting these, the same build passed in `run-u7jilf3c`. No transaction
+assertions ran in those build checks.
+
+**Observed behavior red:** `run-zico1ztt` funded and included the script output,
+evaluated its real nested context, and signed the child. Parent automatic
+balancing then failed with `Balancing nested transactions with scripts is not
+supported.` The nested spend was not submitted. Its signed-child evidence is
+retained in the printed node directory.
+
+**Fix and observed green:** the API balancer now accepts prepared, signed child
+scripts, recognizes their need for parent collateral, and evaluates them in
+their final nested contexts under their committed budgets. It preserves child
+bodies, execution units, integrity hashes and witnesses. Parent-level Plutus
+combined with children and nested `ScriptInvalid` transactions remain unsupported.
+No ledger or validator implementation changed.
+
+The support build passed in `run-srqjzbtw`, then the same live check passed in
+`run-08ebqvhs`. SHA-256 verification confirmed the harness and validator sources
+were identical to the behavior-red run; subsequent harness formatting changes
+are cosmetic. The child used 35,520,158 execution steps and 201,042 memory units.
+Its input allocation was 1,043,020 lovelace; its continuation required 1,047,330,
+so the parent funded the additional **4,310 lovelace**. The node accepted and
+included the transaction. Exact UTxO and deposit-store checks, total ADA
+conservation, separate signatures, unchanged signed-child bytes and unspent
+collateral all passed. The parent's fee under the current private-node rules
+was 3,214 lovelace. Evidence is in the run log and the printed node directory's
+`plutus-nested-parent-{child-signed,balanced,submitted,included}.json` and CBOR
+files.
+
+**Regressions:** after formatting and documenting the API limits,
+`node-plutus-ordinary` passed in `run-kxs_nay5` and `node-plutus-negative` passed
+in `run-0i10e72u`. The latter rejected datum 0 to 2 with the expected validator
+failure, then included the valid token-only datum 0 to 1 continuation. Fourmolu,
+Python runner syntax and staged diff whitespace checks passed.
+
+**Correction following collateral review:** this positive check does not prove
+that the node enforces the child validator. Local evaluation occurs explicitly
+in the harness and API. Source inspection found that Dijkstra's inherited
+Conway `UTXOS` rule calls `expectScriptsToPass`, but the Dijkstra
+`plutusScriptsWithContextStAnnTx` implementation returns only the parent's
+contexts for a top-level transaction (`Dijkstra/UTxO.hs`,
+`plutusScriptsWithContextDijkstraStAnnTx`). Child contexts are stored separately;
+the `SUBLEDGER` / `SUBUTXOW` / `SUBUTXO` path does not evaluate them. Consequently
+node acceptance and inclusion alone do not establish child-script enforcement.
+This is a source-inspected gap, not yet a live invalid-child reproduction.
+
+Collateral is supplied at the parent level for the entire batch. The check
+selects a separate ordinary sponsor UTxO containing 10 ADA and verifies that it
+remains unspent on success. Child redeemers trigger the ledger's batch collateral
+check, but the execution gap above prevents us from claiming that a failing
+child triggers collateral settlement. A negative child must next be submitted
+directly to expose this gap, separately from a phase-two-invalid collateral
+consumption check. The current API rejects locally failing children and does
+not support nested `ScriptInvalid` construction.
+
+**Separate source-inspected limitation:** the pinned ledger's fee calculation
+charges for serialized child bytes but does not aggregate child execution units
+into its script-execution charge. Dijkstra's `getMinFeeTx` uses
+`getConwayMinFeeTx`, which reaches `alonzoMinFeeTx`; its `totExUnits` reads only
+the parent redeemers. The API follows that calculation without a surcharge
+workaround. Consequently this green proves execution and balancing under the
+current rules, not complete nested execution-fee accounting. That needs a
+separate failing check and ledger fix. The existing fee-from-released-backing
+checkpoint also remains red.
+
+### Subsequent checks, introduced individually
+
+After the preceding check is green, add one focused case at a time:
+
+1. Mixed reference inputs preserve their exact visible values. This context
+   check does not prove the separate ledger rule that references release no
+   deposits.
+2. Investigate each remaining transition below separately, then exercise both
+   kinds of script-locked input and continuation in one transaction. The
+   token-only check already mixes a store-backed script input/continuation
+   with an implicit sponsor input/change output.
+
+| Script input | Continuing output | Accounting question |
+| --- | --- | --- |
+| Implicit | Implicit | Demonstrated: ordinary script value is preserved. |
+| Store-backed | Store-backed | Demonstrated: application rule executes with zero attached ADA. |
+| Implicit | Store-backed | Explicitly account for all formerly attached ADA and new backing. |
+| Store-backed | Implicit | Meet the implicit minimum and account for released backing and its settlement. |
+
+Here "implicit" describes the output representation, not the script version.
+The initial matrix uses V4 validators for both representations. An existing
+output locked by a V1-V3 validator cannot simply be spent with that validator
+relabeled as V4: the language tag contributes to the script hash. Such outputs
+need a separate compatibility or migration check using their actual validators.
+
+Use an additional validator with an explicit application ADA reserve/payment
+condition to examine migrations. A transaction that moves ADA required by
+that condition into backing or another recipient must not become acceptable
+merely because the ledger balances. Conversely, an intentional rejection by
+a validator that requires unchanged full value is a policy result to explain,
+not automatically a translation defect.
+
+For successful live cases, verify script evaluation, submission, inclusion,
+actual output kinds, exact deposit allocations, total ADA and unspent
+collateral independently. The script's value checks alone do not prove a
+ledger output's backing kind. Fees should be funded independently of released
+backing during this investigation.
+
+V1-V3 compatibility, sibling-funded nested scripts, parent-level scripts combined
+with children, and collateral failure outcomes each need their own later checks.
+The existing legacy translators contain
+`unexpected StoreBackedTxOut` errors. The archived paired V2 example at
+`archive/minutxo-bundle-20261013:scripts/minutxo-plutus-pair/Main.hs`
+is a reference for reproducing that gap; do not restore its dependency patches
+or combined migration.
+
+Record which stage each failure reached: dependency resolution, compilation,
+context translation, script policy, ledger validation, submission or inclusion.
+A failure before script execution gives no evidence about application behavior.
+
 ## Working one step at a time
 
 For each capability:
@@ -2380,9 +2542,12 @@ The intended progression is:
     and both nested examples, with explicit deposit pricing. Automatic backing
     for new direct outputs funded by implicit-deposit inputs is now green under
     `node-auto-deposit`. Automatic nested deposits and refunds remain separate.
-    Live CLI UTxO reads, basic CLI build/sign/submit with automatic backing,
-    and spending a deposit release are green. Further CLI workflows, live
-    collateral, Plutus, wallet, and balancer paths need their own reproducers.
+    Live CLI UTxO reads and basic CLI build/sign/submit with automatic backing
+    are green. Spending a deposit release to pay its fee is currently red;
+    the earlier greens used the removed local ledger patch. The separate
+    Plutus coverage and its limits are recorded above. Further CLI workflows,
+    collateral failure outcomes, wallet, and balancer paths need their own
+    reproducers.
 
 Later items are future work, not claims of implemented support. Keep missing
 support as a failure; do not add fallback behavior to make a reproducer run.

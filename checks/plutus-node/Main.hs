@@ -41,6 +41,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import Lens.Micro ((^.))
 import MinUTxO.Validator (validatorBytes)
+import Nested (spendNestedParent)
 import Submission (queryUTxO, writeEvidence)
 import System.Environment (getArgs)
 import System.FilePath ((</>))
@@ -54,7 +55,7 @@ type Output = Api.TxOut Api.CtxUTxO Api.DijkstraEra
 
 data OutputKind = Ordinary | StoreBacked
 
-data SpendCase = Direct | Negative deriving (Eq)
+data SpendCase = Direct | Negative | NestedParent deriving (Eq)
 
 main :: IO ()
 main = do
@@ -64,7 +65,8 @@ main = do
         ["ordinary", directory, socket] -> scriptSpend Ordinary Direct directory socket
         ["store-backed", directory, socket] -> scriptSpend StoreBacked Direct directory socket
         ["store-backed-negative", directory, socket] -> scriptSpend StoreBacked Negative directory socket
-        _ -> fail "Usage: check-plutus-node (ordinary|store-backed|store-backed-negative) DIRECTORY SOCKET"
+        ["nested-parent", directory, socket] -> scriptSpend StoreBacked NestedParent directory socket
+        _ -> fail "Usage: check-plutus-node (ordinary|store-backed|store-backed-negative|nested-parent) DIRECTORY SOCKET"
 
 -- Run the same validator rule with either representation of its script output.
 -- The sponsor pays fees and any backing, and supplies separate ordinary
@@ -72,11 +74,11 @@ main = do
 scriptSpend :: OutputKind -> SpendCase -> FilePath -> FilePath -> IO ()
 scriptSpend kind spendCase directory socket = do
     let checkInvalidDatum = spendCase == Negative
-        initialDatum = 0
+        initialDatum = if spendCase == NestedParent then 23 else 0
         modeName = case kind of
             Ordinary -> "ordinary"
             StoreBacked -> "store-backed"
-        evidencePrefix = "plutus-" <> modeName <> (if checkInvalidDatum then "-negative" else "")
+        evidencePrefix = if spendCase == NestedParent then "plutus-nested-parent" else "plutus-" <> modeName <> (if checkInvalidDatum then "-negative" else "")
     putStrLn $ "RUN node assertions: fund a " <> modeName <> " Plutus V4 script output"
     payment <-
         Api.readFileTextEnvelope (Api.File (directory </> "payment.skey"))
@@ -230,141 +232,157 @@ scriptSpend kind spendCase directory socket = do
             State.DepositStore _ allocations ->
                 maybe (fail "The funded script input has no recorded backing allocation") pure $
                     Map.lookup (Api.toShelleyTxIn scriptInput) allocations
-    unless (continuationDeposit == recordedInputDeposit) $
-        fail "The continuation's required backing differs from the script input's recorded allocation"
-    let spendDeclaration = case kind of
-            Ordinary -> TopTx.NoUTxODepositDeclaration
-            StoreBacked -> TopTx.DeclaresZeroNetUTxODeposit
-        spendContent =
-            Exp.defaultTxBodyContent
-                { Exp.txNetUTxODepositChange = spendDeclaration
-                }
-                & Exp.setTxIns [(scriptInput, scriptWitness), (sponsorInput, Exp.AnyKeyWitnessPlaceholder)]
-                & Exp.setTxInsCollateral [collateralInput]
-                & Exp.setTxOuts [Exp.TxOut (Api.toShelleyTxOut era continuation)]
-                & Exp.setTxProtocolParams pparams
-    (spend, balancedContent) <- AutoBalance.balance connection pparams fundingUTxO spendContent sponsor
-    assertBody spend (Set.fromList [scriptInput, sponsorInput]) spendDeclaration
-    unless
-        ( Exp.txInsCollateral balancedContent == [collateralInput]
-            && Exp.txScriptValidity balancedContent == Api.ScriptValid
-        )
-        $ fail "Balancing must preserve the disjoint ordinary collateral and valid-script flag"
-    executionUnits <- case [ Witness.getAnyPlutusScriptWitnessExecutionUnits witness
-                           | (_, Exp.AnyPlutusScriptWitness witness) <- Exp.txIns balancedContent
-                           ] of
-        [units] | Api.executionSteps units > 0 && Api.executionMemory units > 0 -> pure units
-        _ -> fail "Expected exactly one evaluated Plutus spending witness with positive execution units"
-    spendChange <- case outputsOf spend of
-        [actualContinuation, change] | actualContinuation == continuation -> pure change
-        _ -> fail "The script spend must preserve its full address and value, advance datum to 1, and add one sponsor change output"
-    let spendFee = feeOf spend
-        expectedSpendChangeCoin = expectedFundingChangeCoin - spendFee
-        spendEvidence =
-            [ "scriptInput" .= show scriptInput
-            , "sponsorInput" .= show sponsorInput
-            , "collateralInput" .= show collateralInput
-            , "collateralLovelace" .= collateralCoin
-            , "feeLovelace" .= spendFee
-            , "sponsorChangeLovelace" .= expectedSpendChangeCoin
-            , "executionUnits" .= executionUnits
-            , "initialDatum" .= (0 :: Int)
-            , "continuationDatum" .= (1 :: Int)
-            , "recordedStoreBackingLovelace" .= recordedInputDeposit
-            , "continuationStoreBackingLovelace" .= continuationDeposit
-            , "automaticFeeAndChangeVerified" .= True
-            , "scriptValuePreserved" .= True
-            ]
-                <> commonEvidence
-    assertChange sponsor expectedSpendChangeCoin spendChange
-    writeEvidence directory (evidencePrefix <> "-spend-balanced.json") (object spendEvidence)
-    when checkInvalidDatum $ do
-        putStrLn "RUN validator rejection assertion: datum 0 to 2 against the same unspent script input"
-        let invalidContinuation = scriptOutput 2
-            invalidContent =
-                spendContent
-                    & Exp.setTxOuts [Exp.TxOut (Api.toShelleyTxOut era invalidContinuation)]
-        unless (price invalidContinuation == continuationDeposit) $
-            fail "The invalid datum control changed the required store backing"
-        unless (Exp.txScriptValidity invalidContent == Api.ScriptValid) $
-            fail "The invalid datum control must retain ScriptValid"
-        inputPosition <-
-            maybe (fail "The script input is missing from the invalid datum control") pure $
-                Set.lookupIndex scriptInput (Set.fromList (map fst (Exp.txIns invalidContent)))
-        let expectedIndex = Api.ScriptWitnessIndexTxIn (fromIntegral inputPosition)
-        systemStart <-
-            runExceptT (Api.queryNodeLocalState connection Network.VolatileTip Api.QuerySystemStart)
-                >>= either (fail . show) pure
-        history <-
-            runExceptT (Api.queryNodeLocalState connection Network.VolatileTip Api.QueryEraHistory)
-                >>= either (fail . show) pure
-        let invalidBalance =
-                Exp.makeTransactionBodyAutoBalance @Api.DijkstraEra
-                    systemStart
-                    (Api.toLedgerEpochInfo history)
-                    pparams
-                    Set.empty
-                    Map.empty
-                    Map.empty
-                    (Api.toLedgerUTxO era fundingUTxO)
-                    invalidContent
-                    sponsor
-                    Nothing
-        (rejection, executionLogs) <- case invalidBalance of
-            Left err@(Exp.TxBodyScriptExecutionError [(index, Api.ScriptErrorEvaluationFailed debug)]) -> do
-                unless (index == expectedIndex) $
-                    fail "The invalid datum control failed at an unexpected witness index"
-                unless
-                    ( LedgerPlutus.pwcScriptHash (Api.dpfScriptWithContext debug)
-                        == Api.toShelleyScriptHash scriptHash
-                    )
-                    $ fail "The invalid datum control failed in a different validator"
-                -- The pinned plutus-tx 1.71 library emits PT5 for check False.
-                -- Require this precise failure, not a decoder or budget error.
-                unless (Api.dpfExecutionLogs debug == ["PT5"]) $
-                    fail $
-                        "Expected the validator's failed application check: " <> Api.displayError err
-                pure (Api.displayError err, Api.dpfExecutionLogs debug)
-            Left err -> fail $ "Unexpected invalid datum control failure: " <> Api.displayError err
-            Right _ -> fail "The validator accepted the invalid datum transition from 0 to 2"
-        unchangedUTxO <- queryUTxO connection Api.QueryUTxOWhole
-        unless (unchangedUTxO == fundingUTxO) $
-            fail "The funded UTxO changed during the unsubmitted invalid datum control"
-        afterRejection <- queryLedgerState connection
-        verifyStore fundingStore (totalAda before) afterRejection
-        writeEvidence directory (evidencePrefix <> "-rejected-datum.json") $
-            object $
-                [ "stage" .= ("balancer-script-evaluation" :: Text.Text)
-                , "scriptInput" .= show scriptInput
-                , "witnessIndex" .= expectedIndex
-                , "initialDatum" .= (0 :: Int)
-                , "rejectedContinuationDatum" .= (2 :: Int)
-                , "executionLogs" .= executionLogs
-                , "rejection" .= rejection
-                , "invalidTransactionSubmitted" .= False
-                , "wholeUTxOUnchanged" .= True
-                , "depositStore" .= depositStore afterRejection
-                , "totalAdaBefore" .= totalAda before
-                , "totalAdaAfter" .= totalAda afterRejection
-                ]
-                    <> commonEvidence
-        putStrLn "PASS: the same validator rejected datum 0 to 2; input, collateral and backing remain unspent"
-    _ <-
-        submitAndVerify
-            directory
-            (evidencePrefix <> "-spend")
-            connection
-            payment
-            spend
-            (Map.singleton collateralInput collateralOutput)
-            expectedStore
-            (totalAda before)
-            spendEvidence
-    putStrLn $ case kind of
-        Ordinary -> "PASS: ordinary V4 validator executed and was included; seven tokens and script ADA preserved, datum advanced, sponsor paid the fee, collateral unspent"
-        StoreBacked -> "PASS: store-backed V4 validator executed and was included; seven tokens and zero script ADA preserved, datum advanced, backing moved to the continuation, sponsor paid the fee, collateral unspent"
-    when checkInvalidDatum $
-        putStrLn "PASS: the same funded input and validator rejected datum 0 to 2, then accepted datum 0 to 1 on chain"
+    if spendCase == NestedParent
+        then
+            spendNestedParent
+                directory
+                connection
+                pparams
+                payment
+                sponsor
+                fundingId
+                fundingUTxO
+                fundingStore
+                (totalAda before)
+                expectedFundingChangeCoin
+                continuation
+                scriptWitnessWithUnits
+        else do
+            unless (continuationDeposit == recordedInputDeposit) $
+                fail "The continuation's required backing differs from the script input's recorded allocation"
+            let spendDeclaration = case kind of
+                    Ordinary -> TopTx.NoUTxODepositDeclaration
+                    StoreBacked -> TopTx.DeclaresZeroNetUTxODeposit
+                spendContent =
+                    Exp.defaultTxBodyContent
+                        { Exp.txNetUTxODepositChange = spendDeclaration
+                        }
+                        & Exp.setTxIns [(scriptInput, scriptWitness), (sponsorInput, Exp.AnyKeyWitnessPlaceholder)]
+                        & Exp.setTxInsCollateral [collateralInput]
+                        & Exp.setTxOuts [Exp.TxOut (Api.toShelleyTxOut era continuation)]
+                        & Exp.setTxProtocolParams pparams
+            (spend, balancedContent) <- AutoBalance.balance connection pparams fundingUTxO spendContent sponsor
+            assertBody spend (Set.fromList [scriptInput, sponsorInput]) spendDeclaration
+            unless
+                ( Exp.txInsCollateral balancedContent == [collateralInput]
+                    && Exp.txScriptValidity balancedContent == Api.ScriptValid
+                )
+                $ fail "Balancing must preserve the disjoint ordinary collateral and valid-script flag"
+            executionUnits <- case [ Witness.getAnyPlutusScriptWitnessExecutionUnits witness
+                                   | (_, Exp.AnyPlutusScriptWitness witness) <- Exp.txIns balancedContent
+                                   ] of
+                [units] | Api.executionSteps units > 0 && Api.executionMemory units > 0 -> pure units
+                _ -> fail "Expected exactly one evaluated Plutus spending witness with positive execution units"
+            spendChange <- case outputsOf spend of
+                [actualContinuation, change] | actualContinuation == continuation -> pure change
+                _ -> fail "The script spend must preserve its full address and value, advance datum to 1, and add one sponsor change output"
+            let spendFee = feeOf spend
+                expectedSpendChangeCoin = expectedFundingChangeCoin - spendFee
+                spendEvidence =
+                    [ "scriptInput" .= show scriptInput
+                    , "sponsorInput" .= show sponsorInput
+                    , "collateralInput" .= show collateralInput
+                    , "collateralLovelace" .= collateralCoin
+                    , "feeLovelace" .= spendFee
+                    , "sponsorChangeLovelace" .= expectedSpendChangeCoin
+                    , "executionUnits" .= executionUnits
+                    , "initialDatum" .= (0 :: Int)
+                    , "continuationDatum" .= (1 :: Int)
+                    , "recordedStoreBackingLovelace" .= recordedInputDeposit
+                    , "continuationStoreBackingLovelace" .= continuationDeposit
+                    , "automaticFeeAndChangeVerified" .= True
+                    , "scriptValuePreserved" .= True
+                    ]
+                        <> commonEvidence
+            assertChange sponsor expectedSpendChangeCoin spendChange
+            writeEvidence directory (evidencePrefix <> "-spend-balanced.json") (object spendEvidence)
+            when checkInvalidDatum $ do
+                putStrLn "RUN validator rejection assertion: datum 0 to 2 against the same unspent script input"
+                let invalidContinuation = scriptOutput 2
+                    invalidContent =
+                        spendContent
+                            & Exp.setTxOuts [Exp.TxOut (Api.toShelleyTxOut era invalidContinuation)]
+                unless (price invalidContinuation == continuationDeposit) $
+                    fail "The invalid datum control changed the required store backing"
+                unless (Exp.txScriptValidity invalidContent == Api.ScriptValid) $
+                    fail "The invalid datum control must retain ScriptValid"
+                inputPosition <-
+                    maybe (fail "The script input is missing from the invalid datum control") pure $
+                        Set.lookupIndex scriptInput (Set.fromList (map fst (Exp.txIns invalidContent)))
+                let expectedIndex = Api.ScriptWitnessIndexTxIn (fromIntegral inputPosition)
+                systemStart <-
+                    runExceptT (Api.queryNodeLocalState connection Network.VolatileTip Api.QuerySystemStart)
+                        >>= either (fail . show) pure
+                history <-
+                    runExceptT (Api.queryNodeLocalState connection Network.VolatileTip Api.QueryEraHistory)
+                        >>= either (fail . show) pure
+                let invalidBalance =
+                        Exp.makeTransactionBodyAutoBalance @Api.DijkstraEra
+                            systemStart
+                            (Api.toLedgerEpochInfo history)
+                            pparams
+                            Set.empty
+                            Map.empty
+                            Map.empty
+                            (Api.toLedgerUTxO era fundingUTxO)
+                            invalidContent
+                            sponsor
+                            Nothing
+                (rejection, executionLogs) <- case invalidBalance of
+                    Left err@(Exp.TxBodyScriptExecutionError [(index, Api.ScriptErrorEvaluationFailed debug)]) -> do
+                        unless (index == expectedIndex) $
+                            fail "The invalid datum control failed at an unexpected witness index"
+                        unless
+                            ( LedgerPlutus.pwcScriptHash (Api.dpfScriptWithContext debug)
+                                == Api.toShelleyScriptHash scriptHash
+                            )
+                            $ fail "The invalid datum control failed in a different validator"
+                        -- The pinned plutus-tx 1.71 library emits PT5 for check False.
+                        -- Require this precise failure, not a decoder or budget error.
+                        unless (Api.dpfExecutionLogs debug == ["PT5"]) $
+                            fail $
+                                "Expected the validator's failed application check: " <> Api.displayError err
+                        pure (Api.displayError err, Api.dpfExecutionLogs debug)
+                    Left err -> fail $ "Unexpected invalid datum control failure: " <> Api.displayError err
+                    Right _ -> fail "The validator accepted the invalid datum transition from 0 to 2"
+                unchangedUTxO <- queryUTxO connection Api.QueryUTxOWhole
+                unless (unchangedUTxO == fundingUTxO) $
+                    fail "The funded UTxO changed during the unsubmitted invalid datum control"
+                afterRejection <- queryLedgerState connection
+                verifyStore fundingStore (totalAda before) afterRejection
+                writeEvidence directory (evidencePrefix <> "-rejected-datum.json") $
+                    object $
+                        [ "stage" .= ("balancer-script-evaluation" :: Text.Text)
+                        , "scriptInput" .= show scriptInput
+                        , "witnessIndex" .= expectedIndex
+                        , "initialDatum" .= (0 :: Int)
+                        , "rejectedContinuationDatum" .= (2 :: Int)
+                        , "executionLogs" .= executionLogs
+                        , "rejection" .= rejection
+                        , "invalidTransactionSubmitted" .= False
+                        , "wholeUTxOUnchanged" .= True
+                        , "depositStore" .= depositStore afterRejection
+                        , "totalAdaBefore" .= totalAda before
+                        , "totalAdaAfter" .= totalAda afterRejection
+                        ]
+                            <> commonEvidence
+                putStrLn "PASS: the same validator rejected datum 0 to 2; input, collateral and backing remain unspent"
+            _ <-
+                submitAndVerify
+                    directory
+                    (evidencePrefix <> "-spend")
+                    connection
+                    payment
+                    spend
+                    (Map.singleton collateralInput collateralOutput)
+                    expectedStore
+                    (totalAda before)
+                    spendEvidence
+            putStrLn $ case kind of
+                Ordinary -> "PASS: ordinary V4 validator executed and was included; seven tokens and script ADA preserved, datum advanced, sponsor paid the fee, collateral unspent"
+                StoreBacked -> "PASS: store-backed V4 validator executed and was included; seven tokens and zero script ADA preserved, datum advanced, backing moved to the continuation, sponsor paid the fee, collateral unspent"
+            when checkInvalidDatum $
+                putStrLn "PASS: the same funded input and validator rejected datum 0 to 2, then accepted datum 0 to 1 on chain"
 
 datum :: Integer -> Api.HashableScriptData
 datum = Api.unsafeHashableScriptData . Api.ScriptDataNumber

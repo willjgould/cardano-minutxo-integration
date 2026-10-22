@@ -49,9 +49,11 @@ def main():
                             help="Execute the same V4 application rule with zero-ADA script outputs and verify backing")
     submission.add_argument("--plutus-negative", action="store_true",
                             help="Reject an invalid token-only datum transition, then include the valid spend")
+    submission.add_argument("--plutus-nested-parent", action="store_true",
+                            help="Execute a signed token-only V4 child with parent-funded extra backing")
     args = parser.parse_args()
     needs_cli = args.query_cli_utxo or args.submit_cli_transaction
-    needs_plutus = args.plutus_ordinary or args.plutus_store_backed or args.plutus_negative
+    needs_plutus = args.plutus_ordinary or args.plutus_store_backed or args.plutus_negative or args.plutus_nested_parent
     project = "cabal.project.minutxo-node-cli" if needs_cli else "cabal.project.minutxo-node"
     if needs_plutus:
         project = "cabal.project.minutxo-plutus-node"
@@ -110,6 +112,9 @@ def main():
                         elif tip["block"] > first_block:
                             (directory / "ready-tip.json").write_text(json.dumps(tip, indent=2) + "\n")
                             print(f"PASS: Dijkstra blocks advanced from {first_block} to {tip['block']}", flush=True)
+                            if args.plutus_nested_parent:
+                                subprocess.run([plutus_check, "nested-parent", str(directory), str(socket)],
+                                               cwd=ROOT, check=True, timeout=270)
                             if args.plutus_ordinary:
                                 subprocess.run([plutus_check, "ordinary", str(directory), str(socket)],
                                                cwd=ROOT, check=True, timeout=270)
