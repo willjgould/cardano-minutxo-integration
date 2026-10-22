@@ -44,13 +44,14 @@ def run(command, log):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("step", nargs="?", choices=("dependencies", "plutus-dependencies", "build", "transaction", "store-backed", "read-back", "utxo-json", "nested", "serialisation", "signing", "node-build", "cli-build", "cli-store-backed", "node", "node-transaction", "node-token-funding", "node-cli-utxo", "node-cli-transaction", "node-auto-deposit", "node-deposit-release", "node-nested-parent", "node-nested-sibling"),
+    parser.add_argument("step", nargs="?", choices=("dependencies", "plutus-dependencies", "plutus-build", "build", "transaction", "store-backed", "read-back", "utxo-json", "nested", "serialisation", "signing", "node-build", "cli-build", "cli-store-backed", "node", "node-transaction", "node-token-funding", "node-cli-utxo", "node-cli-transaction", "node-auto-deposit", "node-deposit-release", "node-nested-parent", "node-nested-sibling"),
                         default="dependencies",
                         help="Resolve dependencies (default), compile a target, or check a Plutus context/transaction/node")
     parser.add_argument("--offline", action="store_true", help="Use cached Cabal packages only")
     args = parser.parse_args()
     project = {
         "plutus-dependencies": "cabal.project.minutxo-plutus",
+        "plutus-build": "cabal.project.minutxo-plutus",
         "node-build": "cabal.project.minutxo-node",
         "cli-build": "cabal.project.minutxo-cli",
     }.get(args.step, "cabal.project.minutxo-incremental")
@@ -62,6 +63,7 @@ def main():
         options.append("--dry-run")
     target = {
         "plutus-dependencies": "cardano-ledger-dijkstra:test:tests",
+        "plutus-build": "cardano-ledger-dijkstra:test:tests",
         "node-build": "cardano-node:exe:cardano-node",
         "cli-build": "cardano-cli:exe:cardano-cli",
     }.get(args.step, TARGET)

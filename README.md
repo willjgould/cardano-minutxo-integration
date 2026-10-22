@@ -2037,6 +2037,22 @@ for `cardano-ledger-dijkstra` in the separate Plutus project. No dependency
 versions or submodule pins changed. This is a dependency prerequisite green;
 compilation and script behavior remain untested by this command.
 
+### Compilation prerequisite
+
+```sh
+./scripts/check-minutxo --offline plutus-build
+```
+
+**Observed red, 20 October 2026:** `run-80g4i_ko` compiled and linked the
+Dijkstra test executable, then exited 1 because Cabal could not write its
+global summary at `/home/will/.cabal/logs/build.log` inside the sandbox.
+No Plutus assertions ran.
+
+**Observed green, same command:** `run-4nofx6wo` exited 0 with the executable
+up to date from the previous compilation. This establishes the existing test
+target's build prerequisite only. The global log permission issue returned
+when running a test; see the focused test evidence below.
+
 ## Working one step at a time
 
 For each capability:
