@@ -15,8 +15,9 @@ The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
 **Current checkpoint: RED — awaiting Nicolas's fee-release fix.**
-The ledger is pinned to Nicolas's published revision
+The ledger production code is Nicolas's published revision
 `e5da0be244308c217a9b0eecf221c797f4176f44`, without our local fee-release patch.
+The local ledger additions are V4 context tests only.
 `./scripts/check-minutxo node-deposit-release` remains the unchanged reproducer:
 it asks released backing to cover the transaction fee after reserving backing
 for both new outputs. On 20 October 2026, `run-58ujxarj` built successfully,
@@ -28,7 +29,7 @@ fee. The release transaction was rejected; inclusion assertions did not run.
 The earlier release greens below used our local ledger patch; they do not
 describe this checkout. Wait for Nicolas's published fix, update the ledger
 submodule pin, and rerun the same check before recording green again.
-This ledger pin is available from Nicolas's repository. Historical parent
+Nicolas's base revision is available from his repository. Historical parent
 commits that referenced the local ledger patch still require that unpublished
 commit; their history has not been rewritten.
 
@@ -2017,6 +2018,44 @@ This separate sequence investigates Plutus with implicit and store-backed
 outputs while the fee-from-released-backing check remains red. Dependency
 resolution, compilation and application behavior are recorded separately.
 
+### Running the checks
+
+From the repository root:
+
+```sh
+nix develop
+./scripts/check-minutxo plutus-build
+./scripts/check-minutxo plutus-mixed-outputs
+./scripts/check-minutxo plutus-mixed-inputs
+```
+
+Each context check should report **1 example, 0 failures** and **GREEN**.
+No running node is required. Logs are saved under
+`.workspace/minutxo-incremental/checks/`.
+
+The historical commands below use `--offline`, which is suitable for an
+up-to-date build but can fail during dependency reconfiguration with the
+selected Cabal 3.16.1.0. Its offline guard treats configured packages with a
+remote source origin as downloads, even when their archives and unpacked
+sources are cached; see the
+[Cabal offline guard and download selection](https://github.com/haskell/cabal/blob/cabal-install-v3.16.1.0/cabal-install/src/Distribution/Client/ProjectBuilding.hs#L337).
+Use the commands above when setting up or rebuilding. The runner respects an
+explicit `--offline` request and does not silently retry with network access.
+
+**Reproduction and verification, 20 October 2026:** the user's offline runs
+`run-ks4in_m1` (outputs) and `run-0hd7ueyg` (inputs) stopped at `Cabal-7125`
+before executing assertions. The separate offline build reproduced this in
+`run-x8ji44ja`. The rejected sources were the cached published versions of
+`byron-spec-chain`, `byron-spec-ledger`, `cardano-crypto-wrapper` and
+`cardano-ledger-byron`.
+
+Running `nix develop -c ./scripts/check-minutxo plutus-build` completed the
+reconfiguration in `run-hz7056yf`, with no package downloads reported. The same
+offline build then passed in `run-5fqsi6_e`. Both original offline context
+commands were rerun inside `nix develop`: outputs passed in `run-69rgpc38`
+and inputs passed in `run-gb4pd64e`, each with **1 example, 0 failures**.
+No dependency versions, assertions or implementation code changed.
+
 ### Dependency prerequisite
 
 ```sh
@@ -2052,6 +2091,57 @@ No Plutus assertions ran.
 up to date from the previous compilation. This establishes the existing test
 target's build prerequisite only. The global log permission issue returned
 when running a test; see the focused test evidence below.
+
+### Mixed-output context check
+
+```sh
+./scripts/check-minutxo --offline plutus-mixed-outputs
+```
+
+The existing V4 group in
+[`Dijkstra/TxInfoSpec.hs`](cardano-ledger-specs/eras/dijkstra/impl/testlib/Test/Cardano/Ledger/Dijkstra/TxInfoSpec.hs)
+translates one body containing an implicit output with 2,000,000 lovelace and
+seven native tokens beside a store-backed output with eleven native tokens
+and zero application ADA. The assertion checks exact visible values and
+output order through `toPlutusTxInfo SPlutusV4`.
+
+This uses a synthetic transaction body to establish context translation only.
+It does not execute a validator, check encoded script-context data, validate
+deposit accounting, or demonstrate node acceptance.
+
+**Observed green baseline, 20 October 2026:** `run-fkrr565f` exited 0 with
+**1 example, 0 failures**. The existing V4 translator passes without any
+implementation change. The filter fails on zero matching examples or pending
+examples.
+
+Earlier runs `run-v4hr1hj8` and `run-ote2wl6j` passed the same assertion but
+exited 1 while writing Cabal's global summary. These were command failures,
+not failing context assertions. Project and command-line summary settings
+added another destination without removing the global one; no such settings
+are retained. The green run had permission to write the normal Cabal log.
+
+### Mixed spending-input context check
+
+```sh
+./scripts/check-minutxo --offline plutus-mixed-inputs
+```
+
+Added after the mixed-output check was green, this example resolves two
+distinct input references from a synthetic UTxO: an implicit output with
+2,000,000 lovelace and seven native tokens, and a store-backed output with
+eleven native tokens and zero application ADA. It checks the complete
+reference/value pairs, without assuming an order for the ledger's input set.
+
+**Observed green baseline, 20 October 2026:** `run-wdcpzstz` exited 0 with
+**1 example, 0 failures**, without a translator change. As with the output
+check, this tests translation only; the fixture is not a balanced transaction
+submitted to the ledger or node. The preceding output check was rerun after
+adding this example: `run-hrvu9nk_` exited 0 with **1 example, 0 failures**.
+
+These checks confirm the current mapping on both sides: implicit outputs
+retain their full ADA, with no minimum subtracted; store-backed outputs expose
+their application assets. They do not establish that every existing script's
+ADA-dependent policy remains suitable when migrating between representations.
 
 ## Working one step at a time
 
