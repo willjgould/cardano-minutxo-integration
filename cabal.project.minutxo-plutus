@@ -1,0 +1,6 @@
+import: cabal.project.minutxo-incremental
+
+-- Investigate Plutus against this checkout's Dijkstra ledger and existing pins.
+
+package cardano-ledger-dijkstra
+  tests: True

@@ -2011,6 +2011,32 @@ balancing, signed children, node acceptance and inclusion, exact deposits,
 total ADA conservation, epoch retention and API owner-address JSON reads.
 Their logs and transaction evidence are retained in those run directories.
 
+## Plutus mixed-output investigation
+
+This separate sequence investigates Plutus with implicit and store-backed
+outputs while the fee-from-released-backing check remains red. Dependency
+resolution, compilation and application behavior are recorded separately.
+
+### Dependency prerequisite
+
+```sh
+./scripts/check-minutxo --offline plutus-dependencies
+```
+
+This runs `cabal build --dry-run` for the existing
+`cardano-ledger-dijkstra:test:tests` target using
+`cabal.project.minutxo-plutus`. It establishes target/dependency availability,
+without compiling code or running assertions.
+
+**Observed red, 20 October 2026:** `run-hrhjsy39` exited 1 with Cabal error
+`Cabal-7127`: the requested test suite was explicitly disabled by the inherited
+project configuration. No compilation or Plutus assertions ran.
+
+**Observed green, same command:** `run-1tocsgqs` exited 0 after enabling tests
+for `cardano-ledger-dijkstra` in the separate Plutus project. No dependency
+versions or submodule pins changed. This is a dependency prerequisite green;
+compilation and script behavior remain untested by this command.
+
 ## Working one step at a time
 
 For each capability:
