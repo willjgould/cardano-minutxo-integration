@@ -1,0 +1,5 @@
+import: cabal.project.minutxo-plutus
+
+-- Resolve the existing validator compiler before introducing a new script.
+packages:
+  cardano-ledger-specs/libs/plutus-preprocessor

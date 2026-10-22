@@ -48,7 +48,7 @@ def run(command, log):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("step", nargs="?", choices=("dependencies", "plutus-dependencies", "plutus-build", *PLUTUS_CONTEXT_CHECKS, "build", "transaction", "store-backed", "read-back", "utxo-json", "nested", "serialisation", "signing", "node-build", "cli-build", "cli-store-backed", "node", "node-transaction", "node-token-funding", "node-cli-utxo", "node-cli-transaction", "node-auto-deposit", "node-deposit-release", "node-nested-parent", "node-nested-sibling"),
+    parser.add_argument("step", nargs="?", choices=("dependencies", "plutus-dependencies", "plutus-build", "plutus-compiler-dependencies", "plutus-compiler-build", *PLUTUS_CONTEXT_CHECKS, "build", "transaction", "store-backed", "read-back", "utxo-json", "nested", "serialisation", "signing", "node-build", "cli-build", "cli-store-backed", "node", "node-transaction", "node-token-funding", "node-cli-utxo", "node-cli-transaction", "node-auto-deposit", "node-deposit-release", "node-nested-parent", "node-nested-sibling"),
                         default="dependencies",
                         help="Resolve dependencies (default), compile a target, or check a Plutus context/transaction/node")
     parser.add_argument("--offline", action="store_true", help="Use cached Cabal packages only")
@@ -56,6 +56,8 @@ def main():
     project = {
         "plutus-dependencies": "cabal.project.minutxo-plutus",
         "plutus-build": "cabal.project.minutxo-plutus",
+        "plutus-compiler-dependencies": "cabal.project.minutxo-plutus-compiler",
+        "plutus-compiler-build": "cabal.project.minutxo-plutus-compiler",
         **dict.fromkeys(PLUTUS_CONTEXT_CHECKS, "cabal.project.minutxo-plutus"),
         "node-build": "cabal.project.minutxo-node",
         "cli-build": "cabal.project.minutxo-cli",
@@ -64,11 +66,13 @@ def main():
                "--builddir=.workspace/minutxo-incremental/build"]
     if args.offline:
         options.append("--offline")
-    if args.step in ("dependencies", "plutus-dependencies"):
+    if args.step in ("dependencies", "plutus-dependencies", "plutus-compiler-dependencies"):
         options.append("--dry-run")
     target = {
         "plutus-dependencies": "cardano-ledger-dijkstra:test:tests",
         "plutus-build": "cardano-ledger-dijkstra:test:tests",
+        "plutus-compiler-dependencies": "plutus-preprocessor:lib:plutus-preprocessor",
+        "plutus-compiler-build": "plutus-preprocessor:lib:plutus-preprocessor",
         **dict.fromkeys(PLUTUS_CONTEXT_CHECKS, "cardano-ledger-dijkstra:test:tests"),
         "node-build": "cardano-node:exe:cardano-node",
         "cli-build": "cardano-cli:exe:cardano-cli",

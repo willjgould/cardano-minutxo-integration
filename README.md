@@ -2143,6 +2143,32 @@ retain their full ADA, with no minimum subtracted; store-backed outputs expose
 their application assets. They do not establish that every existing script's
 ADA-dependent policy remains suitable when migrating between representations.
 
+### Validator compiler prerequisites
+
+The investigation now continues to actual validator execution. The compiler
+prerequisite uses the existing `plutus-preprocessor` library from the declared
+ledger submodule, in `cabal.project.minutxo-plutus-compiler`.
+
+```sh
+./scripts/check-minutxo plutus-compiler-dependencies
+./scripts/check-minutxo plutus-compiler-build
+```
+
+The dependency command is a dry run only. Its first run, `run-_nic3abm`,
+exited 1 with `Cabal-7130`: the compiler package was not included in the
+project's packages. After adding that package directory, the same check
+passed in `run-t7veoa5c`, selecting `plutus-tx-plugin` and `plutus-metatheory`
+1.71.0.0 alongside the existing Plutus version. No dependency pins changed.
+No validator execution assertions ran in either dependency check.
+
+Build the library only; running the preprocessor executable would regenerate
+the ledger's unrelated script fixtures. The integration validator lives
+in its own check package and uses the same compiler.
+
+**Compiler build baseline:** `run-6x0prhbp` exited 0, compiling the existing V4
+fixtures as well as the compiler plugin. This establishes compilation support,
+not application-validator execution.
+
 ## Working one step at a time
 
 For each capability:
