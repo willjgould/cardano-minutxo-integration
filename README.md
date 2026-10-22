@@ -10,7 +10,10 @@ adaptations for store-backed output construction, read-back, and deposit
 declarations. The node and dependencies follow the matching upstream stack;
 the ledger retains Nicolas's `v2-minutxo` work. The CLI now follows the node's
 upstream pin `40f41676`, with focused adaptations for the minUTxO output types.
-Wallet and balancing components retain their original pins and remain untested.
+The wallet retains its original revision; the balancer advances only for
+dependency-bound changes. The wallet dependency check now resolves against
+the integration stack. Wallet and balancer compilation and behaviour remain
+untested.
 The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
@@ -2483,6 +2486,63 @@ or combined migration.
 Record which stage each failure reached: dependency resolution, compilation,
 context translation, script policy, ledger validation, submission or inclusion.
 A failure before script execution gives no evidence about application behavior.
+
+## Wallet dependency prerequisite
+
+The first wallet check resolves the core wallet library against this checkout's
+API, minUTxO ledger, and declared standalone balancer:
+
+```sh
+./scripts/check-minutxo wallet-dependencies
+```
+
+`cabal.project.minutxo-wallet` imports the integration project and adds the
+twelve local wallet packages needed by `cardano-wallet:lib:cardano-wallet`,
+including its library dependency on `cardano-wallet-test-utils`. It retains
+the wallet's coin-selection and ledger-read source pins without importing the
+wallet project's older node stack. Tests and benchmarks remain disabled.
+This is a Cabal dry run: no wallet compilation or transaction assertions run.
+
+**Recorded result, 22 October 2026: RED at dependency resolution**, exit 1
+(`run-p_o2j93h`). The balancer requires `cardano-crypto-class >=2.5.1.0 && <2.6`,
+which rejects the integration's pinned `2.6.0.0`. Its manifest also excludes
+several of the local ledger versions and the pinned consensus version. This
+is a stack-alignment prerequisite, not evidence of a minUTxO behaviour defect.
+The preceding `run-sp6hsl4h` failed fetching source repositories because the
+sandbox could not resolve GitHub; it did not reach dependency resolution.
+Logs and the initial wallet project are retained under
+`.workspace/minutxo-incremental/checks/run-p_o2j93h/`.
+
+Subsequent runs of the same command exposed these further dependency conflicts:
+
+| Run | Observed rejection | Dependency change |
+| --- | --- | --- |
+| `run-blvv0oph` | Coin selection requires `random <1.3`, but the stack selects `1.3.1`. | Reuse the wallet project's `cardano-coin-selection:random` allowance, restricted to the 1.3 series. |
+| `run-rcwz7kk0` | Ledger-read requires ledger-api `<1.15`, but the local version is `1.16.0.0`. | Allow its specifically named crypto, ledger, consensus and network dependencies to use the integration stack. |
+| `run-2fr4arwc` | Delta-store requires `io-classes <1.8`, but diffusion requires the 1.8 series. | Reuse the wallet project's `delta-store:io-classes` allowance, restricted to the 1.8 series. |
+
+**Recorded result, 22 October 2026: GREEN at dependency resolution**
+(`run-s9o6p5lj`), using GHC 9.6.7 and Cabal 3.16.1.0. The balancer manifest now
+has finite upper bounds admitting the integration's crypto-class, ledger and
+consensus versions, with existing lower bounds retained. The wallet project
+contains the specific allowances above; ledger-read remains at its original
+source pin. Crypto and crypto-wrapper are constrained to the integration's
+`1.4.0` and `1.8.0.0`. No wildcard bounds relaxation or dependency-source patches
+are used. QuickCheck resolved to `2.15.0.1` without changing its bounds.
+
+The saved `run-s9o6p5lj/plan.json` confirms local origins for wallet, balancer,
+API and the minUTxO ledger, with no test-suite components enabled. Libraries
+named `testlib` are still real transitive dependencies. The unchanged API
+dependency command also remains green (`run-9tgea4j7`). Runner syntax, help and
+diff whitespace checks passed. The wallet revision and existing integration
+dependency pins are unchanged; the balancer revision records only its manifest
+bound changes.
+
+This green establishes a dependency plan only. The admitted version ranges
+have not been compiled; wallet's existing `cryptonite`/`memory` dependencies
+coexist with the integration's `crypton`/`ram` in the plan without proving their
+source interfaces compatible. Introduce compilation as the next separate
+check before adding a store-backed output receiving or writing assertion.
 
 ## Working one step at a time
 

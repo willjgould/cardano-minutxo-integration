@@ -48,12 +48,13 @@ def run(command, log):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("step", nargs="?", choices=("dependencies", "plutus-dependencies", "plutus-build", "plutus-compiler-dependencies", "plutus-compiler-build", "plutus-node-dependencies", "plutus-node-build", *PLUTUS_CONTEXT_CHECKS, "build", "transaction", "store-backed", "read-back", "utxo-json", "nested", "serialisation", "signing", "node-build", "cli-build", "cli-store-backed", "node", "node-transaction", "node-token-funding", "node-cli-utxo", "node-cli-transaction", "node-auto-deposit", "node-deposit-release", "node-nested-parent", "node-nested-sibling", "node-plutus-ordinary", "node-plutus-store-backed", "node-plutus-negative", "node-plutus-nested-parent"),
+    parser.add_argument("step", nargs="?", choices=("dependencies", "wallet-dependencies", "plutus-dependencies", "plutus-build", "plutus-compiler-dependencies", "plutus-compiler-build", "plutus-node-dependencies", "plutus-node-build", *PLUTUS_CONTEXT_CHECKS, "build", "transaction", "store-backed", "read-back", "utxo-json", "nested", "serialisation", "signing", "node-build", "cli-build", "cli-store-backed", "node", "node-transaction", "node-token-funding", "node-cli-utxo", "node-cli-transaction", "node-auto-deposit", "node-deposit-release", "node-nested-parent", "node-nested-sibling", "node-plutus-ordinary", "node-plutus-store-backed", "node-plutus-negative", "node-plutus-nested-parent"),
                         default="dependencies",
                         help="Resolve dependencies (default), compile a target, or check a Plutus context/transaction/node")
     parser.add_argument("--offline", action="store_true", help="Use cached Cabal packages only")
     args = parser.parse_args()
     project = {
+        "wallet-dependencies": "cabal.project.minutxo-wallet",
         "plutus-dependencies": "cabal.project.minutxo-plutus",
         "plutus-build": "cabal.project.minutxo-plutus",
         "plutus-compiler-dependencies": "cabal.project.minutxo-plutus-compiler",
@@ -68,9 +69,10 @@ def main():
                "--builddir=.workspace/minutxo-incremental/build"]
     if args.offline:
         options.append("--offline")
-    if args.step in ("dependencies", "plutus-dependencies", "plutus-compiler-dependencies", "plutus-node-dependencies"):
+    if args.step in ("dependencies", "wallet-dependencies", "plutus-dependencies", "plutus-compiler-dependencies", "plutus-node-dependencies"):
         options.append("--dry-run")
     target = {
+        "wallet-dependencies": "cardano-wallet:lib:cardano-wallet",
         "plutus-dependencies": "cardano-ledger-dijkstra:test:tests",
         "plutus-build": "cardano-ledger-dijkstra:test:tests",
         "plutus-compiler-dependencies": "plutus-preprocessor:lib:plutus-preprocessor",
