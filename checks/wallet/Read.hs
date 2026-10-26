@@ -55,7 +55,7 @@ main = do
                 (W.UnsafeTokenPolicyId (W.Hash (Api.serialiseToRawBytes policyId)))
                 (W.UnsafeAssetName "offer")
         expected =
-            W.TxOut
+            W.StoreBackedTxOut
                 (W.Address (Api.serialiseToRawBytes address))
                 (TokenBundle.fromFlatList (W.Coin 0) [(expectedAsset, W.TokenQuantity 7)])
     -- Keep the genuine Dijkstra wrapper: unwrapping it into a Babbage output

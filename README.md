@@ -12,10 +12,10 @@ the ledger retains Nicolas's `v2-minutxo` work. The CLI now follows the node's
 upstream pin `40f41676`, with focused adaptations for the minUTxO output types.
 The wallet and its declared ledger-reader dependency now have focused source
 adaptations for this stack; the balancer advances only for dependency-bound
-changes. The wallet dependency check resolves, and wallet output reading
-preserves the address and application assets of a store-backed output with
-seven tokens and zero ADA. Output-kind preservation, persistence, transaction
-construction, spending and balancer behaviour remain unproven.
+changes. The wallet dependency check resolves, and wallet output reading and
+writing preserve the kind, address and assets of simple store-backed outputs,
+including seven tokens and zero ADA. This does not yet establish wallet
+persistence, transaction construction, spending or balancer behaviour.
 The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
@@ -2566,7 +2566,7 @@ dependency project and adds only this check. The command builds the libraries
 needed by the reader and then runs its assertions. The existing
 `wallet-dependencies` command remains a dependency dry run. No wallet service or
 node is started; backing accounting, persistence and spending require later
-checks. This check does not assert output-kind preservation.
+checks. Output-kind preservation is exercised separately below.
 
 **Recorded result, 22 October 2026: RED during dependency compilation**, exit 1
 (`run-1x8zags9`), using GHC 9.6.7 and Cabal 3.16.1.0. Dependency resolution
@@ -2618,7 +2618,8 @@ dependency plan are saved in that run's directory. The plan confirms local
 sources for ledger-read, wallet-read, wallet primitive and crypto-primitives.
 
 This established the output reader used by the check, not compilation of the
-full wallet service. Output-kind retention remains a separate missing capability. Deposit accounting, persistence,
+full wallet service. Output-kind retention was the next missing capability,
+covered by the following round-trip check. Deposit accounting, persistence,
 spending and live wallet synchronization still need their own later checks.
 The test fixture and assertions were not changed to obtain this first green.
 
@@ -2640,7 +2641,8 @@ Those existing reader fixtures cover ordinary outputs across eras; they do
 not establish store-backed serialization or generated-block chain acceptance.
 The unchanged `wallet-dependencies` dry run also remains green after these
 changes (`run-im1zc36s`). Formatting and diff-whitespace checks passed.
-The compilation and value-reading adaptations form the wallet-reading green step.
+The compilation and value-reading adaptations are recorded separately from
+the output-kind round-trip step below.
 
 ## Wallet output round-trip check
 
@@ -2669,6 +2671,48 @@ kind assertion failed; its complete-output comparison and the two controls
 were not reached. The log, check source and checksum, dependency plan, and
 pre-fix source diffs are retained under
 `.workspace/minutxo-incremental/checks/run-290fx4jo/`.
+
+The fix adds a distinct `StoreBackedTxOut` constructor to the wallet's primitive
+output model, sharing the address and token-bundle fields with ordinary
+`TxOut`. Equality and ordering distinguish the kinds, and asset/coin modifiers
+and shrinking retain them. Ledger and API reading choose the matching wallet
+constructor. The ledger writer constructs a native Dijkstra store-backed
+output when requested and rejects that kind in older eras. Ordinary outputs
+keep their existing conversion. Backing amounts are still held separately;
+this change does not add deposit accounting to the wallet.
+
+**Recorded result, 22 October 2026: GREEN** (`run-2cigsgz4`) with the same command
+and byte-for-byte identical `OutputRoundtrip.hs` as the red run. All three cases
+passed their kind and complete-output assertions. The source checksums and
+dependency plan are saved with the green log. An intermediate run
+(`run-uq_m3eu2`) failed during compilation because the new constructor was
+missing from an explicit import; its assertions did not run.
+
+The existing `wallet-read` command also passed (`run-pwn6lp9x`). Its expected
+output now explicitly uses `StoreBackedTxOut`; the address, policy, asset name,
+quantity, zero-ADA expectation and full equality assertion are unchanged. This
+extends the earlier value-reading expectation to include output kind.
+
+Focused model regressions also passed (`run-3rfxefar`): equality/ordering and
+set membership distinguish output kinds; coin/asset modifiers and shrinking
+retain kind; ledger and API readers preserve it; ordinary older-era conversion
+still works and store-backed conversion to those eras fails explicitly. The
+standalone source and exact compile/run commands are saved with that run's log.
+Formatting, runner syntax and diff-whitespace checks passed. The output-kind
+check and its fix are recorded as separate red and green steps.
+
+This is in-memory output conversion only. Full transaction construction,
+deposit declarations, balancing, signing and submission remain future steps.
+The broader wallet storage and transaction code still has ordinary-output-only
+patterns (including its UTxO-history encoder); those paths need their own
+checks and adaptations before the new kind can be used throughout the service.
+
+**Commit verification, 26 October 2026:** the current wallet-reading check
+passed in `run-ik_pmhre`, and all three output round-trip cases passed in
+`run-9d_kokvn`. These reruns verify the final implementation; the earlier
+run IDs above retain the original red/green evidence. A preceding rerun
+(`run-jyozphaj`) stopped before assertions because the sandbox denied
+access to Cabal's build log.
 
 ## Working one step at a time
 
