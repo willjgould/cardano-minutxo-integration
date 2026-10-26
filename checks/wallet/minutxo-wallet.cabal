@@ -1,0 +1,15 @@
+cabal-version: 3.0
+name: minutxo-wallet
+version: 0.1.0.0
+build-type: Simple
+
+executable check-wallet-read
+  main-is: Read.hs
+  default-language: Haskell2010
+  ghc-options: -Wall -Werror -Wno-deprecations
+  build-depends:
+    base >= 4.18 && < 4.19,
+    cardano-api,
+    cardano-ledger-core,
+    cardano-ledger-read,
+    cardano-wallet-primitive

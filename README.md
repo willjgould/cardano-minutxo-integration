@@ -2538,11 +2538,52 @@ diff whitespace checks passed. The wallet revision and existing integration
 dependency pins are unchanged; the balancer revision records only its manifest
 bound changes.
 
-This green establishes a dependency plan only. The admitted version ranges
-have not been compiled; wallet's existing `cryptonite`/`memory` dependencies
-coexist with the integration's `crypton`/`ram` in the plan without proving their
-source interfaces compatible. Introduce compilation as the next separate
-check before adding a store-backed output receiving or writing assertion.
+This green established a dependency plan only. At that point, the admitted
+version ranges had not been compiled; wallet's `cryptonite`/`memory` dependencies
+coexisted with the integration's `crypton`/`ram` in the plan without proving their
+source interfaces compatible. The following check exercises wallet reading
+directly, with compilation failures reported separately from reading assertions.
+
+## Wallet reading check
+
+```sh
+./scripts/check-minutxo wallet-read
+```
+
+`checks/wallet/Read.hs` constructs a Dijkstra store-backed output through the
+API, checks that the resulting ledger output really is store-backed, and passes
+that output to the wallet's existing `getOutputs` reader. It expects exactly one
+wallet output with the original address, seven tokens of the specified policy
+and asset name, zero ADA, and no other assets. Equality compares the complete
+wallet output against an independently constructed expected value.
+
+The separate `cabal.project.minutxo-wallet-read` imports the established wallet
+dependency project and adds only this check. The command builds the libraries
+needed by the reader and then runs its assertions. The existing
+`wallet-dependencies` command remains a dependency dry run. No wallet service or
+node is started; backing accounting, persistence and spending require later
+checks. This check does not assert output-kind preservation.
+
+**Recorded result, 22 October 2026: RED during dependency compilation**, exit 1
+(`run-1x8zags9`), using GHC 9.6.7 and Cabal 3.16.1.0. Dependency resolution
+succeeded, but the pinned `cardano-ledger-read-0.1.0.0` failed to compile:
+
+- `Block/Block.hs:88` and `:103`: the Dijkstra block adapter expects `Praos`,
+  while this integration's consensus uses `Praos2`.
+- `Tx/CollateralOutputs.hs:102`–`:104`: its Babbage, Conway and Dijkstra
+  collateral-output types use `BabbageTxOut`, while the ledger interface now
+  provides the `TxOut` wrapper.
+- `Tx/Output.hs:39`: `Cardano.Ledger.Api` no longer exports `mkBasicTxOut`.
+
+These are observed compilation failures in the reader dependency. The check
+executable did not compile or run, and no reading assertion passed or failed.
+The `RUN wallet assertions` banner was not reached. The first block-type error
+is a stack-alignment prerequisite; it alone is not a minUTxO behaviour defect.
+
+The command, complete compiler output, dependency plan and summary are saved
+under `.workspace/minutxo-incremental/checks/run-1x8zags9/`. The initial red step
+contained only the check, project, runner entry and failure record, without
+implementation, source-pin or dependency-bound changes.
 
 ## Working one step at a time
 

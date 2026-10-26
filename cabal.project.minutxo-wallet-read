@@ -1,0 +1,6 @@
+import: cabal.project.minutxo-wallet
+
+-- Exercise the wallet's output reader and conversions directly. Cabal builds
+-- the required libraries before running the output assertions.
+packages:
+  checks/wallet
