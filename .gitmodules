@@ -21,3 +21,6 @@
 [submodule "cardano-node"]
 	path = cardano-node
 	url = https://github.com/IntersectMBO/cardano-node.git
+[submodule "cardano-ledger-read"]
+	path = cardano-ledger-read
+	url = https://github.com/willjgould/cardano-ledger-read.git

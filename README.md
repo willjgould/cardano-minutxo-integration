@@ -10,10 +10,12 @@ adaptations for store-backed output construction, read-back, and deposit
 declarations. The node and dependencies follow the matching upstream stack;
 the ledger retains Nicolas's `v2-minutxo` work. The CLI now follows the node's
 upstream pin `40f41676`, with focused adaptations for the minUTxO output types.
-The wallet retains its original revision; the balancer advances only for
-dependency-bound changes. The wallet dependency check now resolves against
-the integration stack. Wallet and balancer compilation and behaviour remain
-untested.
+The wallet and its declared ledger-reader dependency now have focused source
+adaptations for this stack; the balancer advances only for dependency-bound
+changes. The wallet dependency check resolves, and wallet output reading
+preserves the address and application assets of a store-backed output with
+seven tokens and zero ADA. Output-kind preservation, persistence, transaction
+construction, spending and balancer behaviour remain unproven.
 The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
@@ -2499,8 +2501,10 @@ API, minUTxO ledger, and declared standalone balancer:
 `cabal.project.minutxo-wallet` imports the integration project and adds the
 twelve local wallet packages needed by `cardano-wallet:lib:cardano-wallet`,
 including its library dependency on `cardano-wallet-test-utils`. It retains
-the wallet's coin-selection and ledger-read source pins without importing the
-wallet project's older node stack. Tests and benchmarks remain disabled.
+the wallet's coin-selection source pin without importing the wallet project's
+older node stack. Ledger-read now comes from a declared submodule based on its
+original source revision, with the compilation adaptations described below.
+Tests and benchmarks remain disabled.
 This is a Cabal dry run: no wallet compilation or transaction assertions run.
 
 **Recorded result, 22 October 2026: RED at dependency resolution**, exit 1
@@ -2584,6 +2588,59 @@ The command, complete compiler output, dependency plan and summary are saved
 under `.workspace/minutxo-incremental/checks/run-1x8zags9/`. The initial red step
 contained only the check, project, runner entry and failure record, without
 implementation, source-pin or dependency-bound changes.
+
+Subsequent runs of the unchanged check exposed further compilation prerequisites:
+
+| Run | Observed compiler failure | Adaptation |
+| --- | --- | --- |
+| `run-nqauhdfq` | Wallet-read imports `OrdExUnits` from its old module and constructs raw era outputs. | Use its current exporting module and the ledger's implicit-deposit output wrapper. |
+| `run-uwcsxsn4` | Wallet primitive uses the removed output constructor, unindexed pool parameters, and `memory` with a `ram`-based entropy type. | Adapt output conversions and parameter types; align primitive with `ram` and its shared crypto library with `crypton`/`ram`. |
+| `run-_wl83ja_` | A script threshold is now `Word`, but the ledger requires `Int`. | Use a checked conversion that rejects out-of-range counts. |
+| `run-022x_3lo` | The pinned network no longer defines node-to-client versions 16–22. | Use version 23, the version supported by the pinned network and consensus. |
+| `run-c3wlo7sx` | Wallet block-producer extraction expects a Praos header for Dijkstra. | Read the producing key from Dijkstra's Praos2/Leios header. |
+
+All these runs stopped during compilation, before any reading assertion ran.
+The logs remain under `.workspace/minutxo-incremental/checks/`.
+
+The compilation changes use a declared `cardano-ledger-read` submodule based on the
+wallet's original `ad4a0d5df468769b30e54e1ab215a9146333721a` source revision,
+with local adaptations. Its output, collateral-output and block interfaces now
+match this ledger and consensus. Wallet readers pass the ledger output wrapper
+through to conversions that distinguish implicit-deposit values from
+store-backed application assets. Ordinary output constructors retain their
+implicit-deposit form; reading application assets does not add backing ADA.
+
+**Recorded result, 22 October 2026: GREEN**, using the unchanged
+`./scripts/check-minutxo wallet-read` command and assertions (`run-scjcj3ww`).
+The reader libraries and check executable compiled; the `RUN wallet assertions`
+banner was reached and the full expected wallet output matched. The log and
+dependency plan are saved in that run's directory. The plan confirms local
+sources for ledger-read, wallet-read, wallet primitive and crypto-primitives.
+
+This established the output reader used by the check, not compilation of the
+full wallet service. Output-kind retention remains a separate missing capability. Deposit accounting, persistence,
+spending and live wallet synchronization still need their own later checks.
+The test fixture and assertions were not changed to obtain this first green.
+
+Existing regression suites also passed (`run-do7u6y3x`): ledger-read's all-era
+block and output-byte tests had **73 examples, zero failures**; crypto-primitives'
+AES, PBKDF2 and padding tests had **49 examples, zero failures**. The saved
+`project.cabal` imports the wallet-reading project and enables tests only for
+these two packages. To repeat, copy that configuration to a temporary project
+file in the checkout root and run:
+
+```sh
+cabal test --project-file=<temporary-project-file> \
+  --builddir=.workspace/minutxo-incremental/build \
+  cardano-ledger-read:test:unit-tests crypto-primitives:test:test \
+  --test-show-details=streaming
+```
+
+Those existing reader fixtures cover ordinary outputs across eras; they do
+not establish store-backed serialization or generated-block chain acceptance.
+The unchanged `wallet-dependencies` dry run also remains green after these
+changes (`run-im1zc36s`). Formatting and diff-whitespace checks passed.
+The compilation and value-reading adaptations form the wallet-reading green step.
 
 ## Working one step at a time
 
