@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 TARGET = "cardano-api:lib:cardano-api"
 TRANSACTION_TARGETS = {
     "wallet-read": "minutxo-wallet:exe:check-wallet-read",
+    "wallet-output-roundtrip": "minutxo-wallet:exe:check-wallet-output-roundtrip",
     "transaction": "minutxo-transaction:exe:check-transaction",
     "store-backed": "minutxo-transaction:exe:check-store-backed-transaction",
     "read-back": "minutxo-transaction:exe:check-store-backed-readback",
@@ -49,7 +50,7 @@ def run(command, log):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("step", nargs="?", choices=("dependencies", "wallet-dependencies", "wallet-read", "plutus-dependencies", "plutus-build", "plutus-compiler-dependencies", "plutus-compiler-build", "plutus-node-dependencies", "plutus-node-build", *PLUTUS_CONTEXT_CHECKS, "build", "transaction", "store-backed", "read-back", "utxo-json", "nested", "serialisation", "signing", "node-build", "cli-build", "cli-store-backed", "node", "node-transaction", "node-token-funding", "node-cli-utxo", "node-cli-transaction", "node-auto-deposit", "node-deposit-release", "node-nested-parent", "node-nested-sibling", "node-plutus-ordinary", "node-plutus-store-backed", "node-plutus-negative", "node-plutus-nested-parent"),
+    parser.add_argument("step", nargs="?", choices=("dependencies", "wallet-dependencies", "wallet-read", "wallet-output-roundtrip", "plutus-dependencies", "plutus-build", "plutus-compiler-dependencies", "plutus-compiler-build", "plutus-node-dependencies", "plutus-node-build", *PLUTUS_CONTEXT_CHECKS, "build", "transaction", "store-backed", "read-back", "utxo-json", "nested", "serialisation", "signing", "node-build", "cli-build", "cli-store-backed", "node", "node-transaction", "node-token-funding", "node-cli-utxo", "node-cli-transaction", "node-auto-deposit", "node-deposit-release", "node-nested-parent", "node-nested-sibling", "node-plutus-ordinary", "node-plutus-store-backed", "node-plutus-negative", "node-plutus-nested-parent"),
                         default="dependencies",
                         help="Resolve dependencies (default), compile a target, or check a Plutus context/transaction/node")
     parser.add_argument("--offline", action="store_true", help="Use cached Cabal packages only")
@@ -57,6 +58,7 @@ def main():
     project = {
         "wallet-dependencies": "cabal.project.minutxo-wallet",
         "wallet-read": "cabal.project.minutxo-wallet-read",
+        "wallet-output-roundtrip": "cabal.project.minutxo-wallet-read",
         "plutus-dependencies": "cabal.project.minutxo-plutus",
         "plutus-build": "cabal.project.minutxo-plutus",
         "plutus-compiler-dependencies": "cabal.project.minutxo-plutus-compiler",

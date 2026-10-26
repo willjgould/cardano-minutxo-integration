@@ -2642,6 +2642,34 @@ The unchanged `wallet-dependencies` dry run also remains green after these
 changes (`run-im1zc36s`). Formatting and diff-whitespace checks passed.
 The compilation and value-reading adaptations form the wallet-reading green step.
 
+## Wallet output round-trip check
+
+```sh
+./scripts/check-minutxo wallet-output-roundtrip
+```
+
+This check reads a genuine Dijkstra ledger output through the wallet's existing
+`getOutputs`, writes it back using `toBabbageTxOutInEra @Dijkstra`, and requires
+the output kind and complete simple ledger output to survive. The first case is
+store-backed with seven tokens and zero ADA. Two controls use identical address
+and value (seven tokens and 2,000,000 lovelace), one implicit-deposit and one
+store-backed, so kind cannot be inferred from the amount. The fixtures have no
+datum or reference script; their preservation is outside this check.
+
+**Recorded result, 22 October 2026: RED at the output-kind assertion**, exit 1
+(`run-290fx4jo`). The libraries and executable compiled, and the check reported:
+
+```text
+FAIL: store-backed, seven tokens and zero ADA: expected store-backed output, got implicit-deposit output
+```
+
+The wallet's address-and-token-bundle model lost the kind on reading, and its
+reverse converter always constructed an implicit-deposit output. The first
+kind assertion failed; its complete-output comparison and the two controls
+were not reached. The log, check source and checksum, dependency plan, and
+pre-fix source diffs are retained under
+`.workspace/minutxo-incremental/checks/run-290fx4jo/`.
+
 ## Working one step at a time
 
 For each capability:

@@ -13,3 +13,14 @@ executable check-wallet-read
     cardano-ledger-core,
     cardano-ledger-read,
     cardano-wallet-primitive
+
+executable check-wallet-output-roundtrip
+  main-is: OutputRoundtrip.hs
+  default-language: Haskell2010
+  ghc-options: -Wall -Werror -Wno-deprecations
+  build-depends:
+    base >= 4.18 && < 4.19,
+    cardano-api,
+    cardano-ledger-core,
+    cardano-ledger-read,
+    cardano-wallet-primitive
