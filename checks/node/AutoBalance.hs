@@ -8,8 +8,9 @@ module AutoBalance (balance, balanceWithChangeOutput, checkOrdinary) where
 import qualified Cardano.Api as Api
 import qualified Cardano.Api.Experimental.Tx as Exp
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.State as State
 import qualified Cardano.Ledger.Dijkstra.Core as Dijkstra
-import qualified Cardano.Ledger.Dijkstra.UTxODeposit.TopTx as TopTx
+import qualified Cardano.Ledger.Dijkstra.UTxOs.Deposit.TopTx as TopTx
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Network
 
 import Control.Monad (unless)
@@ -28,6 +29,7 @@ balance ::
     Api.LocalNodeConnectInfo ->
     Core.PParams (Api.ShelleyLedgerEra Api.DijkstraEra) ->
     Api.UTxO Api.DijkstraEra ->
+    State.UTxOStore (Api.ShelleyLedgerEra Api.DijkstraEra) ->
     Exp.TxBodyContent (Api.ShelleyLedgerEra Api.DijkstraEra) ->
     Api.AddressInEra Api.DijkstraEra ->
     IO (Exp.UnsignedTx (Api.ShelleyLedgerEra Api.DijkstraEra), Exp.TxBodyContent (Api.ShelleyLedgerEra Api.DijkstraEra))
@@ -38,10 +40,11 @@ balanceWithChangeOutput ::
     Api.LocalNodeConnectInfo ->
     Core.PParams (Api.ShelleyLedgerEra Api.DijkstraEra) ->
     Api.UTxO Api.DijkstraEra ->
+    State.UTxOStore (Api.ShelleyLedgerEra Api.DijkstraEra) ->
     Exp.TxBodyContent (Api.ShelleyLedgerEra Api.DijkstraEra) ->
     Api.AddressInEra Api.DijkstraEra ->
     IO (Exp.UnsignedTx (Api.ShelleyLedgerEra Api.DijkstraEra), Exp.TxBodyContent (Api.ShelleyLedgerEra Api.DijkstraEra))
-balanceWithChangeOutput changeKind connection pparams utxo content address = do
+balanceWithChangeOutput changeKind connection pparams utxo store content address = do
     systemStart <-
         runExceptT (Api.queryNodeLocalState connection Network.VolatileTip Api.QuerySystemStart)
             >>= either (fail . show) pure
@@ -58,6 +61,7 @@ balanceWithChangeOutput changeKind connection pparams utxo content address = do
             Map.empty
             Map.empty
             (Api.toLedgerUTxO Api.ShelleyBasedEraDijkstra utxo)
+            (State.allocations store)
             content
             address
             Nothing
@@ -83,8 +87,12 @@ checkOrdinary directory connection pparams input inputOutput@(Api.TxOut address 
                 & Exp.setTxOuts [Exp.TxOut (Api.toShelleyTxOut era paymentOutput)]
     unless (Api.txOutValueToValue inputValue == Api.lovelaceToValue inputCoin) $
         fail "Ordinary balancing control requires an ADA-only input"
+    queried <- Api.executeLocalStateQueryExpr connection Network.VolatileTip $
+        Api.queryUTxOAllocations Api.ShelleyBasedEraDijkstra (Set.singleton input)
+    entries <- either (fail . show) pure queried >>= either (fail . show) pure
+    store <- either (fail . show) pure (State.fromAllocations $ State.unAllocations entries)
     (Exp.UnsignedTx transaction, _) <-
-        balance connection pparams (Api.UTxO (Map.singleton input inputOutput)) content address
+        balance connection pparams (Api.UTxO (Map.singleton input inputOutput)) store content address
     let body = transaction ^. Core.bodyTxL
         fee = body ^. Core.feeTxBodyL
     unless

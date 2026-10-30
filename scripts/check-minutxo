@@ -26,6 +26,8 @@ TRANSACTION_TARGETS = {
 PLUTUS_CONTEXT_CHECKS = {
     "plutus-mixed-outputs": "mixed-output-v4-context preserves both output values in order",
     "plutus-mixed-inputs": "mixed-input-v4-context preserves both resolved input values",
+    "plutus-reference-backing": "reference-backing-v4-context preserves historical backing and explicit zero",
+    "plutus-invalid-backing": "invalid-backing-v4-context rejects missing inputs and negative accepted sizes",
 }
 
 

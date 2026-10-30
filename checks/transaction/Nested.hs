@@ -13,8 +13,8 @@ import qualified Cardano.Api.Ledger as Ledger
 
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Dijkstra.Core as Dijkstra
-import qualified Cardano.Ledger.Dijkstra.UTxODeposit.SubTx as SubTx
-import qualified Cardano.Ledger.Dijkstra.UTxODeposit.TopTx as TopTx
+import qualified Cardano.Ledger.Dijkstra.UTxOs.Deposit.SubTx as SubTx
+import qualified Cardano.Ledger.Dijkstra.UTxOs.Deposit.TopTx as TopTx
 import Cardano.Ledger.StrictlyPositiveCoin (StrictlyPositiveCoin, mkStrictlyPositiveCoin, unStrictlyPositiveCoin)
 
 import Control.Monad (unless)
@@ -216,7 +216,7 @@ checkConstruction Fixture{tokenInput, parentInput, siblingInput, tokens, deposit
                 (SubTx.RequestsUTxODepositFromTopTx deposit)
                 (tokenBody ^. Dijkstra.subTxNetUTxODepositChangeTxBodyL)
             case toList (tokenBody ^. Core.outputsTxBodyL) of
-                [Core.StoreBackedTxOut payload] ->
+                [Core.NewTxOut payload] ->
                     assertEqual "token-only output assets" tokenAssets (payload ^. Core.applicationAssetsTxOutL)
                 _ -> die "FAIL: expected exactly one store-backed token output"
             otherValues <- mapM (checkSupplier utxo siblingInput (unStrictlyPositiveCoin deposit)) otherChildren

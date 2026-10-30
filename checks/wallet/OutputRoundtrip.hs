@@ -77,9 +77,9 @@ checkRoundtrip label expectedKind original = do
 
 expectKind :: String -> ExpectedKind -> Core.TxOut Read.Dijkstra -> IO ()
 expectKind label expectedKind output = case (expectedKind, output) of
-    (StoreBacked, Core.StoreBackedTxOut{}) -> pure ()
-    (ImplicitDeposit, Core.ImplicitDepositTxOut{}) -> pure ()
-    (StoreBacked, Core.ImplicitDepositTxOut{}) ->
+    (StoreBacked, Core.NewTxOut{}) -> pure ()
+    (ImplicitDeposit, Core.LegacyTxOut{}) -> pure ()
+    (StoreBacked, Core.LegacyTxOut{}) ->
         die $ "FAIL: " <> label <> ": expected store-backed output, got implicit-deposit output"
-    (ImplicitDeposit, Core.StoreBackedTxOut{}) ->
+    (ImplicitDeposit, Core.NewTxOut{}) ->
         die $ "FAIL: " <> label <> ": expected implicit-deposit output, got store-backed output"

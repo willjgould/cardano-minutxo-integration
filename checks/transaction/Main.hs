@@ -51,10 +51,10 @@ main = do
   case body of
     Api.ShelleyTxBody _ ledgerBody _ _ _ _ ->
       case toList (ledgerBody ^. Ledger.outputsTxBodyL) of
-        [Ledger.ImplicitDepositTxOut implicitOutput] ->
+        [Ledger.LegacyTxOut implicitOutput] ->
           unless (implicitOutput ^. Ledger.valueTxOutL == Ledger.MaryValue (Ledger.Coin 2_000_000) mempty) $
             die "FAIL: transaction output value changed; expected 2000000 lovelace and no assets"
-        [Ledger.StoreBackedTxOut{}] ->
+        [Ledger.NewTxOut{}] ->
           die "FAIL: expected an implicit-deposit output, got a store-backed output"
         outputs ->
           die $ "FAIL: expected exactly one transaction output, got " <> show (length outputs)

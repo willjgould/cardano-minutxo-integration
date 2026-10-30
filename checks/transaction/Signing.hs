@@ -10,7 +10,7 @@ import qualified Cardano.Api.Experimental.Tx as Exp
 
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Dijkstra.Core as Dijkstra
-import qualified Cardano.Ledger.Dijkstra.UTxODeposit.TopTx as TopTx
+import qualified Cardano.Ledger.Dijkstra.UTxOs.Deposit.TopTx as TopTx
 import qualified Cardano.Ledger.Hashes as Hashes
 import qualified Cardano.Ledger.Keys as Keys
 import Cardano.Ledger.State (verifyWitVKey)

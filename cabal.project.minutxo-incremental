@@ -18,6 +18,8 @@ index-state:
   cardano-haskell-packages 2026-10-09T14:30:01Z
 
 packages:
+  vendor/plutus-ledger-api
+  ouroboros-consensus
   checks/transaction
   cardano-api/cardano-api
   cardano-ledger-specs/libs/cardano-data
@@ -49,6 +51,11 @@ package crypton
   flags: -support_rdrand
 package bitvec
   flags: -simd
+
+-- Plinth needs literal V4 decoder branch lists in imported unfoldings.
+-- Keep this consistent for validators built through any workspace project.
+package plutus-ledger-api
+  ghc-options: -fno-full-laziness
 
 -- Upstream API/node policy for the matching crypton/ram stack.
 constraints:
@@ -113,8 +120,3 @@ source-repository-package
     ouroboros-network
     cardano-diffusion
     network-mux
-
-source-repository-package
-  type: git
-  location: https://github.com/IntersectMBO/ouroboros-consensus
-  tag: 5cc95f4caf294751318f8637ab2fb60d5de6eb29

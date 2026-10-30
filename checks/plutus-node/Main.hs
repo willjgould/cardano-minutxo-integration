@@ -7,23 +7,32 @@
 module Main (main) where
 
 import qualified Cardano.Api as Api
+import qualified TokenFunding as Funding
+import qualified Cardano.Api.Consensus as Consensus
 import qualified Cardano.Api.Experimental as Era
 import qualified Cardano.Api.Experimental.AnyScriptWitness as Witness
 import qualified Cardano.Api.Experimental.Plutus as Plutus
 import qualified Cardano.Api.Experimental.Tx as Exp
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
 import Cardano.Ledger.Binary (mkSized)
-import Cardano.Ledger.Coin (Coin)
+import qualified Cardano.Ledger.Binary.Plain as Plain
+import Cardano.Ledger.Coin (Coin (..))
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Dijkstra as Dijkstra
 import qualified Cardano.Ledger.Dijkstra.Core as Dijkstra
 import qualified Cardano.Ledger.Dijkstra.Rules as Dijkstra
-import qualified Cardano.Ledger.Dijkstra.UTxODeposit.TopTx as TopTx
+import qualified Cardano.Ledger.Dijkstra.Tx as Dijkstra
+import qualified Cardano.Ledger.Dijkstra.UTxOs.Deposit.TopTx as TopTx
 import qualified Cardano.Ledger.Keys as Keys
 import Cardano.Ledger.Plutus (Language (PlutusV4), SLanguage (SPlutusV4))
 import qualified Cardano.Ledger.Plutus.Evaluate as LedgerPlutus
 import qualified Cardano.Ledger.Shelley.Scripts as Native
 import qualified Cardano.Ledger.State as State
+import qualified Cardano.Ledger.State.UTxOs.Allocations as Allocations
 import Cardano.Ledger.StrictlyPositiveCoin (mkStrictlyPositiveCoin)
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Network
+import qualified PlutusLedgerApi.V4 as PV4
 
 import qualified AutoBalance
 import Control.Concurrent (threadDelay)
@@ -32,6 +41,7 @@ import Control.Monad.Trans.Except (runExceptT)
 import Data.Aeson (object, (.=))
 import Data.Aeson.Types (Pair)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base64 as Base64
 import qualified Data.ByteString.Short as SBS
 import Data.Foldable (toList)
 import Data.Function ((&))
@@ -97,7 +107,7 @@ scriptSpend kind spendCase directory socket = do
                 }
     pparams <- queryDijkstra connection Api.QueryProtocolParameters
     before <- queryLedgerState connection
-    unless (depositStore before == State.DepositStore 0 mempty) $
+    unless (depositStore before == Funding.BackingSummary 0 mempty) $
         fail "Expected an empty deposit store on the fresh chain"
     funded@(Api.UTxO genesis) <- queryUTxO connection Api.QueryUTxOWhole
     (genesisInput, genesisCoin) <- case Map.toList genesis of
@@ -147,9 +157,9 @@ scriptSpend kind spendCase directory socket = do
             Ordinary -> 0
             StoreBacked -> price initialScriptOutput
         expectedStore txId = case kind of
-            Ordinary -> State.DepositStore 0 mempty
+            Ordinary -> Funding.BackingSummary 0 mempty
             StoreBacked ->
-                State.DepositStore scriptDeposit $
+                Funding.BackingSummary scriptDeposit $
                     Map.singleton (Api.toShelleyTxIn (Api.TxIn txId (Api.TxIx 0))) scriptDeposit
         collateralOutput =
             Api.TxOut sponsor (Api.lovelaceToTxOutValue era collateralCoin) Api.TxOutDatumNone Api.ReferenceScriptNone
@@ -172,7 +182,7 @@ scriptSpend kind spendCase directory socket = do
                 & Exp.setTxIns [(genesisInput, Exp.AnyKeyWitnessPlaceholder)]
                 & Exp.setTxOuts (map (Exp.TxOut . Api.toShelleyTxOut era) [initialScriptOutput, collateralOutput])
                 & Exp.setTxMintValue mint
-    (funding, _) <- AutoBalance.balance connection pparams funded fundingContent sponsor
+    (funding, _) <- AutoBalance.balance connection pparams funded (Funding.outputStore before) fundingContent sponsor
     assertBody funding (Set.singleton genesisInput) fundingDeclaration
     fundingChange <- case outputsOf funding of
         [actualScript, actualCollateral, change]
@@ -207,11 +217,55 @@ scriptSpend kind spendCase directory socket = do
     (fundingId, fundingUTxO, fundingStore) <-
         submitAndVerify directory (evidencePrefix <> "-funding") connection payment funding Map.empty expectedStore (totalAda before) fundingEvidence
 
+    -- Exercise the public query with UTxO from the same acquired snapshot,
+    -- independently comparing its records with the verified ledger store.
+    let fundingInputs = Map.keysSet (Api.unUTxO fundingUTxO)
+    queryResult <-
+        Api.executeLocalStateQueryExpr connection Network.VolatileTip $
+            (,)
+                <$> Api.queryUtxo era (Api.QueryUTxOByTxIn fundingInputs)
+                <*> Api.queryUTxOAllocations era fundingInputs
+    (utxoResult, allocationsResult) <- either (fail . show) pure queryResult
+    queriedFundingUTxO <- either (fail . show) pure utxoResult >>= either (fail . show) pure
+    queriedAllocations <- either (fail . Api.displayError) pure allocationsResult
+    unless
+        ( queriedFundingUTxO == fundingUTxO
+            && queriedAllocations
+                == Allocations.restrictToInputs
+                    (Set.map Api.toShelleyTxIn fundingInputs)
+                    (State.allocations fundingStore)
+        )
+        $ fail "The acquired UTxO/backing query differs from the independently verified funding state"
+
     putStrLn "RUN node assertions: execute the V4 validator and advance its inline datum"
     let scriptInput = Api.TxIn fundingId (Api.TxIx 0)
         collateralInput = Api.TxIn fundingId (Api.TxIx 1)
         sponsorInput = Api.TxIn fundingId (Api.TxIx 2)
-        scriptWitnessWithUnits units =
+        continuation = scriptOutput (initialDatum + 1)
+        continuationDeposit = case kind of
+            Ordinary -> 0
+            StoreBacked -> price continuation
+    recordedInputDeposit <- case kind of
+        Ordinary -> pure 0
+        StoreBacked ->
+            maybe (fail "The funded script input has no recorded backing allocation") pure $
+                Map.lookup (Api.toShelleyTxIn scriptInput) (Funding.backingAmounts fundingStore)
+    let expectedInputTotal = scriptCoin + recordedInputDeposit
+        expectedOutputTotal = scriptCoin + continuationDeposit
+        backingData allocation = case kind of
+            Ordinary -> Api.ScriptDataConstructor 0 []
+            StoreBacked -> Api.ScriptDataConstructor 1 [Api.ScriptDataNumber (unCoin allocation)]
+        -- IsData encoding of (Integer, MinUTxOBacking, Integer, MinUTxOBacking).
+        contextExpectations inputTotal =
+            Api.unsafeHashableScriptData $
+                Api.ScriptDataConstructor
+                    0
+                    [ Api.ScriptDataNumber (unCoin inputTotal)
+                    , backingData recordedInputDeposit
+                    , Api.ScriptDataNumber (unCoin expectedOutputTotal)
+                    , backingData continuationDeposit
+                    ]
+        scriptWitnessWithContext expectedContext units =
             Exp.AnyPlutusScriptWitness $
                 Witness.AnyPlutusSpendingScriptWitness $
                     Witness.PlutusSpendingScriptWitnessV4 $
@@ -219,19 +273,22 @@ scriptSpend kind spendCase directory socket = do
                             SPlutusV4
                             (Plutus.PScript script)
                             Plutus.InlineDatum
-                            (Api.unsafeHashableScriptData (Api.ScriptDataConstructor 0 []))
+                            expectedContext
                             units
+        scriptWitnessWithUnits = scriptWitnessWithContext (contextExpectations expectedInputTotal)
         scriptWitness = scriptWitnessWithUnits (Api.ExecutionUnits 0 0)
-        continuation = scriptOutput (initialDatum + 1)
-        continuationDeposit = case kind of
-            Ordinary -> 0
-            StoreBacked -> price continuation
-    recordedInputDeposit <- case kind of
-        Ordinary -> pure 0
-        StoreBacked -> case fundingStore of
-            State.DepositStore _ allocations ->
-                maybe (fail "The funded script input has no recorded backing allocation") pure $
-                    Map.lookup (Api.toShelleyTxIn scriptInput) allocations
+    writeEvidence directory (evidencePrefix <> "-context-expectations.json") $
+        object
+            [ "inputTotalLovelace" .= expectedInputTotal
+            , "outputTotalLovelace" .= expectedOutputTotal
+            , "inputBackingLovelace" .= recordedInputDeposit
+            , "outputBackingLovelace" .= continuationDeposit
+            , "backingKind" .= case kind of
+                Ordinary -> ("implicit" :: Text.Text)
+                StoreBacked -> "explicit"
+            , "allocationQueryMatchesLedgerStore" .= True
+            , "allocationQuerySharesUTxOSnapshot" .= True
+            ]
     if spendCase == NestedParent
         then
             spendNestedParent
@@ -261,7 +318,7 @@ scriptSpend kind spendCase directory socket = do
                         & Exp.setTxInsCollateral [collateralInput]
                         & Exp.setTxOuts [Exp.TxOut (Api.toShelleyTxOut era continuation)]
                         & Exp.setTxProtocolParams pparams
-            (spend, balancedContent) <- AutoBalance.balance connection pparams fundingUTxO spendContent sponsor
+            (spend, balancedContent) <- AutoBalance.balance connection pparams fundingUTxO fundingStore spendContent sponsor
             assertBody spend (Set.fromList [scriptInput, sponsorInput]) spendDeclaration
             unless
                 ( Exp.txInsCollateral balancedContent == [collateralInput]
@@ -290,6 +347,9 @@ scriptSpend kind spendCase directory socket = do
                     , "continuationDatum" .= (1 :: Int)
                     , "recordedStoreBackingLovelace" .= recordedInputDeposit
                     , "continuationStoreBackingLovelace" .= continuationDeposit
+                    , "validatorInputTotalLovelace" .= expectedInputTotal
+                    , "validatorOutputTotalLovelace" .= expectedOutputTotal
+                    , "validatorBackingMetadataVerified" .= True
                     , "automaticFeeAndChangeVerified" .= True
                     , "scriptValuePreserved" .= True
                     ]
@@ -325,6 +385,7 @@ scriptSpend kind spendCase directory socket = do
                             Map.empty
                             Map.empty
                             (Api.toLedgerUTxO era fundingUTxO)
+                            (State.allocations fundingStore)
                             invalidContent
                             sponsor
                             Nothing
@@ -349,7 +410,7 @@ scriptSpend kind spendCase directory socket = do
                 unless (unchangedUTxO == fundingUTxO) $
                     fail "The funded UTxO changed during the unsubmitted invalid datum control"
                 afterRejection <- queryLedgerState connection
-                verifyStore fundingStore (totalAda before) afterRejection
+                verifyStore (Funding.BackingSummary (State.toCoin $ State.totalDepositAmount fundingStore) (Funding.backingAmounts fundingStore)) (totalAda before) afterRejection
                 writeEvidence directory (evidencePrefix <> "-rejected-datum.json") $
                     object $
                         [ "stage" .= ("balancer-script-evaluation" :: Text.Text)
@@ -367,6 +428,101 @@ scriptSpend kind spendCase directory socket = do
                         ]
                             <> commonEvidence
                 putStrLn "PASS: the same validator rejected datum 0 to 2; input, collateral and backing remain unspent"
+
+                putStrLn "RUN node rejection assertion: incorrect expected input total with ScriptValid"
+                let wrongInputTotal = expectedInputTotal + 1
+                    wrongTotalWitness = scriptWitnessWithContext (contextExpectations wrongInputTotal) executionUnits
+                    wrongTotalContent =
+                        balancedContent
+                            & Exp.setTxIns
+                                [ (input, if input == scriptInput then wrongTotalWitness else witness)
+                                | (input, witness) <- Exp.txIns balancedContent
+                                ]
+                unless (Exp.txScriptValidity wrongTotalContent == Api.ScriptValid) $
+                    fail "The incorrect-total transaction must retain ScriptValid"
+                wrongTotalUnsigned <-
+                    either (fail . show) pure $
+                        Exp.makeUnsignedTx Era.DijkstraEra wrongTotalContent
+                let wrongKeyWitness = Exp.makeKeyWitness Era.DijkstraEra wrongTotalUnsigned (Api.WitnessPaymentKey payment)
+                    Exp.SignedTx wrongTotalSigned = Exp.signTx Era.DijkstraEra [] [wrongKeyWitness] wrongTotalUnsigned
+                    wrongTotalTx = Api.ShelleyTx era wrongTotalSigned
+                    wrongTotalBytes = Api.serialiseToCBOR wrongTotalTx
+                    validKeyWitness = Exp.makeKeyWitness Era.DijkstraEra spend (Api.WitnessPaymentKey payment)
+                    Exp.SignedTx validSigned = Exp.signTx Era.DijkstraEra [] [validKeyWitness] spend
+                    validBytes = Api.serialiseToCBOR (Api.ShelleyTx era validSigned)
+                -- Only a same-width redeemer number changes. The constructor
+                -- recalculates integrity hash; retain the valid budget and fee.
+                unless
+                    ( BS.length wrongTotalBytes == BS.length validBytes
+                        && feeOf wrongTotalUnsigned == spendFee
+                        && outputsOf wrongTotalUnsigned == outputsOf spend
+                    )
+                    $ fail "Changing the expected total changed the transaction size, fee or outputs"
+                let wrongTotalEvaluation =
+                        Exp.evaluateTransactionExecutionUnits @Api.DijkstraEra
+                            systemStart
+                            (Api.toLedgerEpochInfo history)
+                            pparams
+                            (Api.toLedgerUTxO era fundingUTxO)
+                            (State.allocations fundingStore)
+                            wrongTotalSigned
+                wrongTotalLogs <- case Map.toList wrongTotalEvaluation of
+                    [(index, Left (Api.ScriptErrorEvaluationFailed debug))]
+                        | index == expectedIndex
+                            && LedgerPlutus.pwcScriptHash (Api.dpfScriptWithContext debug) == Api.toShelleyScriptHash scriptHash
+                            && Api.dpfExecutionLogs debug == ["input-total", "PT5"] ->
+                            pure (Api.dpfExecutionLogs debug)
+                    other -> fail $ "Expected only the input-total validator failure at the spending witness: " <> show other
+                let Api.LedgerEpochInfo epochInfo = Api.toLedgerEpochInfo history
+                    annotated =
+                        Dijkstra.mkDijkstraStAnnTopTx
+                            epochInfo
+                            systemStart
+                            pparams
+                            (State.allocations fundingStore)
+                            Map.empty
+                            wrongTotalSigned
+                contexts <- either (fail . show) pure (Dijkstra.dsattPlutusScriptsWithContext annotated)
+                exactContext <- case contexts of
+                    [context]
+                        | LedgerPlutus.pwcScriptHash context == Api.toShelleyScriptHash scriptHash -> pure context
+                    _ -> fail "The signed incorrect-total transaction must execute exactly the expected validator"
+                -- Re-evaluate using the committed budget, which the node will
+                -- enforce, rather than the estimator's maximum evaluation budget.
+                case LedgerPlutus.evaluatePlutusWithContext PV4.Verbose exactContext of
+                    (logs, Left _) | logs == wrongTotalLogs -> pure ()
+                    other -> fail $ "The committed budget did not produce the exact input-total failure: " <> show other
+                BS.writeFile (directory </> evidencePrefix <> "-wrong-total.cbor") wrongTotalBytes
+                nodeRejection <- Api.submitTxToNodeLocal connection (Api.TxInMode era wrongTotalTx)
+                nodeContextBytes <- rejectedPlutusContext nodeRejection
+                unless (nodeContextBytes == Base64.encode (Plain.serialize' exactContext)) $
+                    fail "The node rejected a different script context or execution budget"
+                afterWrongTotalUTxO <- queryUTxO connection Api.QueryUTxOWhole
+                unless (afterWrongTotalUTxO == fundingUTxO) $
+                    fail "The node changed an input or collateral after rejecting the incorrect total"
+                afterWrongTotal <- queryLedgerState connection
+                unless (Funding.outputStore afterWrongTotal == fundingStore) $ fail "Rejected transaction changed accepted allocations"
+                verifyStore (Funding.BackingSummary (State.toCoin $ State.totalDepositAmount fundingStore) (Funding.backingAmounts fundingStore)) (totalAda before) afterWrongTotal
+                writeEvidence directory (evidencePrefix <> "-rejected-total.json") $
+                    object $
+                        [ "stage" .= ("node-script-validation" :: Text.Text)
+                        , "scriptInput" .= show scriptInput
+                        , "witnessIndex" .= expectedIndex
+                        , "actualInputTotalLovelace" .= expectedInputTotal
+                        , "incorrectExpectedInputTotalLovelace" .= wrongInputTotal
+                        , "executionLogs" .= wrongTotalLogs
+                        , "rejection" .= show nodeRejection
+                        , "invalidTransactionSubmitted" .= True
+                        , "scriptValid" .= True
+                        , "nodeFailureContextMatchesLocalEvaluation" .= True
+                        , "unchangedSerializedSizeAndFee" .= True
+                        , "wholeUTxOUnchanged" .= True
+                        , "depositStore" .= depositStore afterWrongTotal
+                        , "totalAdaBefore" .= totalAda before
+                        , "totalAdaAfter" .= totalAda afterWrongTotal
+                        ]
+                            <> commonEvidence
+                putStrLn "PASS: the node rejected the incorrect total in the expected validator; input, collateral and backing remain unspent"
             _ <-
                 submitAndVerify
                     directory
@@ -382,7 +538,30 @@ scriptSpend kind spendCase directory socket = do
                 Ordinary -> "PASS: ordinary V4 validator executed and was included; seven tokens and script ADA preserved, datum advanced, sponsor paid the fee, collateral unspent"
                 StoreBacked -> "PASS: store-backed V4 validator executed and was included; seven tokens and zero script ADA preserved, datum advanced, backing moved to the continuation, sponsor paid the fee, collateral unspent"
             when checkInvalidDatum $
-                putStrLn "PASS: the same funded input and validator rejected datum 0 to 2, then accepted datum 0 to 1 on chain"
+                putStrLn "PASS: the same funded input and validator rejected the incorrect total on chain, then accepted the correct total and datum 0 to 1"
+
+-- Require the single phase-two failure for a ScriptValid transaction. A phase-one
+-- failure, an era mismatch or a submission transport error is not this control.
+rejectedPlutusContext :: Api.TxSubmitResult -> IO BS.ByteString
+rejectedPlutusContext result = case result of
+    Api.TxSubmitFail
+        (Consensus.TxValidationErrorInCardanoMode
+            (Consensus.ShelleyTxValidationError Api.ShelleyBasedEraDijkstra
+                (Dijkstra.DijkstraApplyTxError failures))) ->
+            case toList failures of
+                [ Dijkstra.LedgerFailure
+                    (Dijkstra.DijkstraUtxowFailure
+                        (Dijkstra.UtxoFailure
+                            (Dijkstra.UtxosFailure
+                                (Conway.ValidationTagMismatch Dijkstra.Phase2Valid
+                                    (Alonzo.FailedUnexpectedly descriptions)))))
+                    ] -> case toList descriptions of
+                        [Alonzo.PlutusFailure _ encodedContext] -> pure encodedContext
+                        _ -> unexpected
+                _ -> unexpected
+    _ -> unexpected
+  where
+    unexpected = fail $ "Expected only a ScriptValid ValidationTagMismatch with one Plutus failure: " <> show result
 
 datum :: Integer -> Api.HashableScriptData
 datum = Api.unsafeHashableScriptData . Api.ScriptDataNumber
@@ -427,10 +606,10 @@ submitAndVerify ::
     Api.SigningKey Api.PaymentKey ->
     Exp.UnsignedTx LedgerEra ->
     Map.Map Api.TxIn Output ->
-    (Api.TxId -> State.DepositStore) ->
+    (Api.TxId -> Funding.BackingSummary) ->
     Coin ->
     [Pair] ->
-    IO (Api.TxId, Api.UTxO Api.DijkstraEra, State.DepositStore)
+    IO (Api.TxId, Api.UTxO Api.DijkstraEra, State.UTxOStore LedgerEra)
 submitAndVerify directory name connection payment unsigned retained expectedStore expectedAda evidence = do
     let era = Api.ShelleyBasedEraDijkstra
         witness = Exp.makeKeyWitness Era.DijkstraEra unsigned (Api.WitnessPaymentKey payment)
@@ -471,7 +650,7 @@ submitAndVerify directory name connection payment unsigned retained expectedStor
                     , "totalAdaAfter" .= totalAda after
                     ]
                         <> transactionEvidence
-            pure (txId, Api.UTxO expected, depositStore after)
+            pure (txId, Api.UTxO expected, Funding.outputStore after)
 
 awaitExactUTxO :: Api.LocalNodeConnectInfo -> Set.Set Api.TxIn -> Map.Map Api.TxIn Output -> IO ()
 awaitExactUTxO connection created expected = do

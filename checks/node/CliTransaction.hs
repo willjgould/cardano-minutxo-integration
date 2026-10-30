@@ -11,10 +11,9 @@ import Cardano.Ledger.Binary (mkSized)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Dijkstra.Core as Dijkstra
 import qualified Cardano.Ledger.Dijkstra.Rules as Dijkstra
-import qualified Cardano.Ledger.Dijkstra.UTxODeposit.TopTx as TopTx
+import qualified Cardano.Ledger.Dijkstra.UTxOs.Deposit.TopTx as TopTx
 import qualified Cardano.Ledger.Keys as Keys
 import qualified Cardano.Ledger.Shelley.Scripts as Native
-import qualified Cardano.Ledger.State as State
 import Cardano.Ledger.StrictlyPositiveCoin (mkStrictlyPositiveCoin)
 
 import Control.Concurrent (threadDelay)
@@ -60,7 +59,7 @@ submitTokenOutput cli directory socket = do
                 }
     pparams <- Funding.queryDijkstra connection Api.QueryProtocolParameters
     before <- Funding.queryLedgerState connection
-    unless (Funding.depositStore before == State.DepositStore 0 mempty) $
+    unless (Funding.depositStore before == Funding.BackingSummary 0 mempty) $
         fail "Expected an empty deposit store on the fresh chain"
     Api.UTxO funded <- queryUTxO connection (Api.QueryUTxOByAddress (Set.singleton source))
     (input, inputValue) <- case Map.toList funded of
@@ -183,10 +182,10 @@ submitTokenOutput cli directory socket = do
     putStrLn "PASS CLI sign: body/native script preserved and funding-owner signature verified"
     let txId = Api.getTxId (Api.getTxBody transaction)
         created = Map.fromList (zipWith (\ix output -> (Api.TxIn txId (Api.TxIx ix), output)) [0 ..] outputs)
-        Api.UTxO original = Api.fromLedgerUTxO era (before ^. State.utxoL)
+        Api.UTxO original = Api.fromLedgerUTxO era (Funding.ledgerUTxO before)
         expectedUTxO = Map.union created (Map.delete input original)
         expectedStore =
-            State.DepositStore deposit $
+            Funding.BackingSummary deposit $
                 Map.singleton (Api.toShelleyTxIn (Api.TxIn txId (Api.TxIx 0))) deposit
         submittedEvidence = ("txId" .= Api.serialiseToRawBytesHexText txId) : evidence
     runCli
@@ -241,7 +240,7 @@ runCli cli directory step arguments = do
 awaitInclusion :: Api.LocalNodeConnectInfo -> Set.Set Api.TxIn -> Map.Map Api.TxIn (Api.TxOut Api.CtxUTxO Api.DijkstraEra) -> IO Funding.LiveState
 awaitInclusion connection created expected = do
     state <- Funding.queryLedgerState connection
-    let Api.UTxO actual = Api.fromLedgerUTxO Api.ShelleyBasedEraDijkstra (state ^. State.utxoL)
+    let Api.UTxO actual = Api.fromLedgerUTxO Api.ShelleyBasedEraDijkstra (Funding.ledgerUTxO state)
     if Map.null (Map.restrictKeys actual created)
         then threadDelay 1_000_000 >> awaitInclusion connection created expected
         else do

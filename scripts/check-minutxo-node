@@ -48,7 +48,7 @@ def main():
     submission.add_argument("--plutus-store-backed", action="store_true",
                             help="Execute the same V4 application rule with zero-ADA script outputs and verify backing")
     submission.add_argument("--plutus-negative", action="store_true",
-                            help="Reject an invalid token-only datum transition, then include the valid spend")
+                            help="Reject an incorrect total-ADA claim, then include the valid spend")
     submission.add_argument("--plutus-nested-parent", action="store_true",
                             help="Execute a signed token-only V4 child with parent-funded extra backing")
     args = parser.parse_args()

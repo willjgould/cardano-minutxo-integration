@@ -1,5 +1,234 @@
 # Incremental minUTxO writer integration
 
+## V4 total-value interface work
+
+The current work makes the V4 script-facing value include separately allocated
+UTxO backing, with explicit backing metadata and an opt-in projection excluding
+that backing. This changes the work-in-progress V4 interface; the ledger output
+representation remains unchanged.
+
+```haskell
+data MinUTxOBacking = Implicit | Explicit Lovelace
+
+txOutValue :: TxOut -> Value                 -- total, including explicit backing
+txOutBacking :: TxOut -> MinUTxOBacking
+valueWithoutExplicitBacking :: TxOut -> Value
+```
+
+A validator checking an ADA payment uses `txOutValue` for either output kind.
+A token-state validator can opt into `valueWithoutExplicitBacking`: it subtracts
+only the recorded explicit allocation. For implicit outputs it preserves the
+entire value; the ledger does not infer an application/infrastructure split.
+`Explicit 0` remains distinguishable from `Implicit`.
+
+Explicitly backed consumed and reference inputs use their historical allocation
+from the deposit store. New explicit outputs use the allocation priced from
+their accepted serialized size and the transaction's protocol parameters. Allocations now contain the
+output, accepted size, and calculation version and price together; the earlier
+separate map of input coins is no longer used. Both ordinary and data-backed V4 libraries expose the same five-field
+output encoding. Existing experimental V4 scripts need rebuilding.
+
+Evaluation and balancing APIs now take an allocation map alongside the UTxO.
+Online convenience queries obtain both in the same acquired ledger snapshot.
+Dedicated node queries return allocations for selected inputs and the cached
+global deposit total. They require the matching updated prototype node.
+Offline CLI script-cost evaluation rejects explicit inputs because its current
+UTxO JSON does not include historical allocations. Programmatic offline
+evaluation accepts an explicitly supplied allocation map.
+
+## Nicolas upstream integration, 30 October 2026
+
+The ledger checkout now includes `v2-minutxo` revision
+`7b9b274800e213a33bb2f55b1210e901d91034dc`. The V4 interface above is retained.
+Downstream code uses `LegacyTxOut`, `NewTxOut`, and the unified `Allocations`
+entries introduced upstream. Legacy inputs retain their entire value and
+`Implicit` metadata; this integration does not reconstruct historical implicit
+minima or change the size-based deposit formula.
+V1–V3 compatibility with explicit outputs is not established by this integration;
+the preserved interface is the experimental V4 interface above.
+
+Consensus tables retain accepted output sizes and calculation versions and
+prices. Snapshot version 3 preserves the global cached deposit total separately
+from the entries resident in memory. Existing prototype databases using the
+older snapshot/table format need rebuilding; no database converter is included.
+The allocation and total queries use the existing prototype protocol version,
+so its handshake alone cannot distinguish an older prototype node.
+
+Merge verification and commands are recorded in
+`.workspace/minutxo-incremental/merge-2026-10-30/`. The verification history below
+predates this upstream integration. The HTML component map also describes that
+earlier implementation rather than the new allocation storage and queries.
+
+Current merge verification:
+
+| Check | Result |
+| --- | --- |
+| V4 context group | 45 examples, zero failures |
+| Ledger golden group | 129 examples, zero failures |
+| Allocation-store codecs | 14 examples, zero failures |
+| Consensus snapshot, table and MemPack preservation | 100 property cases passed |
+| Full Dijkstra ledger suite | 1,360 passed, 27 failed, two pending |
+| Live V4 ordinary and explicit spends | Passed |
+| Signed incorrect-total rejection, followed by the correct spend | Passed |
+| Signed child with parent-funded backing and fee | Passed |
+| Offline CLI with an unrelated explicit output | Assertion red, then the unchanged check passed |
+| Live CLI build, sign, submit and ledger-state verification | Passed |
+| Token funding, epoch-boundary retention, address query and live JSON round trip | Passed |
+| Automatic deposit pricing and live inclusion | Passed |
+| Native parent-funded and sibling-funded nested transactions | Both passed |
+| Fee funded entirely from deposit release | Still fails with the existing settlement-output rule |
+| API unit and golden suites | 278 unit and 125 golden tests passed |
+| Balancer unit suite | 420 examples, zero failures, eight existing pending tests |
+| Wallet reader and output round trip | Passed |
+| Wallet library, including balancing and evaluation callers | Compiled successfully |
+| Wallet passphrase suite, including PBKDF2 and scrypt goldens | 21 examples, zero failures |
+| Transaction construction, read-back, JSON, nesting, serialization and signing | All seven existing checks passed |
+
+All 209 deposit-store business checks and the full-size `UTxOState`,
+`EpochState`, and `NewEpochState` round trips passed in the full ledger run.
+Its 27 failures are the previously recorded nested-script expectations:
+child phase-two evaluation, child-budget enforcement, and missing child
+context errors. Their failure inventory and source/history comparison are in
+`ledger-full-summary.json` alongside the logs. This is not an all-green ledger
+suite claim or a separately executed pristine-upstream comparison.
+
+The unchanged deposit-release check also reproduces its prior rejection:
+`155160` lovelace released equals `577` in fees plus `154583` in the settlement
+output, but upstream requires the full `155160` in that output. This is
+`InsufficientSettlementOutput`, not a compilation or balancing failure.
+The merge preserves that agreed upstream rule and leaves the reproducer red.
+Supporting fees from this release needs a separate settlement-policy change.
+
+Wallet compilation also needed prerequisites for this checkout's GHC and crypto
+stack: explicit imports for older GHC APIs, consistent extended-key types, and
+byte-array types matching the selected cryptography packages. Script-template
+key boundaries preserve the same 64-byte encoding. The existing database stores
+cosigner indices as `Word8`; larger indices from the selected address library
+are rejected rather than truncated. No key format or database schema migration
+is included. Both byte-array APIs access the same protected passphrase buffer.
+
+The wallet library build does not establish complete explicit-output wallet
+support. The pre-existing branch still has unfinished explicit-output history
+filtering, persistence, and transaction construction. Its two reader checks
+cover output decoding and conversion, not those application paths.
+
+The offline CLI regression first demonstrated that adding an unused explicit
+output to a valid legacy-only UTxO file caused evaluation to fail. Allocation
+conversion now uses only the transaction's referenced inputs. The same check
+confirms identical execution costs and continued rejection of an actual explicit
+input whose historical metadata is unavailable.
+
+## Earlier V4 interface verification
+
+The local Plutus dependency prerequisite ran separately. Declaring the local
+package failed in `run-0pvs35u1` because its source was absent. After importing
+the unchanged published `plutus-ledger-api-1.71.0.0` source (provenance in
+`vendor/README.md`), the same `plutus-dependencies` check resolved successfully
+in `run-n4djrkvr`. Neither run executed transaction assertions.
+
+The first total-output-value check is `plutus-mixed-outputs`. Initial attempts
+stopped at Cabal log permissions (`run-zbm88lsu`) and uncached pinned packages
+(`run-lwv4os55`); no assertions ran in either attempt.
+Two fixture import corrections (`run-_insg59k`, `run-w78mndb_`) likewise
+stopped before assertions. The corrected check ran in `run-6c8xxi0w` and
+failed its value assertion: the implicit output retained 2,000,000 lovelace
+and seven tokens, but the explicit output exposed zero lovelace instead of
+its 991,300-lovelace backing alongside eleven tokens. This is the behavioural
+red baseline for the interface change.
+The same check passed after implementation in `run-ybqz3b_9` (one example,
+zero failures). An earlier offline rerun, `run-39jnjotw`, stopped at missing
+dependency source archives and did not execute assertions.
+
+Additional regressions were introduced individually after the preceding check
+passed. They passed on their first assertion runs: historical consumed-input
+backing and helper behavior (`plutus-mixed-inputs`, `run-efpidkav`), historical
+reference inputs and explicit-zero output metadata (`plutus-reference-backing`,
+`run-5zio882n`), and missing/negative/unexpected metadata rejection for both
+input kinds (`plutus-invalid-backing`, `run-rclsjymj`). Compilation stops
+`run-n8v5thtb` and `run-ka8vgwqf` executed no assertions. These are additional
+regression greens, not separate demonstrations of red-to-green implementation.
+The complete ledger context group passes (45 examples). The vendored Plutus
+V4 encoding group also passes all 93 checks in
+`run-vendor-v4-encoding-1jub8i8b`, including normal/data-backed encoding,
+cross-decoding and helper agreement for implicit, explicit-zero and nonzero
+backing. Its preceding permission/cache failures did not execute assertions.
+
+The node build exposed one additional caller in the pinned consensus package
+(`run-kgfhzd_z`, compilation failure before transaction assertions). That exact
+revision, `5cc95f4caf294751318f8637ab2fb60d5de6eb29`, is now a declared
+`ouroboros-consensus` submodule instead of an opaque Cabal source dependency.
+Its Leios annotation call passes allocations from the same ledger state as its
+UTxO. Validation policy and nested-script enforcement are unchanged.
+The existing Plinth compiler flag is shared across workspace projects so all
+consumers of the vendored V4 library use compatible decoder unfoldings.
+
+The updated node, API, RPC and validator harness build successfully
+(`plutus-node-build`, `run-txn_tff7`; the preceding `run-zfonhoew` stopped at
+an RPC query error-propagation type error, before assertions). Live ordinary
+and store-backed V4 spends pass in `run-qcko25zy` and `run-rtunzzjs`. The
+validator checks exact total ADA and backing metadata on its consumed and
+continuing outputs, while preserving application assets through the helper.
+The public allocation query is also compared with the independently verified
+ledger deposit store. CLI compilation (`run-vl562zfe`) and the existing CLI
+output-construction check (`run-c_pwigmh`) pass; `run-cxtnjj9o` was a preceding
+compile-only stop for missing era type evidence.
+
+The signed negative control also passes (`node-plutus-negative`,
+`run-i4zoq0pp`, following successful harness build `run-1ahpjoh_`). A redeemer
+claims 1,043,021 lovelace for an input whose actual total is 1,043,020. Local
+execution reports exactly `["input-total", "PT5"]`; the node rejects the
+`ScriptValid` transaction with the same serialized script context and budget.
+The transaction size, fee, inputs, collateral and backing are unchanged, and
+the subsequent correct spend of that same input is included. A preceding
+build attempt `run-yysx14bg` stopped on Cabal log permissions, without running
+transaction assertions.
+
+All 278 existing API tests pass in `run-api-interface-tests-7ms1lwfk`.
+Earlier runs `run-api-interface-tests-0ul4lhoj`,
+`run-api-interface-tests-0tpp3li6` and `run-api-interface-tests-kl2xba57`
+stopped before assertions at pre-existing output-constructor fixture gaps.
+The prerequisite repair changes 51 ordinary-output constructor calls and one
+raw Babbage output wrapper to the corresponding implicit-output forms, without
+changing fixture values, assertions or adding test cases.
+
+The existing nested-parent check passes in `run-6vh4mynl`, including local V4
+evaluation when the continuation datum grows from 23 to 24 and requires more
+backing. This confirms context construction and balancing; it does not claim
+to repair the previously identified absence of nested phase-two enforcement.
+The live CLI build/sign/submit regression passes in `run-serakgsj`, with exact
+UTxO, allocation and total ADA checked after inclusion.
+
+The standalone balancer now forwards allocation metadata to script evaluation.
+Its primitive coin-selection representation still supports implicit outputs
+only; store-backed conversions fail directly with `UnsupportedStoreBackedTxOut`.
+The build prerequisites adapt ordinary output wrappers, current protocol
+parameter fixtures, era-history arguments and key types without adding
+store-backed coin selection. The wallet's supported online transaction-writing
+paths still reject Dijkstra, so their new allocation arguments are empty.
+
+The first completed balancer unit run (`run-balancer-interface-tests-e4splwf9`)
+executed 420 examples with one failure and eight existing pending tests.
+Its Dijkstra `testPParams` golden ended at byte 1,896: it contained 35 fields,
+whereas the current protocol schema has 54. The refreshed fixture preserves
+all prior field values, adds the V4 cost model alongside V1–V3, and appends the
+19 current fields using ledger example defaults. The transaction goldens
+remain unchanged. Earlier balancer runs stopped at compilation and executed
+no assertions. The fixture comparison is recorded under
+`.workspace/minutxo-incremental/checks/interface-review/balancer-golden-review.json`.
+
+Broader verification is not an all-green ledger-suite claim. An exploratory
+unfiltered run was interrupted after 1,095 examples and 203 reported failures
+(exit 130, seed 286782365). These comprise the 174 existing constant-false
+DepositStore backlog checks, 27 previously observed nested-Plutus failures,
+one missing Cabal data-directory setup, and one deliberately disabled Datum
+test counted as a failure by `--fail-on=pending`. The 27 nested failure paths
+and normalized outcomes match the previous `run-namcrmuz` baseline. With the
+normal Cabal data directory supplied, the complete Golden group passes all
+128 examples. Logs and the partial-run classification are retained under
+`.workspace/minutxo-incremental/checks/interface-review/`.
+
+## Previous integration checkpoints
+
 This workspace tests how the minUTxO ledger change affects transaction-writing
 code in `cardano-api`, `cardano-cli`, `cardano-wallet`, and
 `cardano-balance-transaction`. Use this checkout and its declared submodules.
@@ -19,10 +248,10 @@ persistence, transaction construction, spending or balancer behaviour.
 The previous combined implementation is preserved separately. New work stays
 staged for review until a commit is explicitly requested.
 
-**Current checkpoint: RED — awaiting Nicolas's fee-release fix.**
-The ledger production code is Nicolas's published revision
+**Pre-interface checkpoint: RED — awaiting Nicolas's fee-release fix.**
+At that checkpoint, the ledger production code was Nicolas's published revision
 `e5da0be244308c217a9b0eecf221c797f4176f44`, without our local fee-release patch.
-The local ledger additions are V4 context tests only.
+The local ledger additions at that point were V4 context tests only.
 `./scripts/check-minutxo node-deposit-release` remains the unchanged reproducer:
 it asks released backing to cover the transaction fee after reserving backing
 for both new outputs. On 20 October 2026, `run-58ujxarj` built successfully,

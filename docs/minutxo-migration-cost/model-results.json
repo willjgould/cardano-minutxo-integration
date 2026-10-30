@@ -1,0 +1,172 @@
+{
+  "utxos": 10886508,
+  "utxo_snapshot_dates": [
+    "2026-10-23T19:01:33.813Z"
+  ],
+  "history_volume_proxy_bytes": 234502459819,
+  "history_volume_note": "Database minus ancillary; includes immutable indexes. Not exact bytes a scanner must read.",
+  "assumed_scan_rate_scenarios": [
+    {
+      "effective_MB_per_second": 5,
+      "seconds": 46900.4919638,
+      "hours": 13.027914434388888
+    },
+    {
+      "effective_MB_per_second": 10,
+      "seconds": 23450.2459819,
+      "hours": 6.513957217194444
+    },
+    {
+      "effective_MB_per_second": 25,
+      "seconds": 9380.09839276,
+      "hours": 2.605582886877778
+    },
+    {
+      "effective_MB_per_second": 50,
+      "seconds": 4690.04919638,
+      "hours": 1.302791443438889
+    },
+    {
+      "effective_MB_per_second": 100,
+      "seconds": 2345.02459819,
+      "hours": 0.6513957217194445
+    },
+    {
+      "effective_MB_per_second": 250,
+      "seconds": 938.009839276,
+      "hours": 0.26055828868777775
+    }
+  ],
+  "measured_layout_extrapolations": {
+    "existing_constructor_extra_word": {
+      "additional_bytes_per_output": 8.0,
+      "additional_bytes": 87092064,
+      "additional_MiB": 83.05746459960938,
+      "additional_GB": 0.087092064
+    },
+    "wrapper_preserving_existing_output": {
+      "additional_bytes_per_output": 24.0,
+      "additional_bytes": 261276192,
+      "additional_MiB": 249.17239379882812,
+      "additional_GB": 0.261276192
+    },
+    "separate_map_shared_keys": {
+      "additional_bytes_per_output": 64.0,
+      "additional_bytes": 696736512,
+      "additional_MiB": 664.459716796875,
+      "additional_GB": 0.696736512
+    },
+    "separate_map_independent_keys": {
+      "additional_bytes_per_output": 128.0,
+      "additional_bytes": 1393473024,
+      "additional_MiB": 1328.91943359375,
+      "additional_GB": 1.393473024
+    }
+  },
+  "illustrative_uncompressed_encoding": {
+    "inline_32bit_cbor_amount_bytes": 54432540,
+    "separate_cbor_map_small_output_index_bytes": 446346833,
+    "note": "Five-byte unsigned integer assumes amounts from 65,536 through 4,294,967,295; smaller amounts encode in fewer bytes. Standalone key is [32-byte TxId, index<24]. No wrapper, version, compression or database overhead included. This is a model, not a measured encoding."
+  },
+  "historical_parameter_regimes": [
+    {
+      "key": [
+        "Shelley",
+        "1000000",
+        null
+      ],
+      "first_epoch": 208,
+      "last_epoch": 235
+    },
+    {
+      "key": [
+        "Allegra",
+        "1000000",
+        null
+      ],
+      "first_epoch": 236,
+      "last_epoch": 250
+    },
+    {
+      "key": [
+        "Mary",
+        "1000000",
+        null
+      ],
+      "first_epoch": 251,
+      "last_epoch": 289
+    },
+    {
+      "key": [
+        "Alonzo",
+        "0",
+        "34482"
+      ],
+      "first_epoch": 290,
+      "last_epoch": 364
+    },
+    {
+      "key": [
+        "Babbage",
+        "0",
+        "4310"
+      ],
+      "first_epoch": 365,
+      "last_epoch": 506
+    },
+    {
+      "key": [
+        "Conway",
+        "0",
+        "4310"
+      ],
+      "first_epoch": 507,
+      "last_epoch": 664
+    }
+  ],
+  "scan_component": {
+    "scope": "Measured component benchmark: complete CBOR structural traversal and optional Blake2b-256 transaction-body hashing of a real recent Conway immutable chunk. Not a full migration benchmark.",
+    "compiler": "GHC 9.6.7, -O2 -fno-full-laziness -fno-cse",
+    "cpu": "AMD Ryzen 9 9950X3D; benchmark is single-threaded",
+    "chunk": "09335.chunk",
+    "chunk_bytes": 8524491,
+    "chunk_sha256": "fd1f5a92ff78f17cae851c591973a73d4a1ce51ff8439e5da3f472cf9f0bd81c",
+    "framing": "All 8,524,491 bytes consumed as 1,062 concatenated Conway hard-fork blocks; each has a pair wrapper with era tag 7 and five block components.",
+    "counts": {
+      "blocks": 1062,
+      "transaction_bodies": 8267,
+      "transaction_body_bytes": 4995733
+    },
+    "read": {
+      "kind": "read",
+      "bytes": 8524491,
+      "seconds": 0.001936635,
+      "cold_io_guaranteed": false
+    },
+    "max_rss_kib": 23296,
+    "heap_allocated_bytes_all_runs": 2471221040,
+    "runs": {
+      "structural": {
+        "repetitions": 7,
+        "median_seconds": 0.023131764,
+        "median_MB_per_second": 368.519,
+        "min_MB_per_second": 362.229,
+        "max_MB_per_second": 383.41
+      },
+      "structural_plus_hash": {
+        "repetitions": 7,
+        "median_seconds": 0.033196073,
+        "median_MB_per_second": 256.792,
+        "min_MB_per_second": 255.055,
+        "max_MB_per_second": 259.718
+      }
+    },
+    "exclusions": [
+      "Cold disk I/O: the chunk was downloaded and extracted immediately before the benchmark; time reports zero filesystem reads.",
+      "Ledger value decoding and exact minUTxO calculation.",
+      "Target live-UTxO lookup and metadata writes.",
+      "Historical parameter recovery and output-creation validity processing.",
+      "Representativeness across older eras, large scripts, and different asset distributions."
+    ]
+  }
+}

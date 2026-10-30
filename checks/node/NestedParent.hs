@@ -12,7 +12,7 @@ import Cardano.Ledger.Binary (mkSized)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Dijkstra.Core as Dijkstra
 import qualified Cardano.Ledger.Dijkstra.Rules as Dijkstra
-import qualified Cardano.Ledger.Dijkstra.UTxODeposit.TopTx as TopTx
+import qualified Cardano.Ledger.Dijkstra.UTxOs.Deposit.TopTx as TopTx
 import qualified Cardano.Ledger.State as State
 import Cardano.Ledger.StrictlyPositiveCoin (StrictlyPositiveCoin, mkStrictlyPositiveCoin)
 
@@ -57,8 +57,8 @@ submitParentFunded directory socket = do
         era = Api.ShelleyBasedEraDijkstra
     before <- Funding.queryLedgerState connection
     pparams <- Funding.queryDijkstra connection Api.QueryProtocolParameters
-    let Api.UTxO original = Api.fromLedgerUTxO era (before ^. State.utxoL)
-        store = Funding.depositStore before
+    let Api.UTxO original = Api.fromLedgerUTxO era (Funding.ledgerUTxO before)
+        store = Funding.outputStore before
         tokenInputs =
             [(input, output) | (input, output@(Api.TxOut _ Api.TxOutValueStoreBacked{} _ _)) <- Map.toAscList original]
         adaInputs =
@@ -70,7 +70,7 @@ submitParentFunded directory socket = do
     tokenOutputs <- splitTokenOutput tokenOutput
     released <-
         maybe (fail "Token input has no recorded allocation") pure $
-            Map.lookup (Api.toShelleyTxIn tokenInput) (State.depositStoreAllocations store)
+            Map.lookup (Api.toShelleyTxIn tokenInput) (Funding.backingAmounts store)
     let price output =
             Dijkstra.requiredUTxODeposit pparams $
                 mkSized
@@ -89,7 +89,7 @@ submitParentFunded directory socket = do
     tokenContribution <- signTokenContribution tokenOwner tokenInput tokenOutputs positiveDeposit
     putStrLn "RUN node assertions: automatically balance the parent fee and change with a signed token child"
     let selectedUTxO = Api.UTxO (Map.restrictKeys original (Set.fromList [parentInput, tokenInput]))
-    transaction <- buildParent connection pparams selectedUTxO payment parentInput address positiveDeposit tokenContribution
+    transaction <- buildParent connection pparams selectedUTxO store payment parentInput address positiveDeposit tokenContribution
     (fee, changeOutput) <- case transaction of
         Api.ShelleyTx _ signed ->
             let body = signed ^. Core.bodyTxL
@@ -110,11 +110,11 @@ submitParentFunded directory socket = do
         spent = Set.fromList [tokenInput, parentInput]
         expectedUTxO = Map.union created (Map.withoutKeys original spent)
         expectedStore =
-            State.DepositStore
-                (State.depositStoreBalance store + netDeposit)
+            Funding.BackingSummary
+                ((State.toCoin . State.totalDepositAmount) store + netDeposit)
                 ( Map.union
                     (Map.fromList (zip (map Api.toShelleyTxIn childInputs) allocations))
-                    (Map.delete (Api.toShelleyTxIn tokenInput) (State.depositStoreAllocations store))
+                    (Map.delete (Api.toShelleyTxIn tokenInput) (Funding.backingAmounts store))
                 )
         evidence =
             [ "parentTxId" .= Api.serialiseToRawBytesHexText parentId
@@ -176,20 +176,21 @@ buildParent ::
     Api.LocalNodeConnectInfo ->
     Core.PParams (Api.ShelleyLedgerEra Api.DijkstraEra) ->
     Api.UTxO Api.DijkstraEra ->
+    State.UTxOStore (Api.ShelleyLedgerEra Api.DijkstraEra) ->
     Api.SigningKey Api.PaymentKey ->
     Api.TxIn ->
     Api.AddressInEra Api.DijkstraEra ->
     StrictlyPositiveCoin ->
     Exp.SignedSubTx ->
     IO (Api.Tx Api.DijkstraEra)
-buildParent connection pparams utxo payment input changeAddress deposit child = do
+buildParent connection pparams utxo store payment input changeAddress deposit child = do
     let content =
             Exp.defaultTxBodyContent
                 { Exp.txNetUTxODepositChange = TopTx.DeclaresNetUTxODepositAllocation deposit
                 }
                 & Exp.setTxIns [(input, Exp.AnyKeyWitnessPlaceholder)]
                 & Exp.setTxSignedSubTransactions [child]
-    (unsigned, _) <- AutoBalance.balance connection pparams utxo content changeAddress
+    (unsigned, _) <- AutoBalance.balance connection pparams utxo store content changeAddress
     let witness = Exp.makeKeyWitness Era.DijkstraEra unsigned (Api.WitnessPaymentKey payment)
         Exp.SignedTx signed = Exp.signTx Era.DijkstraEra [] [witness] unsigned
     pure (Api.ShelleyTx Api.ShelleyBasedEraDijkstra signed)

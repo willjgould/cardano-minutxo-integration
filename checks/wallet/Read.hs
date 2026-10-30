@@ -61,7 +61,7 @@ main = do
     -- Keep the genuine Dijkstra wrapper: unwrapping it into a Babbage output
     -- would bypass the missing wallet support this check is meant to expose.
     case Api.toShelleyTxOut era output of
-        ledgerOutput@Core.StoreBackedTxOut{} ->
+        ledgerOutput@Core.NewTxOut{} ->
             case Wallet.getOutputs @Read.Dijkstra (Outputs (fromList [ledgerOutput])) of
                 [actual] ->
                     unless (actual == expected) $
@@ -69,6 +69,6 @@ main = do
                             "FAIL: expected wallet output " <> show expected <> ", got " <> show actual
                 outputs ->
                     die $ "FAIL: expected exactly one wallet output, got " <> show (length outputs)
-        Core.ImplicitDepositTxOut{} ->
+        Core.LegacyTxOut{} ->
             die "FAIL: fixture must contain a store-backed ledger output"
     putStrLn "PASS: wallet reading preserves the address, seven tokens and zero ADA"

@@ -13,7 +13,7 @@ import Cardano.Ledger.Binary (mkSized)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Dijkstra.Core as Dijkstra
 import qualified Cardano.Ledger.Dijkstra.Rules as Dijkstra
-import qualified Cardano.Ledger.Dijkstra.UTxODeposit.TopTx as TopTx
+import qualified Cardano.Ledger.Dijkstra.UTxOs.Deposit.TopTx as TopTx
 import qualified Cardano.Ledger.Hashes as Hashes
 import qualified Cardano.Ledger.Keys as Keys
 import qualified Cardano.Ledger.State as State
@@ -56,8 +56,8 @@ releaseDeposit directory socket = do
         ownerHash@(Api.PaymentKeyHash keyHash) = Api.verificationKeyHash (Api.getVerificationKey tokenOwner)
     before <- Funding.queryLedgerState connection
     pparams <- Funding.queryDijkstra connection Api.QueryProtocolParameters
-    let Api.UTxO original = Api.fromLedgerUTxO era (before ^. State.utxoL)
-        store = Funding.depositStore before
+    let Api.UTxO original = Api.fromLedgerUTxO era (Funding.ledgerUTxO before)
+        store = Funding.outputStore before
         tokenInputs =
             [(input, output) | (input, output@(Api.TxOut _ Api.TxOutValueStoreBacked{} _ _)) <- Map.toAscList original]
     (inputs, tokenOutput) <- case tokenInputs of
@@ -89,7 +89,7 @@ releaseDeposit directory socket = do
         traverse
             ( \input ->
                 maybe (fail "Consumed input has no recorded deposit") pure $
-                    Map.lookup (Api.toShelleyTxIn input) (State.depositStoreAllocations store)
+                    Map.lookup (Api.toShelleyTxIn input) (Funding.backingAmounts store)
             )
             inputs
     let releaseBeforeChange = mconcat oldAllocations - mergedAllocation
@@ -119,7 +119,7 @@ releaseDeposit directory socket = do
             , "changeKind" .= ("store-backed" :: String)
             ]
     (unsigned@(Exp.UnsignedTx balanced), _) <-
-        AutoBalance.balanceWithChangeOutput Exp.StoreBackedChange connection pparams selectedUTxO content address
+        AutoBalance.balanceWithChangeOutput Exp.StoreBackedChange connection pparams selectedUTxO store content address
     let body = balanced ^. Core.bodyTxL
         fee = body ^. Core.feeTxBodyL
         outputs = map (Api.fromShelleyTxOut era) (toList (body ^. Core.outputsTxBodyL))
@@ -155,11 +155,11 @@ releaseDeposit directory socket = do
         created = Map.fromList (zipWith (\ix output -> (Api.TxIn txId (Api.TxIx ix), output)) [0 ..] outputs)
         expectedUTxO = Map.union created (Map.withoutKeys original spent)
         expectedStore =
-            State.DepositStore
-                (State.depositStoreBalance store - released)
+            Funding.BackingSummary
+                ((State.toCoin . State.totalDepositAmount) store - released)
                 ( Map.insert (Api.toShelleyTxIn (Api.TxIn txId (Api.TxIx 1))) changeAllocation $
                     Map.insert (Api.toShelleyTxIn (Api.TxIn txId (Api.TxIx 0))) mergedAllocation $
-                        Map.withoutKeys (State.depositStoreAllocations store) ledgerSpent
+                        Map.withoutKeys (Funding.backingAmounts store) ledgerSpent
                 )
         evidence =
             [ "txId" .= Api.serialiseToRawBytesHexText txId
@@ -231,7 +231,7 @@ mergeTokenOutputs _ = fail "Expected token outputs without a datum or reference 
 awaitInclusion :: Api.LocalNodeConnectInfo -> Set.Set Api.TxIn -> Map.Map Api.TxIn (Api.TxOut Api.CtxUTxO Api.DijkstraEra) -> IO Funding.LiveState
 awaitInclusion connection created expected = do
     state <- Funding.queryLedgerState connection
-    let Api.UTxO actual = Api.fromLedgerUTxO Api.ShelleyBasedEraDijkstra (state ^. State.utxoL)
+    let Api.UTxO actual = Api.fromLedgerUTxO Api.ShelleyBasedEraDijkstra (Funding.ledgerUTxO state)
     if Map.null (Map.restrictKeys actual created)
         then threadDelay 1_000_000 >> awaitInclusion connection created expected
         else do

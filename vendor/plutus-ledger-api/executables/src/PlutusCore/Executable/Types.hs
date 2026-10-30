@@ -1,0 +1,145 @@
+{-# LANGUAGE LambdaCase #-}
+
+module PlutusCore.Executable.Types where
+
+import PlutusCore qualified as PLC
+import PlutusIR qualified as PIR
+import UntypedPlutusCore qualified as UPLC
+
+import Data.Text qualified as T
+
+-- These types are for ASTs with Names.  This is the internal format for all
+-- ASTs: conversions (eg between Names and de Bruijn indices) are carried out
+-- when ASTs are read and written.
+
+-- | PIR program type.
+type PirProg =
+  PIR.Program PLC.TyName PLC.Name PLC.DefaultUni PLC.DefaultFun
+
+-- | PIR term type.
+type PirTerm =
+  PIR.Term PLC.TyName PLC.Name PLC.DefaultUni PLC.DefaultFun
+
+-- | PLC program type.
+type PlcProg =
+  PLC.Program PLC.TyName PLC.Name PLC.DefaultUni PLC.DefaultFun
+
+-- | PLC term type.
+type PlcTerm =
+  PLC.Term PLC.TyName PLC.Name PLC.DefaultUni PLC.DefaultFun
+
+-- | UPLC program type.
+type UplcProg =
+  UPLC.Program PLC.Name PLC.DefaultUni PLC.DefaultFun
+
+-- | UPLC term type.
+type UplcTerm =
+  UPLC.Term UPLC.Name PLC.DefaultUni PLC.DefaultFun
+
+---------------- Types for commands and arguments ----------------
+
+data AstNameType
+  = Named
+  | DeBruijn
+  | NamedDeBruijn
+  deriving stock (Eq, Show)
+
+data Input = FileInput FilePath | StdInput
+instance Show Input where
+  show (FileInput path) = show path
+  show StdInput = "<stdin>"
+
+data Output = FileOutput FilePath | StdOutput | NoOutput
+data TimingMode = NoTiming | Timing Integer deriving stock (Eq) -- Report program execution time?
+data CekModel = Default | Unit -- Which cost model should we use for CEK machine steps?
+data PrintMode = Classic | Simple | Readable | ReadableSimple
+  deriving stock (Show, Read, Enum, Bounded)
+data NameFormat = IdNames | DeBruijnNames -- Format for textual output of names
+data TraceMode
+  = None
+  | Logs
+  | LogsWithTimestamps
+  | LogsWithBudgets
+  | LogsWithCallTrace
+  deriving stock (Show, Read, Enum, Bounded)
+type ExampleName = T.Text
+data ExampleMode = ExampleSingle ExampleName | ExampleAvailable
+
+type Files = [FilePath]
+
+-- | Input/output format for programs
+data Format
+  = Textual
+  | -- | standard serialization/deserialization using `PlutusLedgerApi.Common.SerialisedScript`.
+    Serialised
+  | {-| serialization plus hex encoding. This is the format used in the blueprints and
+    most other places. -}
+    Hex
+  | Flat AstNameType
+  | Blueprint
+  deriving stock (Eq)
+
+instance Show Format where
+  show Textual = "textual"
+  show Serialised = "serialised"
+  show Hex = "hex"
+  show (Flat Named) = "flat-named"
+  show (Flat DeBruijn) = "flat-deBruijn"
+  show (Flat NamedDeBruijn) = "flat-namedDeBruijn"
+  show Blueprint = "blueprint"
+
+type Certifier = Maybe String
+
+data CertifierOutputMode = CertBasic | CertReport FilePath | CertProject
+
+data ConvertOptions = ConvertOptions Input Format Output Format PrintMode
+data OptimiseOptions name a
+  = OptimiseOptions
+      Input
+      Format
+      Output
+      Format
+      PrintMode
+      Certifier
+      CertifierOutputMode
+      (UPLC.OptimizeOpts name a)
+      OptimiseEvalOpts
+data PrintOptions = PrintOptions Input Output PrintMode
+newtype ExampleOptions = ExampleOptions ExampleMode
+
+{-| Each input file is paired with the input format to read it with (the
+explicit @--if@, or the format deduced from that file's own extension). -}
+data ApplyOptions = ApplyOptions [(FilePath, Format)] Output Format PrintMode
+
+data EvalArgKind
+  = -- | Each argument is a program
+    ArgProg
+  | -- | Each argment is a Data object
+    ArgData
+  deriving stock (Show)
+
+data OptimiseEvalOpts = OptimiseEvalOpts
+  { oeEval :: Bool
+  -- ^ Whether or not to evaluate the program before/after optimisation.
+  , oeArgFiles :: [FilePath]
+  {-^ Argument files, when optimising a single program (i.e., the input-format
+  is anything other than blueprint). -}
+  , oeArgKind :: EvalArgKind
+  , oeBlueprintArgsDir :: Maybe FilePath
+  }
+
+{-| Specialised types for PIR, which doesn't support deBruijn names in ASTs
+| A specialised format type for PIR. We don't support deBruijn or named deBruijn for PIR. -}
+data PirFormat = TextualPir | FlatNamed
+
+instance Show PirFormat where
+  show = \case TextualPir -> "textual"; FlatNamed -> "flat-named"
+
+-- | Convert the PIR format type to the general format type.
+pirFormatToFormat :: PirFormat -> Format
+pirFormatToFormat TextualPir = Textual
+pirFormatToFormat FlatNamed = Flat Named
+
+-- | Output types for some pir commands
+data Language = PLC | UPLC
+  deriving stock (Show)

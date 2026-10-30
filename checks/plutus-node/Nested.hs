@@ -17,8 +17,8 @@ import qualified Cardano.Ledger.Dijkstra as Dijkstra
 import qualified Cardano.Ledger.Dijkstra.Core as Dijkstra
 import qualified Cardano.Ledger.Dijkstra.Rules as Dijkstra
 import qualified Cardano.Ledger.Dijkstra.Tx as Dijkstra
-import qualified Cardano.Ledger.Dijkstra.UTxODeposit.SubTx as SubTx
-import qualified Cardano.Ledger.Dijkstra.UTxODeposit.TopTx as TopTx
+import qualified Cardano.Ledger.Dijkstra.UTxOs.Deposit.SubTx as SubTx
+import qualified Cardano.Ledger.Dijkstra.UTxOs.Deposit.TopTx as TopTx
 import qualified Cardano.Ledger.Hashes as Hashes
 import qualified Cardano.Ledger.Keys as Keys
 import qualified Cardano.Ledger.Plutus as Plutus
@@ -61,7 +61,7 @@ spendNestedParent ::
     Api.AddressInEra Api.DijkstraEra ->
     Api.TxId ->
     Api.UTxO Api.DijkstraEra ->
-    State.DepositStore ->
+    State.UTxOStore (Api.ShelleyLedgerEra Api.DijkstraEra) ->
     Coin ->
     Coin ->
     Output ->
@@ -91,7 +91,7 @@ spendNestedParent directory connection pparams parentPayment sponsor fundingId f
         fail "Expected separate ordinary sponsor collateral of 10 ADA"
     recordedDeposit <-
         maybe (fail "The script input has no recorded deposit allocation") pure $
-            Map.lookup (Api.toShelleyTxIn scriptInput) (State.depositStoreAllocations fundingStore)
+            Map.lookup (Api.toShelleyTxIn scriptInput) (Funding.backingAmounts fundingStore)
     let netDeposit = newDeposit - recordedDeposit
     positiveDeposit <-
         maybe (fail "Datum 23 to 24 must require positive additional backing") pure $
@@ -103,7 +103,6 @@ spendNestedParent directory connection pparams parentPayment sponsor fundingId f
         runExceptT (Api.queryNodeLocalState connection Network.VolatileTip Api.QueryEraHistory)
             >>= either (fail . show) pure
     let Api.LedgerEpochInfo epochInfo = Api.toLedgerEpochInfo history
-        ledgerUTxO = Api.toLedgerUTxO era fundingUTxO
         parentContent =
             Exp.defaultTxBodyContent
                 { Exp.txNetUTxODepositChange = TopTx.DeclaresNetUTxODepositAllocation positiveDeposit
@@ -126,7 +125,7 @@ spendNestedParent directory connection pparams parentPayment sponsor fundingId f
                 Exp.makeUnsignedTx Era.DijkstraEra $
                     parentContent & Exp.setTxSubTransactions [child]
         nestedContext transaction = do
-            let annotated = Dijkstra.mkDijkstraStAnnTopTx epochInfo systemStart pparams ledgerUTxO Map.empty transaction
+            let annotated = Dijkstra.mkDijkstraStAnnTopTx epochInfo systemStart pparams (State.allocations fundingStore) Map.empty transaction
             topScripts <- either (fail . show) pure (Dijkstra.dsattPlutusScriptsWithContext annotated)
             unless (null topScripts) $ fail "This check must execute its sole Plutus script in the child"
             child <- case Dijkstra.dsattSubTransactions annotated of
@@ -202,7 +201,7 @@ spendNestedParent directory connection pparams parentPayment sponsor fundingId f
 
     putStrLn "RUN node assertions: automatically balance parent backing and fees around the signed Plutus child"
     (unsignedParent@(Exp.UnsignedTx balanced), balancedContent) <-
-        AutoBalance.balance connection pparams fundingUTxO (parentContent & Exp.setTxSignedSubTransactions [signedChild]) sponsor
+        AutoBalance.balance connection pparams fundingUTxO fundingStore (parentContent & Exp.setTxSignedSubTransactions [signedChild]) sponsor
     assertChildUnchanged childBytes balanced
     unless
         ( balanced ^. Core.bodyTxL . Core.inputsTxBodyL == Set.singleton (Api.toShelleyTxIn sponsorInput)
@@ -241,10 +240,10 @@ spendNestedParent directory connection pparams parentPayment sponsor fundingId f
         spent = Set.fromList [scriptInput, sponsorInput]
         expectedUTxO = Map.union created (Map.withoutKeys original spent)
         expectedStore =
-            State.DepositStore
-                (State.depositStoreBalance fundingStore + netDeposit)
+            Funding.BackingSummary
+                ((State.toCoin . State.totalDepositAmount) fundingStore + netDeposit)
                 ( Map.insert (Api.toShelleyTxIn continuationInput) newDeposit $
-                    Map.delete (Api.toShelleyTxIn scriptInput) (State.depositStoreAllocations fundingStore)
+                    Map.delete (Api.toShelleyTxIn scriptInput) (Funding.backingAmounts fundingStore)
                 )
         evidence =
             [ "parentTxId" .= Api.serialiseToRawBytesHexText parentId

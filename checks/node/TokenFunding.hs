@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
-module TokenFunding (fundTokens, LiveState, queryDijkstra, queryLedgerState, depositStore, totalAda, verifyStore) where
+module TokenFunding (fundTokens, LiveState, BackingSummary (..), queryDijkstra, queryLedgerState, depositStore, outputStore, ledgerUTxO, backingAmounts, totalAda, verifyStore) where
 
 import qualified Cardano.Api as Api
 import qualified Cardano.Api.Experimental as Era
@@ -14,12 +14,15 @@ import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Dijkstra.Core as Dijkstra
 import qualified Cardano.Ledger.Dijkstra.Rules as Dijkstra
-import qualified Cardano.Ledger.Dijkstra.UTxODeposit.TopTx as TopTx
+import qualified Cardano.Ledger.Dijkstra.UTxOs.Deposit.TopTx as TopTx
 import qualified Cardano.Ledger.Keys as Keys
 import qualified Cardano.Ledger.Shelley.AdaPots as AdaPots
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import qualified Cardano.Ledger.Shelley.Scripts as Native
 import qualified Cardano.Ledger.State as State
+import qualified Cardano.Ledger.State.UTxOs.Allocations as Allocations
+import qualified Cardano.Ledger.State.UTxOs.Allocations.UTxO as Stored
+import qualified Cardano.Ledger.TxIn as Ledger
 import Cardano.Ledger.StrictlyPositiveCoin (mkStrictlyPositiveCoin)
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Network
 
@@ -27,7 +30,7 @@ import qualified AutoBalance
 import Control.Concurrent (threadDelay)
 import Control.Monad (unless)
 import Control.Monad.Trans.Except (runExceptT)
-import Data.Aeson (eitherDecode, encode, object, (.=))
+import Data.Aeson (ToJSON (..), eitherDecode, encode, object, (.=))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Foldable (toList)
@@ -71,7 +74,7 @@ fundTokens directory socket = do
                 }
     pparams <- queryDijkstra connection Api.QueryProtocolParameters
     before <- queryLedgerState connection
-    unless (depositStore before == State.DepositStore 0 mempty) $
+    unless (depositStore before == BackingSummary 0 mempty) $
         fail "Expected an empty deposit store on the fresh chain"
     Api.UTxO funded <- queryUTxO connection (Api.QueryUTxOByAddress (Set.singleton source))
     (input, inputValue) <- case Map.toList funded of
@@ -121,7 +124,7 @@ fundTokens directory socket = do
                 & Exp.setTxMintValue mint
     putStrLn "RUN node assertions: automatically balance direct store-backed outputs with an explicit deposit"
     (unsigned@(Exp.UnsignedTx balanced), _) <-
-        AutoBalance.balance connection pparams (Api.UTxO funded) content destination
+        AutoBalance.balance connection pparams (Api.UTxO funded) (outputStore before) content destination
     let body = balanced ^. Core.bodyTxL
         fee = body ^. Core.feeTxBodyL
         outputs = map (Api.fromShelleyTxOut era) (toList (body ^. Core.outputsTxBodyL))
@@ -146,7 +149,7 @@ fundTokens directory socket = do
         txId = Api.getTxId (Api.getTxBody transaction)
         expected = Map.fromList (zipWith (\ix output -> (Api.TxIn txId (Api.TxIx ix), output)) [0 ..] outputs)
         expectedStore =
-            State.DepositStore deposit $
+            BackingSummary deposit $
                 Map.fromList
                     [ (Api.toShelleyTxIn (Api.TxIn txId (Api.TxIx ix)), perOutputDeposit)
                     | ix <- [0, 1]
@@ -259,35 +262,65 @@ queryDijkstra connection query = do
     eraResult <- either (fail . show) pure result
     either (fail . show) pure eraResult
 
+-- Only expected monetary allocations are summarized here. Evaluation receives
+-- the complete accepted entries from 'outputStore'.
+data BackingSummary = BackingSummary Coin (Map.Map Ledger.TxIn Coin)
+    deriving (Eq, Show)
+
+instance ToJSON BackingSummary where
+    toJSON (BackingSummary balance amounts) =
+        object ["balance" .= balance, "allocations" .= amounts]
+
 queryLedgerState :: Api.LocalNodeConnectInfo -> IO LiveState
 queryLedgerState connection = do
-    -- Consensus keeps the UTxO in separate tables, outside the debug state.
-    -- Query both at one acquired point to obtain a complete ADA-pot total.
-    result <-
-        Api.executeLocalStateQueryExpr connection Network.VolatileTip $
-            (,)
-                <$> Api.queryDebugLedgerState Api.ShelleyBasedEraDijkstra
-                <*> Api.queryUtxo Api.ShelleyBasedEraDijkstra Api.QueryUTxOWhole
-    (debugResult, utxoResult) <- either (fail . show) pure result
+    -- The node keeps complete accepted entries in UTxO-HD tables. Acquire the
+    -- debug state and those entries at the same point before checking ADA pots.
+    result <- Api.executeLocalStateQueryExpr connection Network.VolatileTip $ do
+        debugResult <- Api.queryDebugLedgerState Api.ShelleyBasedEraDijkstra
+        utxoResult <- Api.queryUtxo Api.ShelleyBasedEraDijkstra Api.QueryUTxOWhole
+        allocationResult <- case utxoResult of
+            Right (Right (Api.UTxO outputs)) ->
+                Just <$> Api.queryUTxOAllocations Api.ShelleyBasedEraDijkstra (Map.keysSet outputs)
+            _ -> pure Nothing
+        totalResult <- Api.queryUTxODepositTotal Api.ShelleyBasedEraDijkstra
+        pure (debugResult, utxoResult, allocationResult, totalResult)
+    (debugResult, utxoResult, allocationResult, totalResult) <- either (fail . show) pure result
     encoded <- either (fail . show) pure debugResult >>= either (fail . show) pure
     utxo <- either (fail . show) pure utxoResult >>= either (fail . show) pure
+    allocationQuery <- maybe (fail "UTxO query failed before allocation lookup") pure allocationResult
+    entries <- either (fail . show) pure allocationQuery
+    unless (Api.fromLedgerUTxO Api.ShelleyBasedEraDijkstra (State.UTxO (Allocations.toTxOutMap entries)) == utxo) $
+        fail "Allocation query and UTxO query disagree at the acquired point"
+    store <- either (fail . show) pure (State.fromAllocations $ State.unAllocations entries)
+    cachedTotal <- either (fail . show) pure totalResult
+    unless (cachedTotal == State.toCoin (State.totalDepositAmount store)) $
+        fail "Node cached global deposit total differs from the sum of its complete allocations"
     decoded <- either (fail . show) pure (Api.decodeDebugLedgerState encoded)
-    pure $
-        Api.unDebugLedgerState decoded
-            & State.utxoL .~ Api.toLedgerUTxO Api.ShelleyBasedEraDijkstra utxo
+    pure $ Api.unDebugLedgerState decoded & State.utxoStoreL .~ store
 
-depositStore :: LiveState -> State.DepositStore
+outputStore :: LiveState -> State.UTxOStore (Api.ShelleyLedgerEra Api.DijkstraEra)
+outputStore state = state ^. State.utxoStoreL
+
+ledgerUTxO :: LiveState -> State.UTxO (Api.ShelleyLedgerEra Api.DijkstraEra)
+ledgerUTxO = State.UTxO . Allocations.toTxOutMap . State.allocations . outputStore
+
+backingAmounts :: State.UTxOStore era -> Map.Map Ledger.TxIn Coin
+backingAmounts =
+    Map.map Stored.depositAmount . Map.filter isExplicit . State.unAllocations . State.allocations
+  where
+    isExplicit entry = case Stored.toTxOut entry of
+        Core.NewTxOut _ -> True
+        Core.LegacyTxOut _ -> False
+
+depositStore :: LiveState -> BackingSummary
 depositStore state =
-    state
-        ^. LedgerState.nesEsL
-            . LedgerState.esLStateL
-            . LedgerState.lsUTxOStateL
-            . LedgerState.utxosDepositStoreL
+    let store = outputStore state
+     in BackingSummary (State.toCoin $ State.totalDepositAmount store) (backingAmounts store)
 
 totalAda :: LiveState -> Coin
 totalAda = AdaPots.totalAdaES . LedgerState.nesEs
 
-verifyStore :: State.DepositStore -> Coin -> LiveState -> IO ()
+verifyStore :: BackingSummary -> Coin -> LiveState -> IO ()
 verifyStore expected expectedTotal state = do
     unless (depositStore state == expected) $
         fail $
