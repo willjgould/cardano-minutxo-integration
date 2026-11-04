@@ -1,5 +1,6 @@
 import: cabal.project.minutxo-node
 
 packages:
+  cardano-cli/cardano-cli
   checks/plutus
   checks/plutus-node
