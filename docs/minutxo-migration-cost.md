@@ -2,6 +2,12 @@
 
 29 October 2026. Scope: populate the original, creation-time minimum ADA amount for surviving legacy outputs, so a new Plutus interface can expose it. This is metadata: it does not move ADA, add money to the deposit store, or require owners to spend their outputs. The new size-independent formula is a separate change.
 
+Implementation note, 30 October: the migration implemented on this branch uses
+full ledger reapplication from genesis as its correctness reference. It does
+not implement the targeted scanner modelled below. The scanner rates and
+planning scenarios in this document are therefore not measurements or timing
+estimates for that replay command. See the [current implementation status](../README.md#historical-minimum-migration).
+
 **Assessment.** This is a feasible historical-data migration, with a potentially significant one-time scan and a persistent storage cost that depends heavily on representation. A full ledger replay is a correctness reference and fallback, not an unavoidable implementation. The cheapest credible general approach is a targeted scan of locally stored, already-validated history against the live UTxO set. On the observed mainnet data volume, a scanner sustaining 25–50 MB/s end to end would spend approximately **1.3–2.6 hours scanning**, before final writing/verification and catch-up. Those rates are explicit assumptions, not a measured migration forecast. An eight-byte-per-output estimate is only realistic for a carefully integrated layout: measured separate-map layouts extrapolate to **0.70–1.39 GB of additional live heap**, versus **87 MB** for an inline word or **261 MB** for a wrapper preserving the existing output object.
 
 No full mainnet ChainDB was available in this workspace. I measured memory layouts at one and two million entries and a decoder/hash component on a real mainnet chunk. I did not run a full migration, cold-disk scan, live-node contention test, or full historical replay. The raw observations, benchmark sources and reproducible arithmetic are in [the accompanying directory](minutxo-migration-cost/measurements.json). Existing ledger and node implementation files were not changed.

@@ -40,6 +40,8 @@ module PlutusLedgerApi.V4.Data.Tx
   , txOutDatum
   , txOutReferenceScript
   , txOutBacking
+  , backingAmount
+  , applicationValue
   , valueWithoutExplicitBacking
   , txOutPubKey
   , txOutScriptHash
@@ -91,12 +93,12 @@ instance Pretty TxOutRef where
   pretty TxOutRef {txOutRefId, txOutRefIdx} = pretty txOutRefId <> "!" <> pretty txOutRefIdx
 
 -- | The data-backed counterpart of 'PlutusLedgerApi.V4.Tx.MinUTxOBacking'.
--- An explicit allocation is included in 'txOutValue'; implicit output value
--- has no separately recorded application/infrastructure split.
+-- Both constructors carry a known amount: the historical minimum already
+-- inside an implicit output, or the separately held explicit allocation.
 PlutusTx.asData
   [d|
     data MinUTxOBacking
-      = Implicit
+      = Implicit Lovelace
       | Explicit Lovelace
       deriving stock (Show, Eq, Generic)
       deriving newtype (PlutusTx.FromData, PlutusTx.UnsafeFromData, PlutusTx.ToData)
@@ -106,7 +108,7 @@ PlutusTx.deriveEq ''MinUTxOBacking
 PlutusTx.makeLift ''MinUTxOBacking
 
 instance Pretty MinUTxOBacking where
-  pretty Implicit = "implicit"
+  pretty (Implicit amount) = "implicit" <+> pretty amount
   pretty (Explicit amount) = "explicit" <+> pretty amount
 
 -- | Transaction output for Plutus V4.
@@ -140,11 +142,25 @@ instance Pretty TxOut where
         , pretty txOutBacking
         ]
 
+-- | Recorded minimum or separate allocation. An implicit amount is already in
+-- the output value and does not represent additional deposit-store money.
+backingAmount :: TxOut -> Lovelace
+backingAmount out = case txOutBacking out of
+  Implicit amount -> amount
+  Explicit amount -> amount
+{-# INLINEABLE backingAmount #-}
+
+-- | Exclude the recorded minimum or separate allocation from total value,
+-- preserving every non-ADA asset.
+applicationValue :: TxOut -> Value
+applicationValue out = txOutValue out PlutusTx.- lovelaceValue (backingAmount out)
+{-# INLINEABLE applicationValue #-}
+
 -- | Exclude only separately allocated backing, preserving the full value of
--- implicit outputs and every non-ADA asset.
+-- implicit outputs, including their recorded minimum, and every non-ADA asset.
 valueWithoutExplicitBacking :: TxOut -> Value
 valueWithoutExplicitBacking out = case txOutBacking out of
-  Implicit -> txOutValue out
+  Implicit _ -> txOutValue out
   Explicit amount -> txOutValue out PlutusTx.- lovelaceValue amount
 {-# INLINEABLE valueWithoutExplicitBacking #-}
 
@@ -164,9 +180,11 @@ isPubKeyOut = isJust . txOutPubKey
 isPayToScriptOut :: TxOut -> Bool
 isPayToScriptOut = isJust . txOutScriptHash
 
--- | Create a transaction output locked by a public key.
-pubKeyHashTxOut :: Value -> PubKeyHash -> TxOut
-pubKeyHashTxOut v pkh = TxOut (pubKeyHashAddress pkh) v NoOutputDatum Nothing Implicit
+-- | Create an implicitly backed output locked by a public key, supplying its
+-- total value and known minimum at creation.
+pubKeyHashTxOut :: Value -> Lovelace -> PubKeyHash -> TxOut
+pubKeyHashTxOut v minimumAtCreation pkh =
+  TxOut (pubKeyHashAddress pkh) v NoOutputDatum Nothing (Implicit minimumAtCreation)
 
 ----------------------------------------------------------------------------------------------------
 -- TH Splices --------------------------------------------------------------------------------------

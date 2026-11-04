@@ -1,0 +1,14 @@
+{
+  "txIn": "dcf30854a9976d95cd37159d3e4024b63efd244b6d39dfb10359b90ca7cb6cec#0",
+  "creationEra": "Conway",
+  "totalLovelace": 5000000,
+  "legacyMinimumAtCreation": 969750,
+  "legacyOutputs": 2,
+  "explicitOutputs": 0,
+  "totalDeposit": 0,
+  "target": {
+    "slot": 649,
+    "hash": "0f96b728afa56b2512bfd2e56299d1da87a8cab93038b295fe55d03b45cf65fd"
+  },
+  "targetChunk": 12
+}

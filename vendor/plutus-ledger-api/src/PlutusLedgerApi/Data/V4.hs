@@ -264,6 +264,8 @@ module PlutusLedgerApi.Data.V4
   , Tx.MinUTxOBacking
   , pattern Tx.Implicit
   , pattern Tx.Explicit
+  , Tx.backingAmount
+  , Tx.applicationValue
   , Tx.valueWithoutExplicitBacking
   , Tx.TxOutRef
   , pattern Tx.TxOutRef

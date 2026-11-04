@@ -1,0 +1,56 @@
+{
+  "baseline": "The old node replayed chunks 00000 through 00012 from genesis; baseline/tip.json and baseline/utxo.json were queried at its stationary tip. The original source also has chunk 00013, proving the target is in a closed chunk.",
+  "capturedOn": "2026-10-30",
+  "checkpointCommit": "af0491e33010e6b8a09f96390eb286c96be9afcb",
+  "cliVersion": "11.3.0.0",
+  "dbAnalyserExtraArguments": [
+    "--threshold",
+    "1.1"
+  ],
+  "description": "Public immutable blocks from a private network validated by the pre-migration node. A Conway-created output survives the Dijkstra transition unchanged. No signing keys are included.",
+  "filesSha256": {
+    "alonzo-genesis.json": "9777c3dfee861144709fa668494beb3b0c61a518e0868f7cfa021d4920c4e83e",
+    "baseline/tip.json": "087859b6d9ca6252a5b67c5bd83847ccc54ba5a000cf43714a5ae6666eba4dc9",
+    "baseline/utxo.json": "7fd9cbaa87c56799254849d9a530c533845b680c1cf7a8ab275bccf215a29ef4",
+    "byron-genesis.json": "66ebc6fed98766da56d4fa8d3b2d3d5c3924a565a2f755b32a2fcaf581529ea9",
+    "config.json": "68eb60a1f137df5ba351e3bf8fbb1fb5d631e25555b60f722abbdee2ba2deb11",
+    "conway-genesis.json": "7dd4e93ddb0ebcd40354527186a0f13dbc6bddde33150cfd897560e085bee905",
+    "db/immutable/00000.chunk": "8a4a848b7ea74b91dba7a5c66fc30061264153198ad122684fc80aeff9a352a0",
+    "db/immutable/00001.chunk": "f6cfe2d10a9f3ce89de596166322c8074c7def13a051e8d8b9115218a37b08a8",
+    "db/immutable/00002.chunk": "eed7fe30963ecfdca9b4f1c79451435aca566a050038d7801d654ec76902a750",
+    "db/immutable/00003.chunk": "4d093ffbba45219d213f22b1a28e3110893f86935caa801f70195148d0fc1a9c",
+    "db/immutable/00004.chunk": "e2a3c91952dbe76aeae50e5cb4c0bed835cfa87c2ed4d672b1a31e29883fdead",
+    "db/immutable/00005.chunk": "ee743bf46303cead7d7d647984eb9ca744a8e4715b359da880eb62db0b6df461",
+    "db/immutable/00006.chunk": "eb780f43eac71da9ffafd7637b58bb4f596090e39198a938306ef0251b25ab3f",
+    "db/immutable/00007.chunk": "dd4f6341cbf0faad5df38a5f39b760a483b0a14fea99fffdbc89a941b281c04e",
+    "db/immutable/00008.chunk": "333ca0a087ca068b4ee84b183b83a1e289026a4db744f20d8651dee85f4450e7",
+    "db/immutable/00009.chunk": "a4acb9e20602de744e8f5856d8d6b6182b3cad0d362b90c18fbb2b91f72df2dd",
+    "db/immutable/00010.chunk": "8cecf9922b0e94ecaa6a603d37716b6ff14cb2c37da28518446813ad9dd7e9e9",
+    "db/immutable/00011.chunk": "4ae3c72a6b27dbcdacd1d9432ad643aa67a15bf9837358735bbff0f236c1357b",
+    "db/immutable/00012.chunk": "92e2a80d2f9db06dd1a067c3d497b6245f35270d71378904e93c835d157d0092",
+    "db/immutable/00013.chunk": "8834011c46474ccd3f8fff8b948e1649387adade2577c36e75bda523fb2cd115",
+    "db/protocolMagicId": "73475cb40a568e8da8a045ced110137e159f890ac4da883b6b17dc651b3a8049",
+    "dijkstra-genesis.json": "82316a284af01e793325531172d2140df1d43459fc5d9806352d60bb83dd8ed6",
+    "expected.json": "4889c7eb2b91c9fa07e8d4b045c4c710b6ccbdb1fe477bc4712ae6cd6d6982c6",
+    "shelley-genesis.json": "bb8e9d058a38ccbef97a1d9aad3dd0c7621d37095b5b772dc663be36f7e8e828"
+  },
+  "genesisHashes": {
+    "Alonzo": "70083f5b357d61762ed9d53bccbed2f40d2a3ba88c9ce854696058335f90a252",
+    "Byron": "dd1a1c8035e63c22d20ed9636857456d94f57ce7208ecbb6e183cc749b475051",
+    "Conway": "6c2f85ad73b9cd05a1ec74bbaa14818e0e9440f8eafc2d4a55ca25b6d7c91abe",
+    "Dijkstra": "868e251c5e61dac90798f29278bb56a70c94632454d817579c7138164ec45d6e",
+    "Shelley": "8667793c9303a3964bbcc0ad32ad79d688265067be0dbb757a144d9938228d08"
+  },
+  "hashMethods": {
+    "Byron": "cardano-cli byron genesis print-genesis-hash (canonical genesis JSON)",
+    "OtherEras": "cardano-cli latest genesis hash (raw file bytes)"
+  },
+  "historicalMinimum": {
+    "creationEra": "Conway",
+    "result": "Coin 969750",
+    "source": "Pre-migration cardano-cli conway transaction calculate-min-required-utxo using the effective Conway creation parameters and the recipient output of 5000000 lovelace.",
+    "utxoCostPerByte": 4310
+  },
+  "networkMagic": 42,
+  "nodeVersion": "11.2.0.164"
+}

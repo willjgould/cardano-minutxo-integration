@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+"""Check an existing migration checkpoint using an already-built analyser."""
+
+import argparse
+import hashlib
+import json
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
+
+
+def digest(path):
+    with path.open("rb") as source:
+        return hashlib.file_digest(source, "sha256").hexdigest()
+
+
+def trusted_files(work):
+    paths = [work / "migration.json", work / "ready.json"]
+    paths += list((work / "ledger").rglob("*"))
+    return {str(path.relative_to(work)): digest(path) for path in sorted(paths) if path.is_file()}
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("step", choices=["completed-repeat", "wrong-target", "wrong-config", "malformed-checkpoint"])
+    parser.add_argument("--db-analyser", type=Path, required=True)
+    parser.add_argument("--reference", type=Path, required=True,
+                        help="Successful check-minutxo-migration result directory")
+    parser.add_argument("--directory", type=Path, help="New directory for retained results")
+    args = parser.parse_args()
+    reference = args.reference.resolve()
+    directory = args.directory.resolve() if args.directory else Path(
+        tempfile.mkdtemp(prefix=f"minimum-{args.step}-"))
+    if args.directory:
+        directory.mkdir(parents=True, exist_ok=False)
+    print(f"{args.step} check files and logs: {directory}", flush=True)
+    work = directory / "replay"
+    shutil.copytree(reference / "replay", work)
+    command = json.loads((reference / "migration-command.json").read_text())
+    command[0] = str(args.db_analyser.resolve())
+    command[command.index("--migration-work-dir") + 1] = str(work)
+    expected_ready = json.loads((work / "ready.json").read_text())
+    assert expected_ready["status"] == "ready", expected_ready
+    expected_failure = None
+    if args.step == "wrong-target":
+        command[command.index("--migration-target-hash") + 1] = "00" * 32
+        expected_failure = "Migration manifest does not match the source, configuration, schema, or pinned target"
+    if args.step == "wrong-config":
+        original_path = Path(command[command.index("--config") + 1])
+        config = json.loads(original_path.read_text())
+        for era in ("Byron", "Shelley", "Alonzo", "Conway", "Dijkstra"):
+            config[f"{era}GenesisFile"] = str((original_path.parent / config[f"{era}GenesisFile"]).resolve())
+        config["TestDijkstraHardForkAtEpoch"] += 1
+        changed_config = directory / "changed-config.json"
+        changed_config.write_text(json.dumps(config, indent=2) + "\n")
+        command[command.index("--config") + 1] = str(changed_config)
+        expected_failure = "Migration manifest does not match the source, configuration, schema, or pinned target"
+    if args.step == "malformed-checkpoint":
+        metadata_path = work / expected_ready["snapshot"] / "meta"
+        metadata = json.loads(metadata_path.read_text())
+        metadata["checksum"] ^= 1
+        metadata_path.write_text(json.dumps(metadata) + "\n")
+        expected_failure = "Migration checkpoint could not be loaded; refusing a genesis fallback"
+    source = Path(command[command.index("--db") + 1])
+    source_before = {str(path): digest(path) for path in sorted(source.rglob("*")) if path.is_file()}
+    before = trusted_files(work)
+    (directory / "command.json").write_text(json.dumps(command, indent=2) + "\n")
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, timeout=120)
+        (directory / "stdout.log").write_text(result.stdout)
+        (directory / "stderr.log").write_text(result.stderr)
+        print(result.stdout + result.stderr, end="", flush=True)
+        if expected_failure is None:
+            result.check_returncode()
+        else:
+            assert result.returncode != 0, "Migration accepted a different target for an existing checkpoint"
+            assert expected_failure in result.stderr, result.stderr
+        assert json.loads((work / "ready.json").read_text()) == expected_ready
+        assert trusted_files(work) == before, "Completed repeat changed its checkpoint/snapshot bytes"
+        assert "Migration checkpoint:" not in result.stdout, "Completed repeat replayed additional blocks"
+        evidence = {"status": "verified", "case": args.step, "exitCode": result.returncode,
+                    "target": expected_ready["target"], "checkpointBytesUnchanged": True,
+                    "sourceFilesUnchanged": True}
+        (directory / "verification.json").write_text(json.dumps(evidence, indent=2) + "\n")
+        print(f"PASS: {args.step}; checkpoint/snapshot and source bytes unchanged", flush=True)
+    finally:
+        source_after = {str(path): digest(path) for path in sorted(source.rglob("*")) if path.is_file()}
+        assert source_after == source_before, "Migration modified its source"
+
+
+if __name__ == "__main__":
+    main()

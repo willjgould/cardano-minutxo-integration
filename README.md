@@ -2,53 +2,161 @@
 
 ## V4 total-value interface work
 
-The current work makes the V4 script-facing value include separately allocated
-UTxO backing, with explicit backing metadata and an opt-in projection excluding
-that backing. This changes the work-in-progress V4 interface; the ledger output
-representation remains unchanged.
+The experimental V4 script-facing value includes all ADA, including separately
+allocated backing. Both backing kinds expose a recorded amount, and validators
+can opt into an application-value projection. The ledger output representation
+and on-chain transaction encoding remain unchanged.
 
 ```haskell
-data MinUTxOBacking = Implicit | Explicit Lovelace
+data MinUTxOBacking = Implicit Lovelace | Explicit Lovelace
 
-txOutValue :: TxOut -> Value                 -- total, including explicit backing
+txOutValue :: TxOut -> Value                 -- total for either backing kind
 txOutBacking :: TxOut -> MinUTxOBacking
+backingAmount :: TxOut -> Lovelace
+applicationValue :: TxOut -> Value           -- total minus recorded backing
 valueWithoutExplicitBacking :: TxOut -> Value
 ```
 
 A validator checking an ADA payment uses `txOutValue` for either output kind.
-A token-state validator can opt into `valueWithoutExplicitBacking`: it subtracts
-only the recorded explicit allocation. For implicit outputs it preserves the
-entire value; the ledger does not infer an application/infrastructure split.
-`Explicit 0` remains distinguishable from `Implicit`.
+A validator using the decomposition can use `backingAmount` and
+`applicationValue` without branching on output kind. An implicit amount is the
+minimum enforced at creation, already included in the output's ADA. It is not
+additional money in the deposit store. The existing
+`valueWithoutExplicitBacking` helper still subtracts only explicit backing;
+it preserves the entire value of implicit outputs.
 
 Explicitly backed consumed and reference inputs use their historical allocation
 from the deposit store. New explicit outputs use the allocation priced from
 their accepted serialized size and the transaction's protocol parameters. Allocations now contain the
-output, accepted size, and calculation version and price together; the earlier
-separate map of input coins is no longer used. Both ordinary and data-backed V4 libraries expose the same five-field
-output encoding. Existing experimental V4 scripts need rebuilding.
+output, size, calculation version and price together; the earlier separate map
+of input coins is no longer used. Legacy entries additionally retain their
+historical minimum. Era translation may change their output encoding and size,
+but preserves that already calculated minimum. Both ordinary and data-backed
+V4 libraries expose the same five-field output encoding. The implicit backing
+constructor now carries an amount, so existing experimental V4 scripts need
+rebuilding.
 
 Evaluation and balancing APIs now take an allocation map alongside the UTxO.
 Online convenience queries obtain both in the same acquired ledger snapshot.
 Dedicated node queries return allocations for selected inputs and the cached
 global deposit total. They require the matching updated prototype node.
-Offline CLI script-cost evaluation rejects explicit inputs because its current
-UTxO JSON does not include historical allocations. Programmatic offline
-evaluation accepts an explicitly supplied allocation map.
+Output-only UTxO JSON does not provide historical backing information.
+Programmatic offline V4 evaluation requires complete allocation records for
+its consumed and reference inputs. Unknown implicit history must not be treated
+as zero or reconstructed from current parameters. V4 context construction
+rejects missing or invalid historical metadata.
+
+## Historical-minimum migration
+
+The pre-migration integration was committed as `af0491e`. The migration builds
+on that checkpoint. It records `legacyMinimumAtCreation :: StrictMaybe Coin`
+in each stored allocation, distinguishing unknown history from a known zero.
+Ordinary output creation uses the effective era parameters; Babbage onward
+retains the original accepted output size for the calculation. Actual genesis
+and Byron-created outputs have a recorded zero because no minimum-UTxO rule was
+enforced at their creation. An arbitrary output-only import remains unknown.
+
+Internal ledger-state serialization retains this metadata across eras, and the
+consensus snapshot format is version 4. Old output-only or version-3 snapshots
+must be rebuilt. The canonical `utxo/v0` interchange format remains output-only
+and does not certify migration readiness. Transaction values, monetary deposit
+totals and on-chain output encodings are unchanged.
+
+`db-analyser --migrate-legacy-minimum` reconstructs this metadata by reapplying
+locally validated immutable history from genesis. It uses the historical ledger
+rules and parameters, without repeating signature or Plutus validation. Source
+chunks are opened read-only; rebuilt indexes, checkpoints and the final snapshot
+go into a separate work directory. An exact target slot and block hash bind the
+result. Only a complete audit of surviving outputs and the monetary deposit
+total permits publication of `ready.json`.
+
+Run from this checkout, replacing the capitalized arguments with your paths and
+target. The work directory's parent must already exist:
+
+```sh
+cabal run --project-file=cabal.project.minutxo-plutus-node \
+  --builddir=.workspace/minutxo-incremental/build --enable-tests \
+  ouroboros-consensus:exe:db-analyser -- \
+  --migrate-legacy-minimum --db SOURCE_CHAINDB --config NODE_CONFIG \
+  --migration-work-dir SEPARATE_WORK_DIRECTORY \
+  --migration-target-slot SLOT --migration-target-hash BLOCK_HASH \
+  --migration-checkpoint-every 100000 --in-mem --no-leios-db
+```
+
+The supported target is Shelley or later and must lie in a closed immutable
+chunk, before the source's newest chunk. The first implementation uses
+V2InMemory and POSIX filesystem synchronization, and rejects a replayed prefix
+containing Leios certificates. Later source history is ignored. It requires
+the history and genesis files needed for replay; an output-only UTxO export is
+not sufficient.
+
+Repeating the command with the same source, configuration and target resumes
+from its recorded checkpoint. It does not use the source's ordinary ledger
+snapshots. Each checkpoint writes the complete ledger state and UTxO table;
+the interval controls that write cost and how much replay an interruption can
+lose. Snapshot files are synchronized before the manifest is replaced and the
+previous checkpoint is removed. The work directory is exclusively locked.
+
+`ready.json` names an ordinary node-readable snapshot under `ledger/`. Preserve
+that snapshot directory's name when installing it into a stopped node's ledger
+directory, and use the matching updated node, genesis/protocol configuration
+and chain history. Verify its startup `ReplayFromSnapshot` event names the
+pinned target; copying a snapshot beside others does not prove it was selected.
+The tool does
+not replace a running node's database or schedule protocol activation. It also
+does not add the proposed restriction to producing only `NewTxOut`s, transaction
+netting fields, or V1–V3 support for explicitly backed outputs.
+
+The executable regression is [scripts/check-minutxo-migration](scripts/check-minutxo-migration).
+It uses a public local-chain fixture created with the pre-migration binaries:
+a Conway-created 5 ADA output survives into Dijkstra with an independently
+calculated minimum of 969,750 lovelace. Replay followed by a real node restart
+passes: the node loads the prepared snapshot, reports the exact historical
+minimum and unchanged whole UTxO, and the source fixture remains unchanged.
+The V4 library (155 checks), ledger contexts (46 examples), store codecs
+(16 examples), serialization goldens (129 examples), and three existing live
+V4 spending scenarios also pass. Commands and red/green evidence are retained
+in `.workspace/minutxo-incremental/migration-2026-10-30/`.
+
+[The recovery check](scripts/check-minutxo-migration-resume) also passes: it
+kills replay after a durable checkpoint, resumes the same command, and requires
+byte-identical snapshot state, tables and metadata plus an identical readiness
+record to the uninterrupted, node-verified run.
+[Checkpoint checks](scripts/check-minutxo-migration-checkpoint) separately verify
+that repeating a completed migration is idempotent, a changed target or
+configuration is rejected, and a corrupted snapshot fails without falling back
+to genesis. Each passed on its first run; the initial missing-command red/green
+record belongs to the end-to-end check above.
+
+Ledger regressions cover creation before and after a parameter change in all
+seven Shelley-based eras, an accepted noncanonical Babbage output encoding, and
+the collateral return of an actual phase-2-invalid transaction. The latter
+checks that failed ordinary outputs are absent and only the correctly indexed
+return receives a creation record.
+The provenance check distinguishes genuine genesis/Byron zero from an arbitrary
+import and a later payment to the same bootstrap address. These creation checks
+pass together as 10 examples. Consensus storage also passes 100 property cases
+with explicit deposits and legacy unknown, known-zero and known-nonzero minima
+through MemPack and full, empty and partial snapshot/table restoration.
+
+This is a reference replay implementation, not the targeted scanner modelled
+in [the earlier cost analysis](docs/minutxo-migration-cost.md). No full-mainnet
+runtime, peak-memory or operational-load benchmark has been performed.
 
 ## Nicolas upstream integration, 30 October 2026
 
 The ledger checkout now includes `v2-minutxo` revision
-`7b9b274800e213a33bb2f55b1210e901d91034dc`. The V4 interface above is retained.
+`7b9b274800e213a33bb2f55b1210e901d91034dc`. At checkpoint `af0491e`, V4 retained
+the total-value interface and exposed amounts only for explicit backing.
 Downstream code uses `LegacyTxOut`, `NewTxOut`, and the unified `Allocations`
-entries introduced upstream. Legacy inputs retain their entire value and
-`Implicit` metadata; this integration does not reconstruct historical implicit
-minima or change the size-based deposit formula.
+entries introduced upstream. That checkpoint retained legacy inputs' entire
+value with amount-free `Implicit` metadata. The historical-minimum work above
+extends that interface. Neither change replaces the size-based deposit formula.
 V1–V3 compatibility with explicit outputs is not established by this integration;
 the preserved interface is the experimental V4 interface above.
 
-Consensus tables retain accepted output sizes and calculation versions and
-prices. Snapshot version 3 preserves the global cached deposit total separately
+At that checkpoint, consensus tables retained accepted output sizes and calculation versions and
+prices. Snapshot version 3 preserved the global cached deposit total separately
 from the entries resident in memory. Existing prototype databases using the
 older snapshot/table format need rebuilding; no database converter is included.
 The allocation and total queries use the existing prototype protocol version,
@@ -59,7 +167,7 @@ Merge verification and commands are recorded in
 predates this upstream integration. The HTML component map also describes that
 earlier implementation rather than the new allocation storage and queries.
 
-Current merge verification:
+Checkpoint merge verification (before the historical-minimum migration):
 
 | Check | Result |
 | --- | --- |

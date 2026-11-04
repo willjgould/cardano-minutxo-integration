@@ -13,6 +13,7 @@ import Data.Aeson (encode, object, (.=))
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified DepositRelease
 import qualified Genesis
+import qualified Migration
 import qualified NestedParent
 import qualified NestedSibling
 import qualified Submission
@@ -26,6 +27,7 @@ main = do
     case args of
         ["prepare", directory] -> Genesis.prepare directory
         ["probe", socket] -> probe socket
+        ["verify-migration", socket, baseline, evidence] -> Migration.verifyMigration socket baseline evidence
         ["transfer", directory, socket] -> Submission.transfer directory socket
         ["fund-tokens", directory, socket] -> TokenFunding.fundTokens directory socket
         ["auto-deposit", directory, socket] -> AutomaticDeposit.createTokenOutput directory socket
@@ -33,7 +35,7 @@ main = do
         ["release-deposit", directory, socket] -> DepositRelease.releaseDeposit directory socket
         ["nested-parent", directory, socket] -> NestedParent.submitParentFunded directory socket
         ["nested-sibling", directory, socket] -> NestedSibling.submitSiblingFunded directory socket
-        _ -> die "Usage: check-node prepare DIRECTORY | probe SOCKET | transfer DIRECTORY SOCKET | fund-tokens DIRECTORY SOCKET | auto-deposit DIRECTORY SOCKET | cli-transaction CLI DIRECTORY SOCKET | release-deposit DIRECTORY SOCKET | nested-parent DIRECTORY SOCKET | nested-sibling DIRECTORY SOCKET"
+        _ -> die "Usage: check-node prepare DIRECTORY | probe SOCKET | verify-migration SOCKET BASELINE_DIRECTORY EVIDENCE_FILE | transfer DIRECTORY SOCKET | fund-tokens DIRECTORY SOCKET | auto-deposit DIRECTORY SOCKET | cli-transaction CLI DIRECTORY SOCKET | release-deposit DIRECTORY SOCKET | nested-parent DIRECTORY SOCKET | nested-sibling DIRECTORY SOCKET"
 
 probe :: FilePath -> IO ()
 probe socket = do

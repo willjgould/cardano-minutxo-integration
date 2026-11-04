@@ -1,0 +1,150 @@
+#!/usr/bin/env python3
+"""Replay historical minima, then verify the prepared snapshot through a real node.
+
+Pass already-built binaries. This check never builds dependencies or transactions.
+"""
+
+import argparse
+import hashlib
+import json
+from pathlib import Path
+import re
+import shutil
+import signal
+import subprocess
+import tempfile
+import time
+
+
+ROOT = Path(__file__).resolve().parents[1]
+FIXTURE = ROOT / "checks/migration/data/conway-survivor"
+
+
+def fingerprints(directory):
+    return {
+        str(path.relative_to(directory)): hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in sorted(directory.rglob("*")) if path.is_file()
+    }
+
+
+def run(command, log):
+    print("RUN: " + " ".join(map(str, command)), flush=True)
+    with log.open("w") as output:
+        result = subprocess.run(command, stdout=output, stderr=subprocess.STDOUT)
+    print(log.read_text(), end="", flush=True)
+    result.check_returncode()
+
+
+def require_snapshot_trace(log, target):
+    events = []
+    for line in log.read_text().splitlines():
+        try:
+            events.append(json.loads(line).get("data", {}))
+        except json.JSONDecodeError:
+            continue
+    if any(event.get("kind") == "ReplayFromGenesis" for event in events):
+        raise AssertionError("Node replayed genesis instead of loading the migration snapshot")
+    snapshots = [event for event in events if event.get("kind") == "ReplayFromSnapshot"]
+    if len(snapshots) != 1:
+        raise AssertionError(f"Expected one snapshot-load event, observed {snapshots}")
+    tip = snapshots[0].get("tip", "")
+    if target["hash"] not in tip or not re.search(rf'\b{target["slot"]}\b', tip):
+        raise AssertionError(f"Snapshot loaded at an unexpected point: {tip}")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--db-analyser", type=Path, required=True)
+    parser.add_argument("--node", type=Path, required=True)
+    parser.add_argument("--check-node", type=Path, required=True)
+    parser.add_argument("--directory", type=Path,
+                        help="New directory for retained results; defaults to a temporary directory")
+    args = parser.parse_args()
+    analyser, node, verifier = [str(path.resolve()) for path in
+                                (args.db_analyser, args.node, args.check_node)]
+    directory = args.directory.resolve() if args.directory else Path(
+        tempfile.mkdtemp(prefix="minutxo-migration-"))
+    if args.directory:
+        directory.mkdir(parents=True, exist_ok=False)
+    print(f"Migration check files and logs: {directory}", flush=True)
+    expected = json.loads((FIXTURE / "expected.json").read_text())
+    target = expected["target"]
+    source_before = fingerprints(FIXTURE)
+    work = directory / "replay"
+    # The unsupported migration flag is intentionally the first missing capability.
+    # Do not replace its failure with a fallback replay or an alternative command.
+    command = [analyser, "--migrate-legacy-minimum", "--db", str(FIXTURE / "db"),
+               "--config", str(FIXTURE / "config.json"),
+               "--migration-work-dir", str(work),
+               "--migration-target-slot", str(target["slot"]),
+               "--migration-target-hash", target["hash"],
+               "--migration-checkpoint-every", "20", "--in-mem", "--no-leios-db",
+               "--threshold", "1.1"]
+    (directory / "migration-command.json").write_text(json.dumps(command, indent=2) + "\n")
+    try:
+        run(command, directory / "migration.log")
+        ready = json.loads((work / "ready.json").read_text())
+        assert ready["version"] == 1, ready
+        assert ready["status"] == "ready", ready
+        assert ready["backend"] == "V2InMemory", ready
+        assert ready["target"] == target, ready
+        snapshot = (work / ready["snapshot"]).resolve()
+        assert snapshot.is_relative_to(work.resolve()), "Snapshot must be under migration work directory"
+        assert all((snapshot / name).is_file() for name in ("state", "tables", "meta")), snapshot
+
+        # Use a separate writable copy ending exactly at the pinned target.
+        # The read-only replay source still includes the next (open) chunk.
+        node_db = directory / "node-db"
+        immutable = node_db / "immutable"
+        immutable.mkdir(parents=True)
+        for chunk in sorted((FIXTURE / "db/immutable").glob("*.chunk")):
+            if int(chunk.stem) <= expected["targetChunk"]:
+                shutil.copyfile(chunk, immutable / chunk.name)
+        shutil.copyfile(FIXTURE / "db/protocolMagicId", node_db / "protocolMagicId")
+        # Only the prepared snapshot may be loaded; no source ledger directory.
+        shutil.copytree(snapshot, node_db / "ledger" / snapshot.name)
+        config = json.loads((FIXTURE / "config.json").read_text())
+        for era in ("Byron", "Shelley", "Alonzo", "Conway", "Dijkstra"):
+            config[f"{era}GenesisFile"] = str(FIXTURE / config[f"{era}GenesisFile"])
+        config["TraceOptions"] = {"": {"backends": ["Stdout MachineFormat"],
+                                       "detail": "DNormal", "severity": "Info"}}
+        (directory / "node-config.json").write_text(json.dumps(config, indent=2) + "\n")
+        (directory / "topology.json").write_text(json.dumps({
+            "bootstrapPeers": None, "localRoots": [], "publicRoots": [], "useLedgerAfterSlot": -1}) + "\n")
+        # Unix socket paths must remain short even when the result directory is long.
+        with tempfile.TemporaryDirectory(prefix="minimum-socket-") as socket_directory:
+            socket = Path(socket_directory) / "node.sock"
+            node_command = [node, "run", "--config", str(directory / "node-config.json"),
+                            "--topology", str(directory / "topology.json"),
+                            "--database-path", str(node_db), "--socket-path", str(socket),
+                            "--host-addr", "127.0.0.1", "--port", "0"]
+            (directory / "node-command.json").write_text(json.dumps(node_command, indent=2) + "\n")
+            node_log = directory / "node.log"
+            with node_log.open("w") as log:
+                process = subprocess.Popen(node_command, stdout=log, stderr=subprocess.STDOUT)
+                try:
+                    deadline = time.monotonic() + 60
+                    while not socket.exists():
+                        if process.poll() is not None:
+                            raise RuntimeError(f"Node exited with {process.returncode}; see {node_log}")
+                        if time.monotonic() >= deadline:
+                            raise TimeoutError(f"Node socket did not appear; see {node_log}")
+                        time.sleep(0.1)
+                    require_snapshot_trace(node_log, target)
+                    run([verifier, "verify-migration", str(socket), str(FIXTURE / "baseline"),
+                         str(directory / "verification.json")], directory / "verification.log")
+                finally:
+                    process.send_signal(signal.SIGINT)
+                    try:
+                        process.wait(timeout=15)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.wait()
+        print("PASS: historical minimum survived replay and node snapshot loading; ordinary UTxO is unchanged",
+              flush=True)
+    finally:
+        assert fingerprints(FIXTURE) == source_before, "Migration modified its source fixture"
+
+
+if __name__ == "__main__":
+    main()

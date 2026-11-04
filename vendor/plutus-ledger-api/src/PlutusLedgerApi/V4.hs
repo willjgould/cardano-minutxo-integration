@@ -135,6 +135,8 @@ module PlutusLedgerApi.V4
   , Contexts.TxInfo (..)
   , Tx.TxOut (..)
   , Tx.MinUTxOBacking (..)
+  , Tx.backingAmount
+  , Tx.applicationValue
   , Tx.valueWithoutExplicitBacking
   , Tx.TxOutRef (..)
   , Contexts.TxInInfo (..)

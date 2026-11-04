@@ -1,0 +1,10 @@
+{
+    "block": 62,
+    "epoch": 1,
+    "era": "Dijkstra",
+    "hash": "0f96b728afa56b2512bfd2e56299d1da87a8cab93038b295fe55d03b45cf65fd",
+    "slot": 649,
+    "slotInEpoch": 149,
+    "slotsToEpochEnd": 351,
+    "syncProgress": "100.00"
+}

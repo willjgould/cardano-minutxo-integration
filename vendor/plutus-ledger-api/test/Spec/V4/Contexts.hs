@@ -197,7 +197,7 @@ genOutput = do
   let value
         | withToken = V4.lovelaceValue (V4.Lovelace amount) <> V4.singleton currency token amount
         | otherwise = V4.lovelaceValue (V4.Lovelace amount)
-  pure (V4.TxOut address value outputDatum referenceScript V4.Implicit)
+  pure (V4.TxOut address value outputDatum referenceScript (V4.Implicit (V4.Lovelace 0)))
 
 genAddress :: Gen V4.Address
 genAddress = V4.Address <$> genCredential <*> elements [Nothing, Just account, Just otherAccount]

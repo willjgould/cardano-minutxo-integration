@@ -14,6 +14,7 @@ import qualified Cardano.Api.Experimental.AnyScriptWitness as Witness
 import qualified Cardano.Api.Experimental.Plutus as Plutus
 import qualified Cardano.Api.Experimental.Tx as Exp
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (mkSized)
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin (Coin (..))
@@ -245,15 +246,30 @@ scriptSpend kind spendCase directory socket = do
         continuationDeposit = case kind of
             Ordinary -> 0
             StoreBacked -> price continuation
+        continuationBacking = case Api.toShelleyTxOut era continuation of
+            Core.LegacyTxOut output ->
+                Core.getMinCoinSizedTxOut pparams $
+                    mkSized (Core.eraProtVerLow @LedgerEra) output
+            Core.NewTxOut{} -> continuationDeposit
     recordedInputDeposit <- case kind of
         Ordinary -> pure 0
         StoreBacked ->
             maybe (fail "The funded script input has no recorded backing allocation") pure $
                 Map.lookup (Api.toShelleyTxIn scriptInput) (Funding.backingAmounts fundingStore)
+    recordedInputBacking <- case kind of
+        Ordinary -> do
+            entry <-
+                maybe (fail "The funded script input has no accepted allocation entry") pure $
+                    Map.lookup (Api.toShelleyTxIn scriptInput) $
+                        State.unAllocations $ State.allocations fundingStore
+            case State.legacyMinimumAtCreation entry of
+                SNothing -> fail "The funded implicit script input has no recorded creation minimum"
+                SJust minimumAtCreation -> pure minimumAtCreation
+        StoreBacked -> pure recordedInputDeposit
     let expectedInputTotal = scriptCoin + recordedInputDeposit
         expectedOutputTotal = scriptCoin + continuationDeposit
         backingData allocation = case kind of
-            Ordinary -> Api.ScriptDataConstructor 0 []
+            Ordinary -> Api.ScriptDataConstructor 0 [Api.ScriptDataNumber (unCoin allocation)]
             StoreBacked -> Api.ScriptDataConstructor 1 [Api.ScriptDataNumber (unCoin allocation)]
         -- IsData encoding of (Integer, MinUTxOBacking, Integer, MinUTxOBacking).
         contextExpectations inputTotal =
@@ -261,9 +277,9 @@ scriptSpend kind spendCase directory socket = do
                 Api.ScriptDataConstructor
                     0
                     [ Api.ScriptDataNumber (unCoin inputTotal)
-                    , backingData recordedInputDeposit
+                    , backingData recordedInputBacking
                     , Api.ScriptDataNumber (unCoin expectedOutputTotal)
-                    , backingData continuationDeposit
+                    , backingData continuationBacking
                     ]
         scriptWitnessWithContext expectedContext units =
             Exp.AnyPlutusScriptWitness $
@@ -281,8 +297,10 @@ scriptSpend kind spendCase directory socket = do
         object
             [ "inputTotalLovelace" .= expectedInputTotal
             , "outputTotalLovelace" .= expectedOutputTotal
-            , "inputBackingLovelace" .= recordedInputDeposit
-            , "outputBackingLovelace" .= continuationDeposit
+            , "inputBackingLovelace" .= recordedInputBacking
+            , "outputBackingLovelace" .= continuationBacking
+            , "inputSeparateDepositLovelace" .= recordedInputDeposit
+            , "outputSeparateDepositLovelace" .= continuationDeposit
             , "backingKind" .= case kind of
                 Ordinary -> ("implicit" :: Text.Text)
                 StoreBacked -> "explicit"

@@ -1,0 +1,116 @@
+#!/usr/bin/env python3
+"""Kill a replay after a durable checkpoint and compare its resumed snapshot.
+
+The reference must be a successful check-minutxo-migration result directory.
+This check uses built binaries and has no production interruption hook.
+"""
+
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import selectors
+import signal
+import subprocess
+import tempfile
+import time
+
+
+def digest(path):
+    with path.open("rb") as source:
+        return hashlib.file_digest(source, "sha256").hexdigest()
+
+
+def interrupt_after_checkpoint(command, log):
+    output = bytearray()
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    try:
+        with selectors.DefaultSelector() as selector:
+            selector.register(process.stdout, selectors.EVENT_READ)
+            deadline = time.monotonic() + 60
+            while b"Migration checkpoint:" not in output:
+                if time.monotonic() >= deadline:
+                    raise TimeoutError("No durable checkpoint was reported within 60 seconds")
+                if selector.select(timeout=0.1):
+                    data = os.read(process.stdout.fileno(), 65536)
+                    if not data:
+                        raise AssertionError("Migration exited before it reported a checkpoint")
+                    output.extend(data)
+            # This process belongs to this check. Kill it externally, without
+            # letting the replay finish or run a cooperative shutdown handler.
+            process.kill()
+            remainder, _ = process.communicate(timeout=15)
+            output.extend(remainder)
+            assert process.returncode == -signal.SIGKILL, (
+                "Migration finished before the interruption", process.returncode)
+    finally:
+        if process.poll() is None:
+            process.kill()
+            remainder, _ = process.communicate(timeout=15)
+            output.extend(remainder)
+        log.write_bytes(output)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--db-analyser", type=Path, required=True)
+    parser.add_argument("--reference", type=Path, required=True,
+                        help="Successful uninterrupted check-minutxo-migration directory")
+    parser.add_argument("--directory", type=Path,
+                        help="New directory for retained results")
+    args = parser.parse_args()
+    reference = args.reference.resolve()
+    directory = args.directory.resolve() if args.directory else Path(
+        tempfile.mkdtemp(prefix="minimum-resume-"))
+    if args.directory:
+        directory.mkdir(parents=True, exist_ok=False)
+    print(f"Resume check files and logs: {directory}", flush=True)
+    reference_work = reference / "replay"
+    reference_ready = json.loads((reference_work / "ready.json").read_text())
+    assert reference_ready["status"] == "ready", reference_ready
+    command = json.loads((reference / "migration-command.json").read_text())
+    command[0] = str(args.db_analyser.resolve())
+    work = directory / "replay"
+    command[command.index("--migration-work-dir") + 1] = str(work)
+    # Frequent complete checkpoints make external interruption reliable on this
+    # tiny fixture. This changes no transaction or migration semantics.
+    command[command.index("--migration-checkpoint-every") + 1] = "1"
+    (directory / "migration-command.json").write_text(json.dumps(command, indent=2) + "\n")
+    source = Path(command[command.index("--db") + 1])
+    source_before = {str(path): digest(path) for path in sorted(source.rglob("*")) if path.is_file()}
+    try:
+        interrupt_after_checkpoint(command, directory / "interrupted.log")
+        manifest = json.loads((work / "migration.json").read_text())
+        checkpoint = manifest["checkpoint"]
+        assert checkpoint is not None, manifest
+        assert checkpoint["slot"] < reference_ready["target"]["slot"], manifest
+        assert not (work / "ready.json").exists(), "Interruption happened after migration was ready"
+        assert all((work / manifest["snapshot"] / name).is_file()
+                   for name in ("state", "tables", "meta")), manifest
+        (directory / "interrupted-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+        print(f"Interrupted at durable checkpoint {checkpoint}; resuming the exact same command", flush=True)
+        with (directory / "resumed.log").open("w") as log:
+            result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, timeout=120)
+        print((directory / "resumed.log").read_text(), end="", flush=True)
+        result.check_returncode()
+        resumed_ready = json.loads((work / "ready.json").read_text())
+        assert resumed_ready == reference_ready, (resumed_ready, reference_ready)
+        hashes = {}
+        for name in ("state", "tables", "meta"):
+            actual = digest(work / resumed_ready["snapshot"] / name)
+            expected = digest(reference_work / reference_ready["snapshot"] / name)
+            assert actual == expected, f"Resumed {name} differs from uninterrupted snapshot"
+            hashes[name] = actual
+        evidence = {"status": "verified", "interruptedBy": "SIGKILL", "resumedFrom": checkpoint,
+                    "target": resumed_ready["target"], "snapshotSha256": hashes,
+                    "readyRecordIdentical": True, "snapshotBytesIdentical": True}
+        (directory / "verification.json").write_text(json.dumps(evidence, indent=2) + "\n")
+        print("PASS: interrupted replay resumed to the exact node-verified uninterrupted snapshot", flush=True)
+    finally:
+        source_after = {str(path): digest(path) for path in sorted(source.rglob("*")) if path.is_file()}
+        assert source_after == source_before, "Resumed migration modified its source"
+
+
+if __name__ == "__main__":
+    main()

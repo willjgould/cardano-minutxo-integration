@@ -122,11 +122,11 @@ tests =
         DataV4.assetClassValueOf (DataV4.assetClassValue dataAsset 10) dataAsset @?= 10
     , testCase "nested transaction input and spending purpose" $ do
         let unstakedAddress = V4.Address credential Nothing
-            emptyOutput = V4.TxOut unstakedAddress mempty V4.NoOutputDatum Nothing V4.Implicit
+            emptyOutput = V4.TxOut unstakedAddress mempty V4.NoOutputDatum Nothing (V4.Implicit (V4.Lovelace 0))
             dataUnstakedAddress = DataV4.Address dataCredential Nothing
-            dataEmptyOutput = DataV4.TxOut dataUnstakedAddress mempty DataV4.NoOutputDatum Nothing DataV4.Implicit
+            dataEmptyOutput = DataV4.TxOut dataUnstakedAddress mempty DataV4.NoOutputDatum Nothing (DataV4.Implicit (DataV4.Lovelace 0))
         assertProduct unstakedAddress [PlutusTx.toData credential, nothingData]
-        assertProduct emptyOutput [PlutusTx.toData unstakedAddress, V4.Map [], V4.Constr 0 [], nothingData, V4.Constr 0 []]
+        assertProduct emptyOutput [PlutusTx.toData unstakedAddress, V4.Map [], V4.Constr 0 [], nothingData, V4.Constr 0 [V4.I 0]]
         assertProduct
           (V4.TxInInfo reference emptyOutput)
           [V4.List referenceFields, PlutusTx.toData emptyOutput]
@@ -162,9 +162,59 @@ tests =
                 @?= PlutusTx.toData expectedValue
         mapM_
           checkBacking
-          [ (V4.Implicit, DataV4.Implicit, V4.Constr 0 [], 5000000)
+          [ (V4.Implicit (V4.Lovelace 0), DataV4.Implicit (DataV4.Lovelace 0), V4.Constr 0 [V4.I 0], 5000000)
           , (V4.Explicit (V4.Lovelace 0), DataV4.Explicit (DataV4.Lovelace 0), V4.Constr 1 [V4.I 0], 5000000)
           , (V4.Explicit (V4.Lovelace 2000000), DataV4.Explicit (DataV4.Lovelace 2000000), V4.Constr 1 [V4.I 2000000], 3000000)
+          ]
+    , testCase "implicit historical minimum decodes without changing total value" $ do
+        let totalValue = V4.lovelaceValue (V4.Lovelace 5000000) <> value
+            checkMinimum amount = do
+              let backingData = V4.Constr 0 [V4.I amount]
+                  rawOutput =
+                    V4.List
+                      [ addressData
+                      , PlutusTx.toData totalValue
+                      , V4.Constr 0 []
+                      , nothingData
+                      , backingData
+                      ]
+              case (PlutusTx.fromData @V4.TxOut rawOutput, PlutusTx.fromData @DataV4.TxOut rawOutput) of
+                (Just out, Just dataOut) -> do
+                  PlutusTx.toData out @?= rawOutput
+                  PlutusTx.toData dataOut @?= rawOutput
+                  PlutusTx.toData (V4.txOutBacking out) @?= backingData
+                  PlutusTx.toData (DataV4.txOutBacking dataOut) @?= backingData
+                  V4.txOutValue out @?= totalValue
+                  PlutusTx.toData (DataV4.txOutValue dataOut) @?= PlutusTx.toData totalValue
+                  V4.valueWithoutExplicitBacking out @?= totalValue
+                  PlutusTx.toData (DataV4.valueWithoutExplicitBacking dataOut) @?= PlutusTx.toData totalValue
+                _ -> assertBool "both V4 output representations must decode the recorded implicit minimum" False
+        mapM_ checkMinimum [0, 2000000]
+    , testCase "uniform backing helpers preserve total value and tokens" $ do
+        let totalValue = V4.lovelaceValue (V4.Lovelace 5000000) <> value
+            dataTotalValue = DataV4.lovelaceValue (DataV4.Lovelace 5000000) <> dataValue
+            checkHelpers (backing, dataBacking, amount, applicationAda, explicitOnlyAda) = do
+              let out = V4.TxOut address totalValue V4.NoOutputDatum Nothing backing
+                  dataOut = DataV4.TxOut dataAddress dataTotalValue DataV4.NoOutputDatum Nothing dataBacking
+                  expectedApplication = V4.lovelaceValue (V4.Lovelace applicationAda) <> value
+                  expectedExplicitOnly = V4.lovelaceValue (V4.Lovelace explicitOnlyAda) <> value
+              V4.backingAmount out @?= V4.Lovelace amount
+              PlutusTx.toData (DataV4.backingAmount dataOut) @?= V4.I amount
+              V4.applicationValue out @?= expectedApplication
+              PlutusTx.toData (DataV4.applicationValue dataOut) @?= PlutusTx.toData expectedApplication
+              V4.txOutValue out @?= totalValue
+              PlutusTx.toData (DataV4.txOutValue dataOut) @?= PlutusTx.toData totalValue
+              V4.lovelaceValue (V4.backingAmount out) <> V4.applicationValue out @?= totalValue
+              PlutusTx.toData (DataV4.lovelaceValue (DataV4.backingAmount dataOut) <> DataV4.applicationValue dataOut)
+                @?= PlutusTx.toData totalValue
+              V4.valueWithoutExplicitBacking out @?= expectedExplicitOnly
+              PlutusTx.toData (DataV4.valueWithoutExplicitBacking dataOut) @?= PlutusTx.toData expectedExplicitOnly
+        mapM_
+          checkHelpers
+          [ (V4.Implicit (V4.Lovelace 0), DataV4.Implicit (DataV4.Lovelace 0), 0, 5000000, 5000000)
+          , (V4.Implicit (V4.Lovelace 2000000), DataV4.Implicit (DataV4.Lovelace 2000000), 2000000, 3000000, 5000000)
+          , (V4.Explicit (V4.Lovelace 0), DataV4.Explicit (DataV4.Lovelace 0), 0, 5000000, 5000000)
+          , (V4.Explicit (V4.Lovelace 2000000), DataV4.Explicit (DataV4.Lovelace 2000000), 2000000, 3000000, 3000000)
           ]
     , testCase "time range" $ do
         assertProduct (V4.POSIXTimeRange Nothing Nothing) [nothingData, nothingData]
@@ -569,9 +619,9 @@ tests =
     address = V4.Address credential (Just account)
     dataAddress = DataV4.Address dataCredential (Just dataAccount)
     addressData = V4.List [credentialData, justData credentialData]
-    output = V4.TxOut address value (V4.OutputDatum datum) (Just scriptHash) V4.Implicit
-    dataOutput = DataV4.TxOut dataAddress dataValue (DataV4.OutputDatum datum) (Just scriptHash) DataV4.Implicit
-    outputData = V4.List [addressData, assetMapData 6, V4.Constr 2 [datumData], justData scriptHashData, V4.Constr 0 []]
+    output = V4.TxOut address value (V4.OutputDatum datum) (Just scriptHash) (V4.Implicit (V4.Lovelace 0))
+    dataOutput = DataV4.TxOut dataAddress dataValue (DataV4.OutputDatum datum) (Just scriptHash) (DataV4.Implicit (DataV4.Lovelace 0))
+    outputData = V4.List [addressData, assetMapData 6, V4.Constr 2 [datumData], justData scriptHashData, V4.Constr 0 [V4.I 0]]
     input index = V4.TxInInfo (V4.TxOutRef txId index) output
     dataInput index = DataV4.TxInInfo (DataV4.TxOutRef dataTxId index) dataOutput
     inputData index = V4.List [V4.List [V4.B "transaction", V4.I index], outputData]

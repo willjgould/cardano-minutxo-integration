@@ -1,0 +1,54 @@
+{
+  "AlonzoGenesisFile": "alonzo-genesis.json",
+  "AlonzoGenesisHash": "70083f5b357d61762ed9d53bccbed2f40d2a3ba88c9ce854696058335f90a252",
+  "ApplicationName": "cardano-sl",
+  "ApplicationVersion": 0,
+  "ByronGenesisFile": "byron-genesis.json",
+  "ByronGenesisHash": "dd1a1c8035e63c22d20ed9636857456d94f57ce7208ecbb6e183cc749b475051",
+  "ConsensusMode": "PraosMode",
+  "ConwayGenesisFile": "conway-genesis.json",
+  "ConwayGenesisHash": "6c2f85ad73b9cd05a1ec74bbaa14818e0e9440f8eafc2d4a55ca25b6d7c91abe",
+  "DijkstraGenesisFile": "dijkstra-genesis.json",
+  "DijkstraGenesisHash": "868e251c5e61dac90798f29278bb56a70c94632454d817579c7138164ec45d6e",
+  "ExperimentalHardForksEnabled": true,
+  "ExperimentalProtocolsEnabled": true,
+  "LastKnownBlockVersion-Alt": 0,
+  "LastKnownBlockVersion-Major": 10,
+  "LastKnownBlockVersion-Minor": 0,
+  "LedgerDB": {
+    "Backend": "V2InMemory"
+  },
+  "LeiosDbConfig": {
+    "Backend": "InMemory"
+  },
+  "MaxConcurrencyDeadline": 4,
+  "MaxKnownMajorProtocolVersion": 2,
+  "PBftSignatureThreshold": 1.1,
+  "Protocol": "Cardano",
+  "RequiresNetworkMagic": "RequiresMagic",
+  "ShelleyGenesisFile": "shelley-genesis.json",
+  "ShelleyGenesisHash": "8667793c9303a3964bbcc0ad32ad79d688265067be0dbb757a144d9938228d08",
+  "TestAllegraHardForkAtEpoch": 0,
+  "TestAlonzoHardForkAtEpoch": 0,
+  "TestBabbageHardForkAtEpoch": 0,
+  "TestConwayHardForkAtEpoch": 0,
+  "TestDijkstraHardForkAtEpoch": 1,
+  "TestMaryHardForkAtEpoch": 0,
+  "TestShelleyHardForkAtEpoch": 0,
+  "TraceOptionForwarder": {
+    "connQueueSize": 64,
+    "disconnQueueSize": 128,
+    "maxReconnectDelay": 30
+  },
+  "TraceOptionMetricsPrefix": "cardano.node.metrics.",
+  "TraceOptionResourceFrequency": 1000,
+  "TraceOptions": {
+    "": {
+      "backends": [
+        "Stdout HumanFormatColoured"
+      ],
+      "detail": "DNormal",
+      "severity": "Info"
+    }
+  }
+}
