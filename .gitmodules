@@ -27,3 +27,6 @@
 [submodule "ouroboros-consensus"]
 	path = ouroboros-consensus
 	url = https://github.com/IntersectMBO/ouroboros-consensus
+[submodule "plutus"]
+	path = plutus
+	url = https://github.com/IntersectMBO/plutus.git
