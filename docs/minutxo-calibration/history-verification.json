@@ -1,0 +1,165 @@
+{
+  "status": "passed",
+  "kind": "Analysis and data coverage checks, not ledger conformance tests",
+  "result_sha256": "196555e08cb465a5d0900396c4d7bdcb8560b0a44f28b3ba873d1b673234939d",
+  "all_9336_chunks_consumed": true,
+  "source_sizes_and_mtimes_unchanged": true,
+  "source_bytes": 232920615654,
+  "all_chunk_block_counts_match_secondary_indexes": true,
+  "blocks": 14128814,
+  "transactions": 126739842,
+  "genesis_outputs": 14505,
+  "transaction_created_outputs": 363293969,
+  "script_hashes_unchanged": true,
+  "prior_30_chunk_metadata_matches": true,
+  "prior_488149_output_formula_results_match": true,
+  "no_additional_shelley_genesis_outputs": true,
+  "selected_witness_audit_sha256": "40b7fbd47a17843c10a11e6982924297f257b462731a398d777c6ea869f85de9",
+  "runner_verification": {
+    "script_sha256": "a29d4909a5eb7ace70f84f72490244e916c46f89f6ca28089b0a5af5132bcb51",
+    "status": "passed",
+    "kind": "analysis-reader/statistics verification; not ledger transaction tests",
+    "statistical_checks": {
+      "synthetic_populations": [
+        1,
+        2,
+        5,
+        99,
+        100,
+        101,
+        1001
+      ],
+      "seed": 49120,
+      "checks": [
+        "nearest-rank quantiles including negative bins",
+        "exact integer-byte quantiles",
+        "Statistics JSON dump/restore roundtrip"
+      ]
+    },
+    "existing_assessor_comparison": {
+      "chunk": "09335.chunk",
+      "outputs": 20122,
+      "formulae": [
+        "original_winner",
+        "new_winner"
+      ],
+      "exactly_matched": [
+        "outputs",
+        "below_old",
+        "equal_old",
+        "above_old",
+        "within_5_percent_above",
+        "within_10_percent_above",
+        "within_5_percent_either_side",
+        "mean_old_lovelace",
+        "mean_new_lovelace",
+        "mean_signed_delta_lovelace",
+        "signed_delta_lovelace",
+        "aggregate_signed_change_percent"
+      ],
+      "percentage_quantiles": "all existing exact quantiles fall inside stated0.01pp intervals"
+    },
+    "cli_and_resume": {
+      "directory": "/tmp/nix-shell.JcZRPQ/minutxo-history-runner-check-a19rdvzw",
+      "block_created_outputs": 36588,
+      "genesis_outputs": 14505,
+      "combined_outputs": 51093,
+      "initial_seconds": 1.0767650639972999,
+      "resume_seconds": 0.3495295899992925,
+      "reused_chunks": 2,
+      "variants_identical": true,
+      "result_sha256": "8729a56ccbfcea1624282fc96387dba3b9bab4863e6fb9ae7c6175e8c6c8b5b2"
+    },
+    "negative_checks": {
+      "changed_price_manifest_rejected": true,
+      "prior_result_unchanged": true,
+      "malformed_source_rejected": "truncated CBOR at offset 2",
+      "malformed_source_no_success_checkpoint": true,
+      "bad_checkpoint_hash_rejected": "Source hash changed: 00000.chunk",
+      "directory": "/tmp/nix-shell.JcZRPQ/minutxo-history-negative-check-as803zmr"
+    }
+  },
+  "genesis_verification": {
+    "canonical_genesis_blake2b256": "5f20df933584822601f9e3f8c024eb5eb252fe8cefb24d1317dc3d432e940ebb",
+    "config": "cardano-node/configuration/cardano/mainnet-config.json",
+    "config_sha256": "bcbba073d6acd2abad1c0fcd6e20ffd4c7cf30f990ee8ff60485b37f51c6b4ce",
+    "constructed_output_bytes": 768363,
+    "constructed_outputs_sha256": "e2ae5c6797fe568633fa2713ec6a6cae5305bc96011335ec37e44752d4dfb94f",
+    "construction_order": "sorted AVVM base64url keys, then sorted non-AVVM base58 addresses",
+    "declared_config_hash_matched": true,
+    "era": "Genesis",
+    "historical_wire_bytes": false,
+    "independent_address_golden": {
+      "address_fixture": "cardano-ledger-specs/eras/byron/ledger/impl/golden/cbor/common/Address2",
+      "address_fixture_sha256": "2e2116575480a33170e521760451a3aa177e7b21cbe24e6c9145e0aab23755f6",
+      "matched": true,
+      "verification_key_fixture": "cardano-ledger-specs/eras/byron/crypto/golden/RedeemVerificationKey",
+      "verification_key_fixture_sha256": "94aa45534c587be20d6d6e2bb8572ce8f4f9d1edee643090a5b64a5b1ae5fe56"
+    },
+    "note": "Genesis outputs have no creation transaction byte span; the byte-price comparator is counterfactual.",
+    "output_counts_by_source": {
+      "avvm": 14505,
+      "non_avvm": 0
+    },
+    "outputs": 14505,
+    "population": "genesis",
+    "size_provenance": "constructed_minimal_byron_txout",
+    "source": "cardano-node/configuration/cardano/mainnet-byron-genesis.json",
+    "source_bytes": 1056360,
+    "source_sha256": "4f28b3b437b2c4f6ee26cc70964b3a5f1a274b0b3909c31535091c00316c13aa",
+    "total_lovelace": 31112484745000000
+  },
+  "final_independent_review": {
+    "status": "passed",
+    "conway_outputs": 85672524,
+    "conway_underestimates_both_formulas": 0,
+    "new_formula_all_underestimates": 16194,
+    "new_zero_quantity_group": 15887,
+    "new_empty_policy_group": 308,
+    "groups_overlap": 1,
+    "new_underestimates_outside_pruned_entries": 0,
+    "original_address_exceptions": {
+      "Byron_large_addresses": 152,
+      "Alonzo_trailing_address_bytes": 1
+    },
+    "ambiguous_overlap_resolved_by_rescan": {
+      "chunk": "03750.chunk",
+      "sha256": "a77886b512ec895e9cdcdae9048263f29e38f197340919a19c4ad212fd21476a",
+      "outputs": 55221,
+      "new_underestimates": 28,
+      "zero_quantity": 6,
+      "empty_policy": 22,
+      "overlap": 0,
+      "other": 0
+    },
+    "worst_byte_rule_era_spans_independently_verified": {
+      "original": {
+        "chunk": "04253.chunk",
+        "txid": "b6c14b11759f08201d83f209fe17ca0e24392a557cc2f873e787d96013787b69",
+        "output_index": 0,
+        "output_bytes": 638,
+        "zero_quantity_entries": 15,
+        "shortfall_bytes": 548
+      },
+      "new": {
+        "chunk": "04754.chunk",
+        "txid": "18d66f3be2058cb9a91a1cc6e659820e37214bb4a8eced579d6d04b5e5292dd3",
+        "output_index": 2,
+        "output_bytes": 2499,
+        "encoded_asset_entries": 100,
+        "zero_quantity_entries": 50,
+        "semantic_assets": 50,
+        "shortfall_bytes": 695
+      }
+    }
+  },
+  "current_rule_address_audit": {
+    "artifact": "history-current-validity.json",
+    "sha256": "1ec3a89fd4fad65cc6ee5c04af188b1e3c29eed771e94cd1c1899fcdddf0f281",
+    "original_byron_misses_audited": 152,
+    "attribute_limit_pass": 127,
+    "attribute_limit_fail": 25,
+    "source_chunks_rechecked": 13,
+    "validation_scope": "Address decoding/attributes, encoded output sizes and adequate minimum-ADA funding; not a full ledger transaction test"
+  }
+}
