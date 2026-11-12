@@ -133,14 +133,17 @@ which a formula falls below the previous minimum.
 
 ## Reproduction
 
-Requires Python 3.11 or later. When running from a worktree without checked-out
-submodules, set `MINUTXO_INTEGRATION_ROOT` to a checkout that has them; the
-genesis step reads ledger fixtures and node configuration from there.
+Requires Python 3.11 or later. Set `IMMUTABLE_DB` to the `immutable` directory of a mainnet node database.
+Download the [mainnet Byron genesis file](https://book.play.dev.cardano.org/environments/mainnet/byron-genesis.json)
+as `mainnet-byron-genesis.json`; the genesis step checks its hash.
+When running from a worktree without checked-out submodules, set
+`MINUTXO_INTEGRATION_ROOT` to a checkout that has them; the genesis step reads
+ledger fixtures from there.
 
 ```sh
 python3 docs/minutxo-calibration/backtest_history.py \
-  --source .workspace/minutxo-incremental/mainnet-benchmark-2026-11-04/data/source/db/immutable \
-  --genesis cardano-node/configuration/cardano/mainnet-byron-genesis.json \
+  --source "$IMMUTABLE_DB" \
+  --genesis mainnet-byron-genesis.json \
   --work-dir .workspace/minutxo-calibration-history/payload-full \
   --result docs/minutxo-calibration/history-formulas.json \
   --workers 24
@@ -149,4 +152,7 @@ python3 docs/minutxo-calibration/report_history.py docs/minutxo-calibration/hist
 ```
 
 The run's manifest hash is
-`db2740b97855fac1e6a70f5a6926e4f3a7651dc8b9756c5869476d7d104ff25a`.
+`db2740b97855fac1e6a70f5a6926e4f3a7651dc8b9756c5869476d7d104ff25a`. That run read
+the expected genesis hash from the `cardano-node` mainnet configuration;
+`extract_genesis.py` now holds the same hash as a constant and produces identical
+genesis outputs.

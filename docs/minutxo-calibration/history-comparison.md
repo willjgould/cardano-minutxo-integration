@@ -166,12 +166,14 @@ This is structural analysis of authenticated chain data, not a ledger validation
 test. Results weight output creations; they do not measure currently locked ADA
 or the composition of the live UTxO set.
 
-Reproduce from the repository root:
+Reproduce from the repository root. Set `IMMUTABLE_DB` to the `immutable` directory of a mainnet node database.
+Download the [mainnet Byron genesis file](https://book.play.dev.cardano.org/environments/mainnet/byron-genesis.json)
+as `mainnet-byron-genesis.json`; the genesis step checks its hash.
 
 ```sh
 python3 docs/minutxo-calibration/backtest_history.py \
-  --source .workspace/minutxo-incremental/mainnet-benchmark-2026-11-04/data/source/db/immutable \
-  --genesis cardano-node/configuration/cardano/mainnet-byron-genesis.json \
+  --source "$IMMUTABLE_DB" \
+  --genesis mainnet-byron-genesis.json \
   --work-dir .workspace/minutxo-calibration-history/full \
   --result docs/minutxo-calibration/history-comparison.json \
   --workers 16

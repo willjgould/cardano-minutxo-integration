@@ -150,9 +150,11 @@ their actual transaction failure rates.
 
 ## Reproduction and checks
 
+Set `IMMUTABLE_DB` to the `immutable` directory of a mainnet node database.
+
 ```sh
 python3 docs/minutxo-calibration/compare_formula.py \
-  --source .workspace/minutxo-incremental/mainnet-benchmark-2026-11-04/data/source/db/immutable \
+  --source "$IMMUTABLE_DB" \
   --result docs/minutxo-calibration/formula-comparison.json
 ```
 

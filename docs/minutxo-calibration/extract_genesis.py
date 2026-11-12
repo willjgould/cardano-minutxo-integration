@@ -23,8 +23,10 @@ from extract_history import describe_historical_output
 MAINNET_PROTOCOL_MAGIC = 764824073
 MAINNET_GENESIS_OUTPUTS = 14505
 MAINNET_GENESIS_LOVELACE = 31112484745000000
+# ByronGenesisHash in the mainnet node configuration.
+MAINNET_BYRON_GENESIS_HASH = "5f20df933584822601f9e3f8c024eb5eb252fe8cefb24d1317dc3d432e940ebb"
 # MINUTXO_INTEGRATION_ROOT lets a worktree without checked-out submodules read
-# the ledger fixtures and node configuration from another checkout.
+# the ledger fixtures from another checkout.
 ROOT = Path(os.environ.get("MINUTXO_INTEGRATION_ROOT") or Path(__file__).resolve().parents[2]).resolve()
 BASE58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 
@@ -171,12 +173,8 @@ def scan_genesis(path, consume):
     canonical_json = json.dumps(genesis, sort_keys=True, separators=(",", ":"),
                                 ensure_ascii=False).encode()
     genesis_hash = hashlib.blake2b(canonical_json, digest_size=32).hexdigest()
-    config_path = ROOT / "cardano-node/configuration/cardano/mainnet-config.json"
-    config = json.loads(config_path.read_text())
-    require(config["RequiresNetworkMagic"] == "RequiresNoMagic",
-            "declared mainnet configuration unexpectedly requires network magic")
-    require(genesis_hash == config["ByronGenesisHash"],
-            "genesis hash differs from the declared mainnet configuration")
+    require(genesis_hash == MAINNET_BYRON_GENESIS_HASH,
+            "genesis hash differs from the mainnet Byron genesis hash")
     golden = verify_golden_address()
     count = total = constructed_bytes = 0
     kinds = {"avvm": 0, "non_avvm": 0}
@@ -200,9 +198,7 @@ def scan_genesis(path, consume):
         "source_bytes": path.stat().st_size,
         "source_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
         "canonical_genesis_blake2b256": genesis_hash,
-        "declared_config_hash_matched": True,
-        "config": str(config_path.relative_to(ROOT)),
-        "config_sha256": hashlib.sha256(config_path.read_bytes()).hexdigest(),
+        "mainnet_genesis_hash_matched": True,
         "size_provenance": "constructed_minimal_byron_txout",
         "constructed_output_bytes": constructed_bytes,
         "constructed_outputs_sha256": checksum.hexdigest(),

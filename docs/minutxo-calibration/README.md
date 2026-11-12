@@ -156,9 +156,11 @@ bundles. The full two-parameter formula has not met the requested properties.
 
 ## Reproduction and verification
 
+Set `IMMUTABLE_DB` to the `immutable` directory of a mainnet node database.
+
 ```sh
 python3 docs/minutxo-calibration/calibrate.py \
-  --source .workspace/minutxo-incremental/mainnet-benchmark-2026-11-04/data/source/db/immutable \
+  --source "$IMMUTABLE_DB" \
   --result docs/minutxo-calibration/results.json
 ```
 

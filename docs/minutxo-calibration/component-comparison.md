@@ -147,9 +147,11 @@ the byte price p can remain the sole adjustable pricing parameter.
 
 ## Reproduction
 
+Set `IMMUTABLE_DB` to the `immutable` directory of a mainnet node database.
+
 ```sh
 python3 docs/minutxo-calibration/compare_components.py \
-  --source .workspace/minutxo-incremental/mainnet-benchmark-2026-11-04/data/source/db/immutable \
+  --source "$IMMUTABLE_DB" \
   --result docs/minutxo-calibration/component-comparison.json
 ```
 
