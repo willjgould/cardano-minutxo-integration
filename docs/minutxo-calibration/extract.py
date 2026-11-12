@@ -143,6 +143,22 @@ def byte_map(node, label):
         yield key, value
 
 
+def script_hash_input_bytes(encoded):
+    """Length of a reference script's hash input after its one-byte language
+    prefix: a native script's original CBOR, or a Plutus script's byte-string
+    contents. `encoded` is the [language, script] CBOR inside tag 24."""
+    reader = Reader(encoded)
+    script = sequence(reader.read(), "reference script")
+    require(reader.pos == len(encoded), "trailing bytes after reference script")
+    require(len(script) == 2, "reference script must be [language, script]")
+    language = integer(script[0], "script language")
+    require(language in (0, 1, 2, 3), "unknown script language")
+    if language == 0:
+        return script[1].size
+    require(script[1].major == 2, "Plutus script must be a byte string")
+    return len(script[1].value)
+
+
 def describe_output(output):
     if output.major == 5:
         fields, contributions = integer_map(output, "output")
@@ -193,12 +209,17 @@ def describe_output(output):
     coin = integer(coin_node, "coin")
     require(coin < 2**64, "coin outside uint64")
 
+    # Payload sizes exclude keys, tags and headers: a datum hash's 32 bytes, an
+    # inline datum's encoded Plutus data (its datum-hash input), and a reference
+    # script's hash input without the language prefix.
     datum_type = "none"
+    datum_payload_bytes = reference_script_payload_bytes = 0
     if 2 in fields:
         datum = fields[2]
         if encoding == "list":
             require(datum.major == 2 and len(datum.value) == 32, "invalid legacy datum hash")
             datum_type = "hash"
+            datum_payload_bytes = len(datum.value)
         else:
             pair = sequence(datum, "datum option")
             require(len(pair) == 2, "datum option length must be 2")
@@ -206,14 +227,17 @@ def describe_output(output):
             require(kind in (0, 1), "unknown datum option")
             if kind == 0:
                 require(pair[1].major == 2 and len(pair[1].value) == 32, "invalid datum hash")
+                datum_payload_bytes = len(pair[1].value)
             else:
                 require(pair[1].major == 6 and pair[1].value[0] == 24
                         and pair[1].value[1].major == 2, "invalid inline datum wrapper")
+                datum_payload_bytes = len(pair[1].value[1].value)
             datum_type = "hash" if kind == 0 else "inline"
     if 3 in fields:
         script = fields[3]
         require(script.major == 6 and script.value[0] == 24
                 and script.value[1].major == 2, "invalid reference script wrapper")
+        reference_script_payload_bytes = script_hash_input_bytes(script.value[1].value)
 
     return {
         "output_bytes": output.size,
@@ -230,6 +254,8 @@ def describe_output(output):
         "has_reference_script": 3 in fields,
         "datum_contribution_bytes": contributions.get(2, 0),
         "reference_script_contribution_bytes": contributions.get(3, 0),
+        "datum_payload_bytes": datum_payload_bytes,
+        "reference_script_payload_bytes": reference_script_payload_bytes,
         "address_bytes": len(address.value),
         "address_contribution_bytes": contributions[0],
         "address_type": address_type,

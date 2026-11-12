@@ -83,6 +83,7 @@ def describe_byron_output(output):
         "value_encoding_bytes": coin_node.size, "value_contribution_bytes": coin_node.size,
         "multiasset_encoding_bytes": 0, "datum_type": "none", "has_reference_script": False,
         "datum_contribution_bytes": 0, "reference_script_contribution_bytes": 0,
+        "datum_payload_bytes": 0, "reference_script_payload_bytes": 0,
         "address_bytes": address.size, "address_contribution_bytes": address.size,
         "address_type": "bootstrap", "address_header_type": 8, "output_encoding": "byron_list",
         "output_framing_bytes": output.size - address.size - coin_node.size,

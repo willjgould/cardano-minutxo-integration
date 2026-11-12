@@ -12,6 +12,7 @@ import argparse
 import base64
 import hashlib
 import json
+import os
 from pathlib import Path
 import zlib
 
@@ -22,7 +23,9 @@ from extract_history import describe_historical_output
 MAINNET_PROTOCOL_MAGIC = 764824073
 MAINNET_GENESIS_OUTPUTS = 14505
 MAINNET_GENESIS_LOVELACE = 31112484745000000
-ROOT = Path(__file__).resolve().parents[2]
+# MINUTXO_INTEGRATION_ROOT lets a worktree without checked-out submodules read
+# the ledger fixtures and node configuration from another checkout.
+ROOT = Path(os.environ.get("MINUTXO_INTEGRATION_ROOT") or Path(__file__).resolve().parents[2]).resolve()
 BASE58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 
 

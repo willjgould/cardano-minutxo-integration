@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Stream both minUTxO candidates over authenticated historical block chunks.
+"""Stream the CIP formula and its alternatives over authenticated historical block chunks.
+
+Datum and reference-script terms count payload bytes only (the hash inputs),
+as the CIP specifies. Two controls keep the 6 November whole-field
+measurements so this run can be checked against that earlier result.
 
 No ledger rule is changed. The common benchmark is 160 plus each output's
 original received byte length; before Babbage this is counterfactual, not the
@@ -24,10 +28,14 @@ import time
 import traceback
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 FORMULAS = {
-    "original_winner": "coinsPerUTxOByte * (250 + 74 * numberOfNativeAssets + serializedDatumFieldBytes + serializedReferenceScriptFieldBytes)",
-    "new_winner": "coinsPerUTxOByte * (175 + serializedAddressFieldBytes + 12 * numberOfNativeAssets + 30 * numberOfMintingPolicies + totalAssetNameBytes + serializedDatumFieldBytes + serializedReferenceScriptFieldBytes)",
+    "cip": "coinsPerUTxOByte * (250 + 74 * numberOfNativeAssets + serializedDatumBytes + serializedReferenceScriptBytes)",
+    "alternative_policy_address": "coinsPerUTxOByte * (175 + serializedAddressFieldBytes + 12 * numberOfNativeAssets + 30 * numberOfMintingPolicies + totalAssetNameBytes + serializedDatumBytes + serializedReferenceScriptBytes)",
+    "alternative_datum_only": "coinsPerUTxOByte * (250 + 74 * numberOfNativeAssets + serializedDatumBytes)",
+    "alternative_fixed_ada_width": "coinsPerUTxOByte * (160 + serializedOutputBytes - serializedAdaAmountBytes + 9)",
+    "control_cip_whole_fields": "coinsPerUTxOByte * (250 + 74 * numberOfNativeAssets + serializedDatumFieldBytes + serializedReferenceScriptFieldBytes)",
+    "control_policy_address_whole_fields": "coinsPerUTxOByte * (175 + serializedAddressFieldBytes + 12 * numberOfNativeAssets + 30 * numberOfMintingPolicies + totalAssetNameBytes + serializedDatumFieldBytes + serializedReferenceScriptFieldBytes)",
 }
 QUANTILES = (("p05", 5), ("p50", 50), ("p95", 95), ("p99", 99))
 WITNESS_COUNT = 5
@@ -231,10 +239,18 @@ class Aggregate:
 
     def consume(self, row):
         baseline = 160 + row["output_bytes"]
-        payload = row["datum_contribution_bytes"] + row["reference_script_contribution_bytes"]
-        estimates = (250 + 74 * row["num_assets"] + payload,
-                     175 + row["address_contribution_bytes"] + 12 * row["num_assets"]
-                     + 30 * row["num_policies"] + row["asset_name_bytes"] + payload)
+        assets = row["num_assets"]
+        payloads = row["datum_payload_bytes"] + row["reference_script_payload_bytes"]
+        whole_fields = row["datum_contribution_bytes"] + row["reference_script_contribution_bytes"]
+        policy_address = (175 + row["address_contribution_bytes"] + 12 * assets
+                          + 30 * row["num_policies"] + row["asset_name_bytes"])
+        # Order matches FORMULAS.
+        estimates = (250 + 74 * assets + payloads,
+                     policy_address + payloads,
+                     250 + 74 * assets + row["datum_payload_bytes"],
+                     baseline - row["coin_encoding_bytes"] + 9,
+                     250 + 74 * assets + whole_fields,
+                     policy_address + whole_fields)
         values = [(estimate - baseline, 100 * (estimate - baseline) / baseline,
                    10000 * (estimate - baseline) // baseline) for estimate in estimates]
         for group in group_names(row):
@@ -448,7 +464,10 @@ def main():
             "numberOfNativeAssets": "Distinct non-ADA policy/name pairs; quantities are not counted.",
             "numberOfMintingPolicies": "Distinct minting policies represented in the output.",
             "totalAssetNameBytes": "Sum of raw name lengths per asset pair, including repeated names under different policies.",
-            "serializedFieldBytes": "Original entire encoded field contribution, including a map key where present and encoding wrappers.",
+            "serializedDatumBytes": "32 for a datum hash; for an inline datum, the original encoded Plutus data inside tag 24 (its datum-hash input). Excludes keys, tags and headers.",
+            "serializedReferenceScriptBytes": "The script-hash input without its one-byte language prefix: a native script's original CBOR or a Plutus script's byte-string contents. Excludes keys, tags, headers and the language identifier.",
+            "serializedAdaAmountBytes": "Original encoded size of the output's ADA amount.",
+            "serializedFieldBytes": "Original entire encoded field contribution, including a map key where present and encoding wrappers (address term, and the whole-field controls).",
         },
         "percentile_method": "Nearest rank ceil(n*q/100). Byte-delta percentiles are exact. Percentage-excess percentiles are intervals [lower,upper) of width 0.01 percentage points, obtained using integer floor(10000*delta_bytes/baseline_bytes). Counts at 5% and 10% are exact integer comparisons.",
         "manifest_sha256": manifest_hash, "manifest": manifest,
