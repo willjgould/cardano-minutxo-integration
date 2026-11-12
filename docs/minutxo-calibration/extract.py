@@ -4,7 +4,7 @@
 This is a structural reader, not ledger validation. Use authenticated chain data.
 No decoding/re-encoding estimate replaces a received output's original length.
 
-Chunk framing follows docs/minutxo-migration-cost/ScanBench.hs: concatenated
+Chunk framing follows ScanBench.hs in this directory: concatenated
 hard-fork [7, [header, tx_bodies, witnesses, auxiliary_data, invalid_indices]].
 Output/value shapes follow the minutxo-calculation ledger pin a1631b518:
   eras/babbage/impl/src/Cardano/Ledger/Babbage/TxOut.hs

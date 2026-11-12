@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "scope": "Source acquisition and cryptographic verification only; this is not a completed migration result.",
+  "status": "source_verified",
+  "verified_utc": "2026-11-04T12:15:17.721596+00:00",
+  "network": "mainnet",
+  "protocol_magic": 764824073,
+  "snapshot": {
+    "hash": "9f765025d358c8ed18d4b2dd0e8ae94c1f37d5f1b1eb773f481a8d57d6312948",
+    "artifact_url": "https://aggregator.release-mainnet.api.mithril.network/aggregator/artifact/cardano-database/9f765025d358c8ed18d4b2dd0e8ae94c1f37d5f1b1eb773f481a8d57d6312948",
+    "created_at": "2026-10-29T09:58:07.852473577Z",
+    "beacon": {
+      "epoch": 664,
+      "immutable_file_number": 9335
+    },
+    "merkle_root": "b1136131d698884c722b2c7bd9039375dd23d2beefb5dd6588cc5b3ca1a20f32",
+    "certificate_hash": "d988dcb45142abadd29bd7f961a039c475b2b35766c6a68818a74732273589dc",
+    "certificate_url": "https://aggregator.release-mainnet.api.mithril.network/aggregator/certificate/d988dcb45142abadd29bd7f961a039c475b2b35766c6a68818a74732273589dc",
+    "node_version_at_snapshot": "11.1.3",
+    "selection_reason": "The snapshot pinned by the earlier cost analysis was still available, so it is retained for direct comparison instead of switching to the latest available snapshot.",
+    "ancillary_included": false
+  },
+  "mithril_client": {
+    "version": "mithril-client 0.13.29+e85df3d",
+    "release_tag": "2642.0",
+    "release_url": "https://github.com/IntersectMBO/mithril/releases/tag/2642.0",
+    "archive_url": "https://github.com/IntersectMBO/mithril/releases/download/2642.0/mithril-2642.0-linux-x64.tar.gz",
+    "archive_sha256": "aba4d675c2c1cf62bf16748a9d448e1a15bf410a142306e6548dfcc38ee89500",
+    "binary_sha256": "bfcfc1fc6b22b299592cedd18215e4c9d69fcf7724b644d013a4a2ac42d79f0c",
+    "archive_verification": "SHA256 matched the digest published for this asset by the official GitHub release API; no separate release signature was checked.",
+    "documentation_url": "https://mithril.network/doc/manual/developer-docs/nodes/mithril-client/"
+  },
+  "mithril_genesis_verification_key": {
+    "sha256": "15d6afd2df071b75d37e7e8451362986b3844d285751a3aec23c1a2969096706",
+    "source_commit": "2c5acaf583634fbd983e0c3dc3e3bc62f7c5f457",
+    "pinned_url": "https://raw.githubusercontent.com/IntersectMBO/mithril/2c5acaf583634fbd983e0c3dc3e3bc62f7c5f457/mithril-infra/configuration/release-mainnet/genesis.vkey",
+    "network_documentation_url": "https://mithril.network/doc/manual/getting-started/network-configurations/"
+  },
+  "verification": {
+    "client_exit_code": 0,
+    "all_seven_client_steps_completed": true,
+    "method": "Official mithril-client certificate-chain verification, immutable database Merkle proof and signed snapshot message verification.",
+    "inventory_sha256": "eb157f45e02732a4e88e59fa36346c81bc7f0d2729ddf7cb399e36bdfec96988",
+    "full_history_rehashed_for_inventory": false,
+    "tail_chunks_match_separately_verified_partial_download": true
+  },
+  "target": {
+    "chunk": 9334,
+    "block_number": 14127576,
+    "slot": 201635970,
+    "block_hash": "859cb87c0290c614f83e46843df5b46fc134bf6b0ea3222c6a3fcabba273b643",
+    "selection": "Final block of closed chunk 09334; verified source includes the later chunk 09335.",
+    "header_decoder": "Declared db-analyser --show-slot-block-no; mainnet genesis/config loader succeeded",
+    "next_chunk": 9335,
+    "next_chunk_first_slot": 201636033
+  },
+  "source_size": {
+    "chunk_range_inclusive": [
+      0,
+      9335
+    ],
+    "chunk_count": 9336,
+    "immutable_file_count": 28008,
+    "all_file_count": 28010,
+    "logical_bytes": 234518543671,
+    "allocated_bytes": 234600812544,
+    "other_files": "clean (zero bytes) and protocolMagicId (nine bytes)",
+    "measurement": "Logical bytes sum file sizes; allocated bytes sum per-file stat blocks times 512, excluding directory metadata."
+  },
+  "replay_prefix_size": {
+    "chunk_range_inclusive": [
+      0,
+      9334
+    ],
+    "chunk_file_count": 9335,
+    "index_file_count": 18670,
+    "chunk_logical_bytes": 232912091163,
+    "index_logical_bytes": 1597782127,
+    "chunk_allocated_bytes": 232940814336,
+    "index_allocated_bytes": 1651314688,
+    "total_logical_bytes": 234509873290,
+    "method": "Sum of recorded file metadata; no additional source content reads. Index bytes comprise primary and secondary files."
+  },
+  "acquisition_seconds": {
+    "total_download_and_verification": 2368.20586,
+    "certificate_chain": 9.862636,
+    "download_and_unpack": 2121.110475,
+    "digest_download_and_verification": 0.145253,
+    "database_verification": 236.940186,
+    "timing_method": "Total uses the acquisition wrapper monotonic clock; phase durations are differences between official client step timestamps. These are preparation costs, not migration timings."
+  },
+  "cache_conditions": {
+    "controlled_cold_cache": false,
+    "description": "Official verification has just read the immutable source; subsequent replay is not a controlled cold-cache run.",
+    "additional_reads": "Inventory uses stat only. Additional content reads hash the last two chunks and their partial-download counterparts, protocolMagicId, and evidence files. No additional full-history hash pass."
+  },
+  "tail_chunk_sha256": {
+    "09334.chunk": "315f76c5711b2a0eab646549328caf9e6394dca7776a9756d8ea58b4870d0784",
+    "09335.chunk": "fd1f5a92ff78f17cae851c591973a73d4a1ce51ff8439e5da3f472cf9f0bd81c"
+  },
+  "raw_evidence": {
+    "root": ".workspace/minutxo-incremental/mainnet-benchmark-2026-11-04",
+    "source_directory": "data/source/db",
+    "verification": "tools/source-verification.json",
+    "inventory": "tools/source-file-inventory.json",
+    "result": "tools/source-result.json",
+    "client_log": "tools/source-stderr.log",
+    "client_success_output": "tools/source-stdout.log",
+    "target": "preflight/target.json",
+    "target_inspection_log": "preflight/header-inspection.log"
+  }
+}

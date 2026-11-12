@@ -133,7 +133,8 @@ which a formula falls below the previous minimum.
 
 ## Reproduction
 
-Requires Python 3.11 or later. Set `IMMUTABLE_DB` to the `immutable` directory of a mainnet node database.
+Requires Python 3.11 or later. Set `IMMUTABLE_DB` to the `immutable` directory of the
+[Mithril-certified mainnet snapshot](mainnet-source.json) (chunks `00000`–`09335`).
 Download the [mainnet Byron genesis file](https://book.play.dev.cardano.org/environments/mainnet/byron-genesis.json)
 as `mainnet-byron-genesis.json`; the genesis step checks its hash.
 When running from a worktree without checked-out submodules, set

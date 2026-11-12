@@ -1,0 +1,4462 @@
+{
+  "collected_date": "2026-10-29",
+  "scope": "Research observations and component benchmarks. No full mainnet migration benchmark was run.",
+  "sources": {
+    "utxo_distribution": "https://cardanoscope.com/api/onchain/utxo-distribution",
+    "mithril_snapshot": "https://aggregator.release-mainnet.api.mithril.network/aggregator/artifact/cardano-database/9f765025d358c8ed18d4b2dd0e8ae94c1f37d5f1b1eb773f481a8d57d6312948",
+    "epoch_parameters": "https://api.koios.rest/api/v1/epoch_params?select=epoch_no,era,min_utxo_value,coins_per_utxo_size&order=epoch_no.asc&limit=1000",
+    "sample_chunk": "https://storage.googleapis.com/cdn.aggregator.release-mainnet.api.mithril.network/cardano-database/immutable/09335.tar.zst",
+    "historical_replay": "https://updates.cardano.intersectmbo.org/2023-01-11-consensus/"
+  },
+  "source_revisions": {
+    ".": "eb81d60cd4721d12a30e8d6b21be4e2d9e49bac9",
+    "cardano-ledger-specs": "2ada8efc69261d94f00d8283e8e392847ffcd62c",
+    "ouroboros-consensus": "5cc95f4caf294751318f8637ab2fb60d5de6eb29"
+  },
+  "source_note": "Working trees include pre-existing changes; revisions identify bases, not clean tested node builds.",
+  "utxo_distribution": [
+    {
+      "bucket": "<10",
+      "utxo_count": 6905091,
+      "total_value_ada": 16153964.813036,
+      "computed_at": "2026-10-23T19:01:33.813Z"
+    },
+    {
+      "bucket": "10-100",
+      "utxo_count": 1532948,
+      "total_value_ada": 61616384.639533,
+      "computed_at": "2026-10-23T19:01:33.813Z"
+    },
+    {
+      "bucket": "100-1k",
+      "utxo_count": 1518175,
+      "total_value_ada": 557337436.379266,
+      "computed_at": "2026-10-23T19:01:33.813Z"
+    },
+    {
+      "bucket": "1k-10k",
+      "utxo_count": 736011,
+      "total_value_ada": 2252368688.931131,
+      "computed_at": "2026-10-23T19:01:33.813Z"
+    },
+    {
+      "bucket": "10k-100k",
+      "utxo_count": 161294,
+      "total_value_ada": 4426385483.394632,
+      "computed_at": "2026-10-23T19:01:33.813Z"
+    },
+    {
+      "bucket": "100k+",
+      "utxo_count": 32989,
+      "total_value_ada": 29820798000.489304,
+      "computed_at": "2026-10-23T19:01:33.813Z"
+    }
+  ],
+  "mithril_snapshot": {
+    "hash": "9f765025d358c8ed18d4b2dd0e8ae94c1f37d5f1b1eb773f481a8d57d6312948",
+    "merkle_root": "b1136131d698884c722b2c7bd9039375dd23d2beefb5dd6588cc5b3ca1a20f32",
+    "network": "mainnet",
+    "beacon": {
+      "epoch": 664,
+      "immutable_file_number": 9335
+    },
+    "certificate_hash": "d988dcb45142abadd29bd7f961a039c475b2b35766c6a68818a74732273589dc",
+    "total_db_size_uncompressed": 237045302990,
+    "digests": {
+      "size_uncompressed": 3248929,
+      "locations": [
+        {
+          "type": "cloud_storage",
+          "uri": "https://storage.googleapis.com/cdn.aggregator.release-mainnet.api.mithril.network/cardano-database/digests/mainnet-e664-i9335.digests.tar.zst",
+          "compression_algorithm": "zstandard"
+        },
+        {
+          "type": "aggregator",
+          "uri": "https://aggregator.release-mainnet.api.mithril.network/aggregator/artifact/cardano-database/digests"
+        }
+      ]
+    },
+    "immutables": {
+      "average_size_uncompressed": 25120777,
+      "locations": [
+        {
+          "type": "cloud_storage",
+          "uri": {
+            "Template": "https://storage.googleapis.com/cdn.aggregator.release-mainnet.api.mithril.network/cardano-database/immutable/{immutable_file_number}.tar.zst"
+          },
+          "compression_algorithm": "zstandard"
+        }
+      ]
+    },
+    "ancillary": {
+      "size_uncompressed": 2542843171,
+      "locations": [
+        {
+          "type": "cloud_storage",
+          "uri": "https://storage.googleapis.com/cdn.aggregator.release-mainnet.api.mithril.network/cardano-database/ancillary/mainnet-e664-i9335.ancillary.tar.zst",
+          "compression_algorithm": "zstandard"
+        }
+      ]
+    },
+    "cardano_node_version": "11.1.3",
+    "created_at": "2026-10-29T09:58:07.852473577Z"
+  },
+  "koios_tip": [
+    {
+      "hash": "0424ab64bb8edea0643819b452fbc1e27e9d288b60ed0caa7c82f0811570ed54",
+      "epoch_no": 664,
+      "era": "Conway",
+      "abs_slot": 201717621,
+      "epoch_slot": 232821,
+      "block_height": 14131629,
+      "block_no": 14131629,
+      "block_time": 1793283912
+    }
+  ],
+  "historical_parameters": [
+    {
+      "epoch_no": 208,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 209,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 210,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 211,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 212,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 213,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 214,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 215,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 216,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 217,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 218,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 219,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 220,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 221,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 222,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 223,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 224,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 225,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 226,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 227,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 228,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 229,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 230,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 231,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 232,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 233,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 234,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 235,
+      "era": "Shelley",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 236,
+      "era": "Allegra",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 237,
+      "era": "Allegra",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 238,
+      "era": "Allegra",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 239,
+      "era": "Allegra",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 240,
+      "era": "Allegra",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 241,
+      "era": "Allegra",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 242,
+      "era": "Allegra",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 243,
+      "era": "Allegra",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 244,
+      "era": "Allegra",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 245,
+      "era": "Allegra",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 246,
+      "era": "Allegra",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 247,
+      "era": "Allegra",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 248,
+      "era": "Allegra",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 249,
+      "era": "Allegra",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 250,
+      "era": "Allegra",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 251,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 252,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 253,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 254,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 255,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 256,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 257,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 258,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 259,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 260,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 261,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 262,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 263,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 264,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 265,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 266,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 267,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 268,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 269,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 270,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 271,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 272,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 273,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 274,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 275,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 276,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 277,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 278,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 279,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 280,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 281,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 282,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 283,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 284,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 285,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 286,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 287,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 288,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 289,
+      "era": "Mary",
+      "min_utxo_value": "1000000",
+      "coins_per_utxo_size": null
+    },
+    {
+      "epoch_no": 290,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 291,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 292,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 293,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 294,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 295,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 296,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 297,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 298,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 299,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 300,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 301,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 302,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 303,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 304,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 305,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 306,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 307,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 308,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 309,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 310,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 311,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 312,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 313,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 314,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 315,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 316,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 317,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 318,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 319,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 320,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 321,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 322,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 323,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 324,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 325,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 326,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 327,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 328,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 329,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 330,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 331,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 332,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 333,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 334,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 335,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 336,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 337,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 338,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 339,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 340,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 341,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 342,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 343,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 344,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 345,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 346,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 347,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 348,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 349,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 350,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 351,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 352,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 353,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 354,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 355,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 356,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 357,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 358,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 359,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 360,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 361,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 362,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 363,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 364,
+      "era": "Alonzo",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "34482"
+    },
+    {
+      "epoch_no": 365,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 366,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 367,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 368,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 369,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 370,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 371,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 372,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 373,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 374,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 375,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 376,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 377,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 378,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 379,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 380,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 381,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 382,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 383,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 384,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 385,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 386,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 387,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 388,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 389,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 390,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 391,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 392,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 393,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 394,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 395,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 396,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 397,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 398,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 399,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 400,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 401,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 402,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 403,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 404,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 405,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 406,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 407,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 408,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 409,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 410,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 411,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 412,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 413,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 414,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 415,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 416,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 417,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 418,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 419,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 420,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 421,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 422,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 423,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 424,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 425,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 426,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 427,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 428,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 429,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 430,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 431,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 432,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 433,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 434,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 435,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 436,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 437,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 438,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 439,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 440,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 441,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 442,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 443,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 444,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 445,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 446,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 447,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 448,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 449,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 450,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 451,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 452,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 453,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 454,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 455,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 456,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 457,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 458,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 459,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 460,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 461,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 462,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 463,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 464,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 465,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 466,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 467,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 468,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 469,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 470,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 471,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 472,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 473,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 474,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 475,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 476,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 477,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 478,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 479,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 480,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 481,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 482,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 483,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 484,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 485,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 486,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 487,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 488,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 489,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 490,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 491,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 492,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 493,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 494,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 495,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 496,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 497,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 498,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 499,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 500,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 501,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 502,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 503,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 504,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 505,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 506,
+      "era": "Babbage",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 507,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 508,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 509,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 510,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 511,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 512,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 513,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 514,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 515,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 516,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 517,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 518,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 519,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 520,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 521,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 522,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 523,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 524,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 525,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 526,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 527,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 528,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 529,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 530,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 531,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 532,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 533,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 534,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 535,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 536,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 537,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 538,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 539,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 540,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 541,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 542,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 543,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 544,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 545,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 546,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 547,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 548,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 549,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 550,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 551,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 552,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 553,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 554,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 555,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 556,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 557,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 558,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 559,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 560,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 561,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 562,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 563,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 564,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 565,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 566,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 567,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 568,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 569,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 570,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 571,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 572,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 573,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 574,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 575,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 576,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 577,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 578,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 579,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 580,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 581,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 582,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 583,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 584,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 585,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 586,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 587,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 588,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 589,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 590,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 591,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 592,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 593,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 594,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 595,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 596,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 597,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 598,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 599,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 600,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 601,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 602,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 603,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 604,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 605,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 606,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 607,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 608,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 609,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 610,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 611,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 612,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 613,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 614,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 615,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 616,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 617,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 618,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 619,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 620,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 621,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 622,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 623,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 624,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 625,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 626,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 627,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 628,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 629,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 630,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 631,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 632,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 633,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 634,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 635,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 636,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 637,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 638,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 639,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 640,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 641,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 642,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 643,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 644,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 645,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 646,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 647,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 648,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 649,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 650,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 651,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 652,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 653,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 654,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 655,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 656,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 657,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 658,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 659,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 660,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 661,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 662,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 663,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    },
+    {
+      "epoch_no": 664,
+      "era": "Conway",
+      "min_utxo_value": "0",
+      "coins_per_utxo_size": "4310"
+    }
+  ],
+  "memory_environment": {
+    "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.42",
+    "architecture": "x86_64",
+    "ghc": "The Glorious Glasgow Haskell Compilation System, version 9.6.7",
+    "compile_flags": [
+      "-O2",
+      "-threaded",
+      "-rtsopts"
+    ],
+    "rts_flags": [
+      "-T",
+      "-s",
+      "-N1"
+    ],
+    "cpu": {
+      "lscpu": [
+        {
+          "field": "Architecture:",
+          "data": "x86_64"
+        },
+        {
+          "field": "CPU op-mode(s):",
+          "data": "32-bit, 64-bit"
+        },
+        {
+          "field": "Address sizes:",
+          "data": "48 bits physical, 48 bits virtual"
+        },
+        {
+          "field": "Byte Order:",
+          "data": "Little Endian"
+        },
+        {
+          "field": "CPU(s):",
+          "data": "32"
+        },
+        {
+          "field": "On-line CPU(s) list:",
+          "data": "0-31"
+        },
+        {
+          "field": "Vendor ID:",
+          "data": "AuthenticAMD"
+        },
+        {
+          "field": "Model name:",
+          "data": "AMD Ryzen 9 9950X3D 16-Core Processor"
+        },
+        {
+          "field": "CPU family:",
+          "data": "26"
+        },
+        {
+          "field": "Model:",
+          "data": "68"
+        },
+        {
+          "field": "Thread(s) per core:",
+          "data": "2"
+        },
+        {
+          "field": "Core(s) per socket:",
+          "data": "16"
+        },
+        {
+          "field": "Socket(s):",
+          "data": "1"
+        },
+        {
+          "field": "Stepping:",
+          "data": "0"
+        },
+        {
+          "field": "CPU max MHz:",
+          "data": "5752.0000"
+        },
+        {
+          "field": "CPU min MHz:",
+          "data": "600.0000"
+        },
+        {
+          "field": "BogoMIPS:",
+          "data": "8599.98"
+        },
+        {
+          "field": "Flags:",
+          "data": "fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good amd_lbr_v2 nopl nonstop_tsc cpuid extd_apicid aperfmperf rapl pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate ssbd mba perfmon_v2 ibrs ibpb stibp ibrs_enhanced vmmcall fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid cqm rdt_a avx512f avx512dq rdseed adx smap avx512ifma clflushopt clwb avx512cd sha_ni avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local user_shstk avx_vnni avx512_bf16 clzero irperf xsaveerptr rdpru wbnoinvd cppc amd_ibpb_ret arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif x2avic v_spec_ctrl vnmi avx512vbmi umip pku ospke avx512_vbmi2 gfni vaes vpclmulqdq avx512_vnni avx512_bitalg avx512_vpopcntdq rdpid bus_lock_detect movdiri movdir64b overflow_recov succor smca fsrm avx512_vp2intersect flush_l1d srso_user_kernel_no"
+        },
+        {
+          "field": "Virtualisation:",
+          "data": "AMD-V"
+        },
+        {
+          "field": "L1d cache:",
+          "data": "768 KiB (16 instances)"
+        },
+        {
+          "field": "L1i cache:",
+          "data": "512 KiB (16 instances)"
+        },
+        {
+          "field": "L2 cache:",
+          "data": "16 MiB (16 instances)"
+        },
+        {
+          "field": "L3 cache:",
+          "data": "128 MiB (2 instances)"
+        },
+        {
+          "field": "NUMA node(s):",
+          "data": "1"
+        },
+        {
+          "field": "NUMA node0 CPU(s):",
+          "data": "0-31"
+        },
+        {
+          "field": "Vulnerability Gather data sampling:",
+          "data": "Not affected"
+        },
+        {
+          "field": "Vulnerability Indirect target selection:",
+          "data": "Not affected"
+        },
+        {
+          "field": "Vulnerability Itlb multihit:",
+          "data": "Not affected"
+        },
+        {
+          "field": "Vulnerability L1tf:",
+          "data": "Not affected"
+        },
+        {
+          "field": "Vulnerability Mds:",
+          "data": "Not affected"
+        },
+        {
+          "field": "Vulnerability Meltdown:",
+          "data": "Not affected"
+        },
+        {
+          "field": "Vulnerability Mmio stale data:",
+          "data": "Not affected"
+        },
+        {
+          "field": "Vulnerability Reg file data sampling:",
+          "data": "Not affected"
+        },
+        {
+          "field": "Vulnerability Retbleed:",
+          "data": "Not affected"
+        },
+        {
+          "field": "Vulnerability Spec rstack overflow:",
+          "data": "Not affected"
+        },
+        {
+          "field": "Vulnerability Spec store bypass:",
+          "data": "Mitigation; Speculative Store Bypass disabled via prctl"
+        },
+        {
+          "field": "Vulnerability Spectre v1:",
+          "data": "Mitigation; usercopy/swapgs barriers and __user pointer sanitization"
+        },
+        {
+          "field": "Vulnerability Spectre v2:",
+          "data": "Mitigation; Enhanced / Automatic IBRS; IBPB conditional; STIBP always-on; PBRSB-eIBRS Not affected; BHI Not affected"
+        },
+        {
+          "field": "Vulnerability Srbds:",
+          "data": "Not affected"
+        },
+        {
+          "field": "Vulnerability Tsa:",
+          "data": "Not affected"
+        },
+        {
+          "field": "Vulnerability Tsx async abort:",
+          "data": "Not affected"
+        },
+        {
+          "field": "Vulnerability Vmscape:",
+          "data": "Not affected"
+        }
+      ]
+    },
+    "meminfo": "MemTotal:       63407016 kB\nMemFree:        37292720 kB\nMemAvailable:   47143328 kB\nBuffers:         1169816 kB\nCached:          8827128 kB\nSwapCached:            0 kB\nActive:         17681232 kB\nInactive:        6315280 kB\nActive(anon):   14133496 kB\nInactive(anon):        0 kB\nActive(file):    3547736 kB\nInactive(file):  6315280 kB\nUnevictable:         256 kB\nMlocked:             256 kB\nSwapTotal:      67108860 kB\nSwapFree:       67108860 kB\nZswap:                 0 kB\nZswapped:              0 kB\nDirty:              1740 kB\nWriteback:             0 kB\nAnonPages:      14000108 kB\nMapped:          2676624 kB\nShmem:            593004 kB\nKReclaimable:     700176 kB\nSlab:            1185520 kB\nSReclaimable:     700176 kB\nSUnreclaim:       485344 kB\nKernelStack:       59248 kB\nPageTables:       171148 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    98812368 kB\nCommitted_AS:   77793020 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:      195052 kB\nVmallocChunk:          0 kB\nPercpu:            46336 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nUnaccepted:            0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:     1553508 kB\nDirectMap2M:    27439104 kB\nDirectMap1G:    35651584 kB\n",
+    "cgroup_membership": "0::/user.slice/user-1000.slice/user@1000.service/app.slice/app-org.gnome.Terminal.slice/vte-spawn-824270f0-53f8-4c4e-a17b-57391c569e69.scope\n",
+    "cgroup_limits": "/sys/fs/cgroup/memory.max and cpu.max unavailable in this execution environment",
+    "notes": [
+      "Sequential benchmark processes; no synthetic concurrent workloads from this agent.",
+      "No CPU pinning or controlled background load.",
+      "One run per mode/count; report durations as observations, not stable production throughput.",
+      "No mainnet UTxO or node state was loaded."
+    ]
+  },
+  "memory_runs": [
+    {
+      "mode": "map-unit",
+      "n": 1000000,
+      "build_seconds": 0.135188779,
+      "retained_delta_bytes": 112032768,
+      "bytes_per_entry": 112.032768,
+      "checksum": 1000000,
+      "process_wall_clock": "0:00.18",
+      "peak_rss_kib": 232960
+    },
+    {
+      "mode": "map-integer",
+      "n": 1000000,
+      "build_seconds": 0.145835798,
+      "retained_delta_bytes": 128032768,
+      "bytes_per_entry": 128.032768,
+      "checksum": 1499999500000,
+      "process_wall_clock": "0:00.20",
+      "peak_rss_kib": 266496
+    },
+    {
+      "mode": "map-word64",
+      "n": 1000000,
+      "build_seconds": 0.153553328,
+      "retained_delta_bytes": 128032768,
+      "bytes_per_entry": 128.032768,
+      "checksum": 1499999500000,
+      "process_wall_clock": "0:00.21",
+      "peak_rss_kib": 266752
+    },
+    {
+      "mode": "map-base-value",
+      "n": 1000000,
+      "build_seconds": 0.156757261,
+      "retained_delta_bytes": 128032768,
+      "bytes_per_entry": 128.032768,
+      "checksum": 499999500000,
+      "process_wall_clock": "0:00.21",
+      "peak_rss_kib": 266752
+    },
+    {
+      "mode": "map-inline-word64",
+      "n": 1000000,
+      "build_seconds": 0.153280843,
+      "retained_delta_bytes": 136032768,
+      "bytes_per_entry": 136.032768,
+      "checksum": 1234772135936,
+      "process_wall_clock": "0:00.21",
+      "peak_rss_kib": 282112
+    },
+    {
+      "mode": "map-shared-keys-integer",
+      "n": 1000000,
+      "build_seconds": 0.054375622,
+      "retained_delta_bytes": 64001096,
+      "bytes_per_entry": 64.001096,
+      "checksum": 1499999500000,
+      "process_wall_clock": "0:00.30",
+      "peak_rss_kib": 361472
+    },
+    {
+      "mode": "vector-word64",
+      "n": 1000000,
+      "build_seconds": 0.005692648,
+      "retained_delta_bytes": 8000944,
+      "bytes_per_entry": 8.000944,
+      "checksum": 1499999500000,
+      "process_wall_clock": "0:00.01",
+      "peak_rss_kib": 19200
+    },
+    {
+      "mode": "map-unit",
+      "n": 2000000,
+      "build_seconds": 0.259469385,
+      "retained_delta_bytes": 224032768,
+      "bytes_per_entry": 112.016384,
+      "checksum": 2000000,
+      "process_wall_clock": "0:00.34",
+      "peak_rss_kib": 455936
+    },
+    {
+      "mode": "map-integer",
+      "n": 2000000,
+      "build_seconds": 0.305457118,
+      "retained_delta_bytes": 256032768,
+      "bytes_per_entry": 128.016384,
+      "checksum": 3999999000000,
+      "process_wall_clock": "0:00.41",
+      "peak_rss_kib": 521984
+    },
+    {
+      "mode": "map-word64",
+      "n": 2000000,
+      "build_seconds": 0.298990913,
+      "retained_delta_bytes": 256032768,
+      "bytes_per_entry": 128.016384,
+      "checksum": 3999999000000,
+      "process_wall_clock": "0:00.40",
+      "peak_rss_kib": 521984
+    },
+    {
+      "mode": "map-base-value",
+      "n": 2000000,
+      "build_seconds": 0.313118699,
+      "retained_delta_bytes": 256032768,
+      "bytes_per_entry": 128.016384,
+      "checksum": 1999999000000,
+      "process_wall_clock": "0:00.41",
+      "peak_rss_kib": 521728
+    },
+    {
+      "mode": "map-inline-word64",
+      "n": 2000000,
+      "build_seconds": 0.303683819,
+      "retained_delta_bytes": 272032768,
+      "bytes_per_entry": 136.016384,
+      "checksum": 4361513353216,
+      "process_wall_clock": "0:00.42",
+      "peak_rss_kib": 553216
+    },
+    {
+      "mode": "map-shared-keys-integer",
+      "n": 2000000,
+      "build_seconds": 0.109854025,
+      "retained_delta_bytes": 128001096,
+      "bytes_per_entry": 64.000548,
+      "checksum": 3999999000000,
+      "process_wall_clock": "0:00.63",
+      "peak_rss_kib": 712192
+    },
+    {
+      "mode": "vector-word64",
+      "n": 2000000,
+      "build_seconds": 0.010708317,
+      "retained_delta_bytes": 16000944,
+      "bytes_per_entry": 8.000472,
+      "checksum": 3999999000000,
+      "process_wall_clock": "0:00.02",
+      "peak_rss_kib": 27136
+    },
+    {
+      "mode": "map-wrapper-word64",
+      "n": 1000000,
+      "build_seconds": 0.173842269,
+      "retained_delta_bytes": 152032768,
+      "bytes_per_entry": 152.032768,
+      "checksum": 1234772135936,
+      "process_wall_clock": "0:00.25",
+      "peak_rss_kib": 313600
+    },
+    {
+      "mode": "map-wrapper-word64",
+      "n": 2000000,
+      "build_seconds": 0.34459601,
+      "retained_delta_bytes": 304032768,
+      "bytes_per_entry": 152.016384,
+      "checksum": 4361513353216,
+      "process_wall_clock": "0:00.48",
+      "peak_rss_kib": 616960
+    }
+  ],
+  "memory_rts_logs": {
+    "map-base-value-1000000.stderr": "     264,232,976 bytes allocated in the heap\n     574,034,904 bytes copied during GC\n     128,047,616 bytes maximum residency (8 sample(s))\n         628,224 bytes maximum slop\n             255 MiB total memory in use (0 MiB lost due to fragmentation)\n\n                                     Tot time (elapsed)  Avg pause  Max pause\n  Gen  0        58 colls,     0 par    0.045s   0.045s     0.0008s    0.0017s\n  Gen  1         8 colls,     0 par    0.128s   0.128s     0.0160s    0.0440s\n\n  TASKS: 4 (1 bound, 3 peak workers (3 total), using -N1)\n\n  SPARKS: 0 (0 converted, 0 overflowed, 0 dud, 0 GC'd, 0 fizzled)\n\n  INIT    time    0.000s  (  0.000s elapsed)\n  MUT     time    0.030s  (  0.029s elapsed)\n  GC      time    0.173s  (  0.173s elapsed)\n  EXIT    time    0.000s  (  0.007s elapsed)\n  Total   time    0.203s  (  0.210s elapsed)\n\n  Alloc rate    8,924,184,832 bytes per MUT second\n\n  Productivity  14.6% of total user, 14.0% of total elapsed\n\n\tCommand being timed: \"/tmp/minutxo-migration-cost-memory/memory-bench map-base-value 1000000 +RTS -T -s -N1 -RTS\"\n\tUser time (seconds): 0.16\n\tSystem time (seconds): 0.04\n\tPercent of CPU this job got: 96%\n\tElapsed (wall clock) time (h:mm:ss or m:ss): 0:00.21\n\tAverage shared text size (kbytes): 0\n\tAverage unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 266752\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 65213\n\tVoluntary context switches: 39\n\tInvoluntary context switches: 2\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 16\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n",
+    "map-base-value-2000000.stderr": "     528,233,160 bytes allocated in the heap\n   1,173,131,768 bytes copied during GC\n     256,047,616 bytes maximum residency (9 sample(s))\n       1,250,816 bytes maximum slop\n             504 MiB total memory in use (0 MiB lost due to fragmentation)\n\n                                     Tot time (elapsed)  Avg pause  Max pause\n  Gen  0       121 colls,     0 par    0.090s   0.090s     0.0007s    0.0020s\n  Gen  1         9 colls,     0 par    0.254s   0.254s     0.0283s    0.0850s\n\n  TASKS: 4 (1 bound, 3 peak workers (3 total), using -N1)\n\n  SPARKS: 0 (0 converted, 0 overflowed, 0 dud, 0 GC'd, 0 fizzled)\n\n  INIT    time    0.000s  (  0.000s elapsed)\n  MUT     time    0.056s  (  0.056s elapsed)\n  GC      time    0.345s  (  0.345s elapsed)\n  EXIT    time    0.000s  (  0.009s elapsed)\n  Total   time    0.402s  (  0.410s elapsed)\n\n  Alloc rate    9,365,697,843 bytes per MUT second\n\n  Productivity  14.0% of total user, 13.7% of total elapsed\n\n\tCommand being timed: \"/tmp/minutxo-migration-cost-memory/memory-bench map-base-value 2000000 +RTS -T -s -N1 -RTS\"\n\tUser time (seconds): 0.32\n\tSystem time (seconds): 0.08\n\tPercent of CPU this job got: 98%\n\tElapsed (wall clock) time (h:mm:ss or m:ss): 0:00.41\n\tAverage shared text size (kbytes): 0\n\tAverage unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 521728\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 129020\n\tVoluntary context switches: 58\n\tInvoluntary context switches: 9\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 16\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n",
+    "map-inline-word64-1000000.stderr": "     296,234,208 bytes allocated in the heap\n     586,657,912 bytes copied during GC\n     136,047,688 bytes maximum residency (8 sample(s))\n         467,896 bytes maximum slop\n             270 MiB total memory in use (0 MiB lost due to fragmentation)\n\n                                     Tot time (elapsed)  Avg pause  Max pause\n  Gen  0        65 colls,     0 par    0.047s   0.047s     0.0007s    0.0014s\n  Gen  1         8 colls,     0 par    0.124s   0.124s     0.0155s    0.0427s\n\n  TASKS: 4 (1 bound, 3 peak workers (3 total), using -N1)\n\n  SPARKS: 0 (0 converted, 0 overflowed, 0 dud, 0 GC'd, 0 fizzled)\n\n  INIT    time    0.000s  (  0.000s elapsed)\n  MUT     time    0.033s  (  0.033s elapsed)\n  GC      time    0.171s  (  0.171s elapsed)\n  EXIT    time    0.000s  (  0.006s elapsed)\n  Total   time    0.204s  (  0.210s elapsed)\n\n  Alloc rate    8,977,345,880 bytes per MUT second\n\n  Productivity  16.1% of total user, 15.6% of total elapsed\n\n\tCommand being timed: \"/tmp/minutxo-migration-cost-memory/memory-bench map-inline-word64 1000000 +RTS -T -s -N1 -RTS\"\n\tUser time (seconds): 0.16\n\tSystem time (seconds): 0.04\n\tPercent of CPU this job got: 97%\n\tElapsed (wall clock) time (h:mm:ss or m:ss): 0:00.21\n\tAverage shared text size (kbytes): 0\n\tAverage unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 282112\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 69111\n\tVoluntary context switches: 35\n\tInvoluntary context switches: 4\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 16\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n",
+    "map-inline-word64-2000000.stderr": "     592,234,256 bytes allocated in the heap\n   1,196,867,008 bytes copied during GC\n     272,047,688 bytes maximum residency (9 sample(s))\n         930,232 bytes maximum slop\n             535 MiB total memory in use (0 MiB lost due to fragmentation)\n\n                                     Tot time (elapsed)  Avg pause  Max pause\n  Gen  0       135 colls,     0 par    0.091s   0.091s     0.0007s    0.0014s\n  Gen  1         9 colls,     0 par    0.249s   0.249s     0.0277s    0.0846s\n\n  TASKS: 4 (1 bound, 3 peak workers (3 total), using -N1)\n\n  SPARKS: 0 (0 converted, 0 overflowed, 0 dud, 0 GC'd, 0 fizzled)\n\n  INIT    time    0.000s  (  0.000s elapsed)\n  MUT     time    0.062s  (  0.062s elapsed)\n  GC      time    0.340s  (  0.340s elapsed)\n  EXIT    time    0.000s  (  0.008s elapsed)\n  Total   time    0.403s  (  0.410s elapsed)\n\n  Alloc rate    9,506,805,841 bytes per MUT second\n\n  Productivity  15.5% of total user, 15.1% of total elapsed\n\n\tCommand being timed: \"/tmp/minutxo-migration-cost-memory/memory-bench map-inline-word64 2000000 +RTS -T -s -N1 -RTS\"\n\tUser time (seconds): 0.31\n\tSystem time (seconds): 0.09\n\tPercent of CPU this job got: 98%\n\tElapsed (wall clock) time (h:mm:ss or m:ss): 0:00.42\n\tAverage shared text size (kbytes): 0\n\tAverage unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 553216\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 136808\n\tVoluntary context switches: 55\n\tInvoluntary context switches: 16\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 16\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n",
+    "map-integer-1000000.stderr": "     272,233,184 bytes allocated in the heap\n     558,146,552 bytes copied during GC\n     128,047,544 bytes maximum residency (8 sample(s))\n         628,296 bytes maximum slop\n             255 MiB total memory in use (0 MiB lost due to fragmentation)\n\n                                     Tot time (elapsed)  Avg pause  Max pause\n  Gen  0        59 colls,     0 par    0.043s   0.043s     0.0007s    0.0014s\n  Gen  1         8 colls,     0 par    0.118s   0.118s     0.0148s    0.0396s\n\n  TASKS: 4 (1 bound, 3 peak workers (3 total), using -N1)\n\n  SPARKS: 0 (0 converted, 0 overflowed, 0 dud, 0 GC'd, 0 fizzled)\n\n  INIT    time    0.000s  (  0.000s elapsed)\n  MUT     time    0.031s  (  0.031s elapsed)\n  GC      time    0.161s  (  0.161s elapsed)\n  EXIT    time    0.000s  (  0.008s elapsed)\n  Total   time    0.192s  (  0.200s elapsed)\n\n  Alloc rate    8,894,933,191 bytes per MUT second\n\n  Productivity  15.9% of total user, 15.2% of total elapsed\n\n\tCommand being timed: \"/tmp/minutxo-migration-cost-memory/memory-bench map-integer 1000000 +RTS -T -s -N1 -RTS\"\n\tUser time (seconds): 0.14\n\tSystem time (seconds): 0.05\n\tPercent of CPU this job got: 96%\n\tElapsed (wall clock) time (h:mm:ss or m:ss): 0:00.20\n\tAverage shared text size (kbytes): 0\n\tAverage unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 266496\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 65225\n\tVoluntary context switches: 36\n\tInvoluntary context switches: 11\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 16\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n",
+    "map-integer-2000000.stderr": "     544,233,232 bytes allocated in the heap\n   1,139,241,736 bytes copied during GC\n     256,047,544 bytes maximum residency (9 sample(s))\n       1,246,792 bytes maximum slop\n             504 MiB total memory in use (0 MiB lost due to fragmentation)\n\n                                     Tot time (elapsed)  Avg pause  Max pause\n  Gen  0       123 colls,     0 par    0.092s   0.092s     0.0007s    0.0021s\n  Gen  1         9 colls,     0 par    0.250s   0.250s     0.0278s    0.0832s\n\n  TASKS: 4 (1 bound, 3 peak workers (3 total), using -N1)\n\n  SPARKS: 0 (0 converted, 0 overflowed, 0 dud, 0 GC'd, 0 fizzled)\n\n  INIT    time    0.000s  (  0.000s elapsed)\n  MUT     time    0.060s  (  0.059s elapsed)\n  GC      time    0.342s  (  0.342s elapsed)\n  EXIT    time    0.000s  (  0.009s elapsed)\n  Total   time    0.402s  (  0.410s elapsed)\n\n  Alloc rate    9,109,348,151 bytes per MUT second\n\n  Productivity  14.9% of total user, 14.5% of total elapsed\n\n\tCommand being timed: \"/tmp/minutxo-migration-cost-memory/memory-bench map-integer 2000000 +RTS -T -s -N1 -RTS\"\n\tUser time (seconds): 0.32\n\tSystem time (seconds): 0.08\n\tPercent of CPU this job got: 97%\n\tElapsed (wall clock) time (h:mm:ss or m:ss): 0:00.41\n\tAverage shared text size (kbytes): 0\n\tAverage unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 521984\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 129021\n\tVoluntary context switches: 57\n\tInvoluntary context switches: 7\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 16\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n",
+    "map-shared-keys-integer-1000000.stderr": "     296,234,432 bytes allocated in the heap\n     815,134,032 bytes copied during GC\n     176,047,280 bytes maximum residency (8 sample(s))\n         658,256 bytes maximum slop\n             348 MiB total memory in use (0 MiB lost due to fragmentation)\n\n                                     Tot time (elapsed)  Avg pause  Max pause\n  Gen  0        65 colls,     0 par    0.064s   0.064s     0.0010s    0.0019s\n  Gen  1         8 colls,     0 par    0.192s   0.192s     0.0240s    0.0744s\n\n  TASKS: 4 (1 bound, 3 peak workers (3 total), using -N1)\n\n  SPARKS: 0 (0 converted, 0 overflowed, 0 dud, 0 GC'd, 0 fizzled)\n\n  INIT    time    0.000s  (  0.000s elapsed)\n  MUT     time    0.043s  (  0.043s elapsed)\n  GC      time    0.257s  (  0.257s elapsed)\n  EXIT    time    0.000s  (  0.000s elapsed)\n  Total   time    0.300s  (  0.300s elapsed)\n\n  Alloc rate    6,863,916,974 bytes per MUT second\n\n  Productivity  14.4% of total user, 14.3% of total elapsed\n\n\tCommand being timed: \"/tmp/minutxo-migration-cost-memory/memory-bench map-shared-keys-integer 1000000 +RTS -T -s -N1 -RTS\"\n\tUser time (seconds): 0.24\n\tSystem time (seconds): 0.06\n\tPercent of CPU this job got: 99%\n\tElapsed (wall clock) time (h:mm:ss or m:ss): 0:00.30\n\tAverage shared text size (kbytes): 0\n\tAverage unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 361472\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 89032\n\tVoluntary context switches: 47\n\tInvoluntary context switches: 10\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 16\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n",
+    "map-shared-keys-integer-2000000.stderr": "     592,234,672 bytes allocated in the heap\n   1,658,310,928 bytes copied during GC\n     352,047,280 bytes maximum residency (9 sample(s))\n       1,306,448 bytes maximum slop\n             690 MiB total memory in use (0 MiB lost due to fragmentation)\n\n                                     Tot time (elapsed)  Avg pause  Max pause\n  Gen  0       135 colls,     0 par    0.132s   0.132s     0.0010s    0.0021s\n  Gen  1         9 colls,     0 par    0.394s   0.395s     0.0438s    0.1553s\n\n  TASKS: 4 (1 bound, 3 peak workers (3 total), using -N1)\n\n  SPARKS: 0 (0 converted, 0 overflowed, 0 dud, 0 GC'd, 0 fizzled)\n\n  INIT    time    0.000s  (  0.000s elapsed)\n  MUT     time    0.088s  (  0.087s elapsed)\n  GC      time    0.527s  (  0.527s elapsed)\n  EXIT    time    0.000s  (  0.006s elapsed)\n  Total   time    0.615s  (  0.620s elapsed)\n\n  Alloc rate    6,765,107,172 bytes per MUT second\n\n  Productivity  14.2% of total user, 14.0% of total elapsed\n\n\tCommand being timed: \"/tmp/minutxo-migration-cost-memory/memory-bench map-shared-keys-integer 2000000 +RTS -T -s -N1 -RTS\"\n\tUser time (seconds): 0.50\n\tSystem time (seconds): 0.13\n\tPercent of CPU this job got: 99%\n\tElapsed (wall clock) time (h:mm:ss or m:ss): 0:00.63\n\tAverage shared text size (kbytes): 0\n\tAverage unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 712192\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 176652\n\tVoluntary context switches: 80\n\tInvoluntary context switches: 13\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 16\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n",
+    "map-unit-1000000.stderr": "     216,232,432 bytes allocated in the heap\n     509,302,536 bytes copied during GC\n     112,047,472 bytes maximum residency (8 sample(s))\n         424,592 bytes maximum slop\n             222 MiB total memory in use (0 MiB lost due to fragmentation)\n\n                                     Tot time (elapsed)  Avg pause  Max pause\n  Gen  0        46 colls,     0 par    0.036s   0.036s     0.0008s    0.0014s\n  Gen  1         8 colls,     0 par    0.121s   0.121s     0.0151s    0.0433s\n\n  TASKS: 4 (1 bound, 3 peak workers (3 total), using -N1)\n\n  SPARKS: 0 (0 converted, 0 overflowed, 0 dud, 0 GC'd, 0 fizzled)\n\n  INIT    time    0.000s  (  0.000s elapsed)\n  MUT     time    0.018s  (  0.017s elapsed)\n  GC      time    0.156s  (  0.156s elapsed)\n  EXIT    time    0.000s  (  0.006s elapsed)\n  Total   time    0.174s  (  0.180s elapsed)\n\n  Alloc rate    12,350,353,360 bytes per MUT second\n\n  Productivity  10.0% of total user, 9.7% of total elapsed\n\n\tCommand being timed: \"/tmp/minutxo-migration-cost-memory/memory-bench map-unit 1000000 +RTS -T -s -N1 -RTS\"\n\tUser time (seconds): 0.13\n\tSystem time (seconds): 0.04\n\tPercent of CPU this job got: 96%\n\tElapsed (wall clock) time (h:mm:ss or m:ss): 0:00.18\n\tAverage shared text size (kbytes): 0\n\tAverage unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 232960\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 56701\n\tVoluntary context switches: 40\n\tInvoluntary context switches: 6\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 16\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n",
+    "map-unit-2000000.stderr": "     432,232,520 bytes allocated in the heap\n   1,048,738,816 bytes copied during GC\n     224,047,472 bytes maximum residency (9 sample(s))\n         839,312 bytes maximum slop\n             440 MiB total memory in use (0 MiB lost due to fragmentation)\n\n                                     Tot time (elapsed)  Avg pause  Max pause\n  Gen  0        97 colls,     0 par    0.075s   0.075s     0.0008s    0.0016s\n  Gen  1         9 colls,     0 par    0.224s   0.224s     0.0249s    0.0807s\n\n  TASKS: 4 (1 bound, 3 peak workers (3 total), using -N1)\n\n  SPARKS: 0 (0 converted, 0 overflowed, 0 dud, 0 GC'd, 0 fizzled)\n\n  INIT    time    0.000s  (  0.000s elapsed)\n  MUT     time    0.035s  (  0.034s elapsed)\n  GC      time    0.299s  (  0.299s elapsed)\n  EXIT    time    0.000s  (  0.007s elapsed)\n  Total   time    0.334s  (  0.340s elapsed)\n\n  Alloc rate    12,519,959,824 bytes per MUT second\n\n  Productivity  10.4% of total user, 10.1% of total elapsed\n\n\tCommand being timed: \"/tmp/minutxo-migration-cost-memory/memory-bench map-unit 2000000 +RTS -T -s -N1 -RTS\"\n\tUser time (seconds): 0.26\n\tSystem time (seconds): 0.07\n\tPercent of CPU this job got: 97%\n\tElapsed (wall clock) time (h:mm:ss or m:ss): 0:00.34\n\tAverage shared text size (kbytes): 0\n\tAverage unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 455936\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 112525\n\tVoluntary context switches: 49\n\tInvoluntary context switches: 3\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 16\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n",
+    "map-word64-1000000.stderr": "     288,233,816 bytes allocated in the heap\n     558,148,240 bytes copied during GC\n     128,047,520 bytes maximum residency (8 sample(s))\n         628,320 bytes maximum slop\n             255 MiB total memory in use (0 MiB lost due to fragmentation)\n\n                                     Tot time (elapsed)  Avg pause  Max pause\n  Gen  0        63 colls,     0 par    0.045s   0.045s     0.0007s    0.0019s\n  Gen  1         8 colls,     0 par    0.125s   0.125s     0.0156s    0.0411s\n\n  TASKS: 4 (1 bound, 3 peak workers (3 total), using -N1)\n\n  SPARKS: 0 (0 converted, 0 overflowed, 0 dud, 0 GC'd, 0 fizzled)\n\n  INIT    time    0.000s  (  0.000s elapsed)\n  MUT     time    0.031s  (  0.031s elapsed)\n  GC      time    0.170s  (  0.170s elapsed)\n  EXIT    time    0.000s  (  0.008s elapsed)\n  Total   time    0.202s  (  0.210s elapsed)\n\n  Alloc rate    9,203,761,616 bytes per MUT second\n\n  Productivity  15.5% of total user, 14.8% of total elapsed\n\n\tCommand being timed: \"/tmp/minutxo-migration-cost-memory/memory-bench map-word64 1000000 +RTS -T -s -N1 -RTS\"\n\tUser time (seconds): 0.15\n\tSystem time (seconds): 0.04\n\tPercent of CPU this job got: 95%\n\tElapsed (wall clock) time (h:mm:ss or m:ss): 0:00.21\n\tAverage shared text size (kbytes): 0\n\tAverage unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 266752\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 65224\n\tVoluntary context switches: 37\n\tInvoluntary context switches: 4\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 16\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n",
+    "map-word64-2000000.stderr": "     576,233,864 bytes allocated in the heap\n   1,139,245,864 bytes copied during GC\n     256,047,520 bytes maximum residency (9 sample(s))\n       1,246,816 bytes maximum slop\n             504 MiB total memory in use (0 MiB lost due to fragmentation)\n\n                                     Tot time (elapsed)  Avg pause  Max pause\n  Gen  0       131 colls,     0 par    0.085s   0.085s     0.0006s    0.0013s\n  Gen  1         9 colls,     0 par    0.246s   0.246s     0.0274s    0.0813s\n\n  TASKS: 4 (1 bound, 3 peak workers (3 total), using -N1)\n\n  SPARKS: 0 (0 converted, 0 overflowed, 0 dud, 0 GC'd, 0 fizzled)\n\n  INIT    time    0.000s  (  0.000s elapsed)\n  MUT     time    0.061s  (  0.061s elapsed)\n  GC      time    0.331s  (  0.331s elapsed)\n  EXIT    time    0.000s  (  0.008s elapsed)\n  Total   time    0.393s  (  0.400s elapsed)\n\n  Alloc rate    9,376,904,443 bytes per MUT second\n\n  Productivity  15.6% of total user, 15.3% of total elapsed\n\n\tCommand being timed: \"/tmp/minutxo-migration-cost-memory/memory-bench map-word64 2000000 +RTS -T -s -N1 -RTS\"\n\tUser time (seconds): 0.33\n\tSystem time (seconds): 0.06\n\tPercent of CPU this job got: 98%\n\tElapsed (wall clock) time (h:mm:ss or m:ss): 0:00.40\n\tAverage shared text size (kbytes): 0\n\tAverage unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 521984\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 129021\n\tVoluntary context switches: 57\n\tInvoluntary context switches: 2\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 16\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n",
+    "map-wrapper-word64-1000000.stderr": "     312,236,200 bytes allocated in the heap\n     643,630,112 bytes copied during GC\n     152,047,712 bytes maximum residency (8 sample(s))\n         511,904 bytes maximum slop\n             301 MiB total memory in use (0 MiB lost due to fragmentation)\n\n                                     Tot time (elapsed)  Avg pause  Max pause\n  Gen  0        69 colls,     0 par    0.055s   0.055s     0.0008s    0.0018s\n  Gen  1         8 colls,     0 par    0.156s   0.156s     0.0195s    0.0623s\n\n  TASKS: 4 (1 bound, 3 peak workers (3 total), using -N1)\n\n  SPARKS: 0 (0 converted, 0 overflowed, 0 dud, 0 GC'd, 0 fizzled)\n\n  INIT    time    0.000s  (  0.000s elapsed)\n  MUT     time    0.034s  (  0.034s elapsed)\n  GC      time    0.210s  (  0.211s elapsed)\n  EXIT    time    0.000s  (  0.005s elapsed)\n  Total   time    0.245s  (  0.250s elapsed)\n\n  Alloc rate    9,137,935,989 bytes per MUT second\n\n  Productivity  13.9% of total user, 13.6% of total elapsed\n\n\tCommand being timed: \"/tmp/minutxo-migration-cost-memory/memory-bench map-wrapper-word64 1000000 +RTS -T -s -N1 -RTS\"\n\tUser time (seconds): 0.20\n\tSystem time (seconds): 0.04\n\tPercent of CPU this job got: 98%\n\tElapsed (wall clock) time (h:mm:ss or m:ss): 0:00.25\n\tAverage shared text size (kbytes): 0\n\tAverage unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 313600\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 77069\n\tVoluntary context switches: 44\n\tInvoluntary context switches: 24\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 16\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n",
+    "map-wrapper-word64-2000000.stderr": "     624,235,920 bytes allocated in the heap\n   1,312,003,216 bytes copied during GC\n     304,047,712 bytes maximum residency (9 sample(s))\n       1,022,368 bytes maximum slop\n             597 MiB total memory in use (0 MiB lost due to fragmentation)\n\n                                     Tot time (elapsed)  Avg pause  Max pause\n  Gen  0       143 colls,     0 par    0.106s   0.106s     0.0007s    0.0015s\n  Gen  1         9 colls,     0 par    0.287s   0.287s     0.0319s    0.1000s\n\n  TASKS: 4 (1 bound, 3 peak workers (3 total), using -N1)\n\n  SPARKS: 0 (0 converted, 0 overflowed, 0 dud, 0 GC'd, 0 fizzled)\n\n  INIT    time    0.000s  (  0.000s elapsed)\n  MUT     time    0.068s  (  0.068s elapsed)\n  GC      time    0.393s  (  0.393s elapsed)\n  EXIT    time    0.000s  (  0.009s elapsed)\n  Total   time    0.461s  (  0.470s elapsed)\n\n  Alloc rate    9,160,591,483 bytes per MUT second\n\n  Productivity  14.8% of total user, 14.4% of total elapsed\n\n\tCommand being timed: \"/tmp/minutxo-migration-cost-memory/memory-bench map-wrapper-word64 2000000 +RTS -T -s -N1 -RTS\"\n\tUser time (seconds): 0.37\n\tSystem time (seconds): 0.09\n\tPercent of CPU this job got: 98%\n\tElapsed (wall clock) time (h:mm:ss or m:ss): 0:00.48\n\tAverage shared text size (kbytes): 0\n\tAverage unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 616960\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 152733\n\tVoluntary context switches: 61\n\tInvoluntary context switches: 16\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 16\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n",
+    "vector-word64-1000000.stderr": "      40,231,376 bytes allocated in the heap\n          79,576 bytes copied during GC\n       8,015,784 bytes maximum residency (4 sample(s))\n         381,032 bytes maximum slop\n              14 MiB total memory in use (0 MiB lost due to fragmentation)\n\n                                     Tot time (elapsed)  Avg pause  Max pause\n  Gen  0         6 colls,     0 par    0.000s   0.000s     0.0000s    0.0000s\n  Gen  1         4 colls,     0 par    0.000s   0.000s     0.0001s    0.0002s\n\n  TASKS: 4 (1 bound, 3 peak workers (3 total), using -N1)\n\n  SPARKS: 0 (0 converted, 0 overflowed, 0 dud, 0 GC'd, 0 fizzled)\n\n  INIT    time    0.000s  (  0.000s elapsed)\n  MUT     time    0.006s  (  0.006s elapsed)\n  GC      time    0.000s  (  0.000s elapsed)\n  EXIT    time    0.000s  (  0.003s elapsed)\n  Total   time    0.007s  (  0.010s elapsed)\n\n  Alloc rate    6,933,962,257 bytes per MUT second\n\n  Productivity  85.2% of total user, 57.8% of total elapsed\n\n\tCommand being timed: \"/tmp/minutxo-migration-cost-memory/memory-bench vector-word64 1000000 +RTS -T -s -N1 -RTS\"\n\tUser time (seconds): 0.00\n\tSystem time (seconds): 0.00\n\tPercent of CPU this job got: 63%\n\tElapsed (wall clock) time (h:mm:ss or m:ss): 0:00.01\n\tAverage shared text size (kbytes): 0\n\tAverage unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 19200\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 3381\n\tVoluntary context switches: 18\n\tInvoluntary context switches: 2\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 16\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n",
+    "vector-word64-2000000.stderr": "      80,231,192 bytes allocated in the heap\n          82,312 bytes copied during GC\n      16,015,800 bytes maximum residency (4 sample(s))\n         769,640 bytes maximum slop\n              22 MiB total memory in use (0 MiB lost due to fragmentation)\n\n                                     Tot time (elapsed)  Avg pause  Max pause\n  Gen  0        14 colls,     0 par    0.000s   0.000s     0.0000s    0.0000s\n  Gen  1         4 colls,     0 par    0.001s   0.001s     0.0001s    0.0003s\n\n  TASKS: 4 (1 bound, 3 peak workers (3 total), using -N1)\n\n  SPARKS: 0 (0 converted, 0 overflowed, 0 dud, 0 GC'd, 0 fizzled)\n\n  INIT    time    0.000s  (  0.000s elapsed)\n  MUT     time    0.011s  (  0.011s elapsed)\n  GC      time    0.001s  (  0.001s elapsed)\n  EXIT    time    0.000s  (  0.008s elapsed)\n  Total   time    0.012s  (  0.020s elapsed)\n\n  Alloc rate    7,438,106,197 bytes per MUT second\n\n  Productivity  91.9% of total user, 53.8% of total elapsed\n\n\tCommand being timed: \"/tmp/minutxo-migration-cost-memory/memory-bench vector-word64 2000000 +RTS -T -s -N1 -RTS\"\n\tUser time (seconds): 0.00\n\tSystem time (seconds): 0.00\n\tPercent of CPU this job got: 57%\n\tElapsed (wall clock) time (h:mm:ss or m:ss): 0:00.02\n\tAverage shared text size (kbytes): 0\n\tAverage unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 27136\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 5328\n\tVoluntary context switches: 16\n\tInvoluntary context switches: 2\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 16\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n"
+  },
+  "scan_summary": {
+    "scope": "Measured component benchmark: complete CBOR structural traversal and optional Blake2b-256 transaction-body hashing of a real recent Conway immutable chunk. Not a full migration benchmark.",
+    "compiler": "GHC 9.6.7, -O2 -fno-full-laziness -fno-cse",
+    "cpu": "AMD Ryzen 9 9950X3D; benchmark is single-threaded",
+    "chunk": "09335.chunk",
+    "chunk_bytes": 8524491,
+    "chunk_sha256": "fd1f5a92ff78f17cae851c591973a73d4a1ce51ff8439e5da3f472cf9f0bd81c",
+    "framing": "All 8,524,491 bytes consumed as 1,062 concatenated Conway hard-fork blocks; each has a pair wrapper with era tag 7 and five block components.",
+    "counts": {
+      "blocks": 1062,
+      "transaction_bodies": 8267,
+      "transaction_body_bytes": 4995733
+    },
+    "read": {
+      "kind": "read",
+      "bytes": 8524491,
+      "seconds": 0.001936635,
+      "cold_io_guaranteed": false
+    },
+    "max_rss_kib": 23296,
+    "heap_allocated_bytes_all_runs": 2471221040,
+    "runs": {
+      "structural": {
+        "repetitions": 7,
+        "median_seconds": 0.023131764,
+        "median_MB_per_second": 368.519,
+        "min_MB_per_second": 362.229,
+        "max_MB_per_second": 383.41
+      },
+      "structural_plus_hash": {
+        "repetitions": 7,
+        "median_seconds": 0.033196073,
+        "median_MB_per_second": 256.792,
+        "min_MB_per_second": 255.055,
+        "max_MB_per_second": 259.718
+      }
+    },
+    "exclusions": [
+      "Cold disk I/O: the chunk was downloaded and extracted immediately before the benchmark; time reports zero filesystem reads.",
+      "Ledger value decoding and exact minUTxO calculation.",
+      "Target live-UTxO lookup and metadata writes.",
+      "Historical parameter recovery and output-creation validity processing.",
+      "Representativeness across older eras, large scripts, and different asset distributions."
+    ]
+  },
+  "scan_runs": [
+    {
+      "kind": "read",
+      "bytes": 8524491,
+      "seconds": 0.001936635,
+      "cold_io_guaranteed": false
+    },
+    {
+      "kind": "structural",
+      "iteration": 1,
+      "blocks": 1062,
+      "transactions": 8267,
+      "body_bytes": 4995733,
+      "checksum": 14885,
+      "seconds": 0.023131764,
+      "MB_per_second": 368.519
+    },
+    {
+      "kind": "structural",
+      "iteration": 2,
+      "blocks": 1062,
+      "transactions": 8267,
+      "body_bytes": 4995733,
+      "checksum": 14885,
+      "seconds": 0.023279011,
+      "MB_per_second": 366.188
+    },
+    {
+      "kind": "structural",
+      "iteration": 3,
+      "blocks": 1062,
+      "transactions": 8267,
+      "body_bytes": 4995733,
+      "checksum": 14885,
+      "seconds": 0.023533407,
+      "MB_per_second": 362.229
+    },
+    {
+      "kind": "structural",
+      "iteration": 4,
+      "blocks": 1062,
+      "transactions": 8267,
+      "body_bytes": 4995733,
+      "checksum": 14885,
+      "seconds": 0.022885448,
+      "MB_per_second": 372.485
+    },
+    {
+      "kind": "structural",
+      "iteration": 5,
+      "blocks": 1062,
+      "transactions": 8267,
+      "body_bytes": 4995733,
+      "checksum": 14885,
+      "seconds": 0.02335279,
+      "MB_per_second": 365.031
+    },
+    {
+      "kind": "structural",
+      "iteration": 6,
+      "blocks": 1062,
+      "transactions": 8267,
+      "body_bytes": 4995733,
+      "checksum": 14885,
+      "seconds": 0.022353088,
+      "MB_per_second": 381.356
+    },
+    {
+      "kind": "structural",
+      "iteration": 7,
+      "blocks": 1062,
+      "transactions": 8267,
+      "body_bytes": 4995733,
+      "checksum": 14885,
+      "seconds": 0.02223333,
+      "MB_per_second": 383.41
+    },
+    {
+      "kind": "structural_plus_hash",
+      "iteration": 1,
+      "blocks": 1062,
+      "transactions": 8267,
+      "body_bytes": 4995733,
+      "checksum": 13017078388548094641,
+      "seconds": 0.033196073,
+      "MB_per_second": 256.792
+    },
+    {
+      "kind": "structural_plus_hash",
+      "iteration": 2,
+      "blocks": 1062,
+      "transactions": 8267,
+      "body_bytes": 4995733,
+      "checksum": 13017078388548094641,
+      "seconds": 0.03282207,
+      "MB_per_second": 259.718
+    },
+    {
+      "kind": "structural_plus_hash",
+      "iteration": 3,
+      "blocks": 1062,
+      "transactions": 8267,
+      "body_bytes": 4995733,
+      "checksum": 13017078388548094641,
+      "seconds": 0.033185123,
+      "MB_per_second": 256.877
+    },
+    {
+      "kind": "structural_plus_hash",
+      "iteration": 4,
+      "blocks": 1062,
+      "transactions": 8267,
+      "body_bytes": 4995733,
+      "checksum": 13017078388548094641,
+      "seconds": 0.033422109,
+      "MB_per_second": 255.055
+    },
+    {
+      "kind": "structural_plus_hash",
+      "iteration": 5,
+      "blocks": 1062,
+      "transactions": 8267,
+      "body_bytes": 4995733,
+      "checksum": 13017078388548094641,
+      "seconds": 0.03335542,
+      "MB_per_second": 255.565
+    },
+    {
+      "kind": "structural_plus_hash",
+      "iteration": 6,
+      "blocks": 1062,
+      "transactions": 8267,
+      "body_bytes": 4995733,
+      "checksum": 13017078388548094641,
+      "seconds": 0.033073875,
+      "MB_per_second": 257.741
+    },
+    {
+      "kind": "structural_plus_hash",
+      "iteration": 7,
+      "blocks": 1062,
+      "transactions": 8267,
+      "body_bytes": 4995733,
+      "checksum": 13017078388548094641,
+      "seconds": 0.033311441,
+      "MB_per_second": 255.903
+    }
+  ],
+  "scan_rts_log": "   2,471,221,040 bytes allocated in the heap\n       1,335,864 bytes copied during GC\n       8,640,712 bytes maximum residency (15 sample(s))\n         923,448 bytes maximum slop\n              15 MiB total memory in use (0 MiB lost due to fragmentation)\n\n                                     Tot time (elapsed)  Avg pause  Max pause\n  Gen  0       589 colls,     0 par    0.001s   0.001s     0.0000s    0.0000s\n  Gen  1        15 colls,     0 par    0.002s   0.002s     0.0001s    0.0002s\n\n  INIT    time    0.000s  (  0.000s elapsed)\n  MUT     time    0.393s  (  0.394s elapsed)\n  GC      time    0.003s  (  0.003s elapsed)\n  EXIT    time    0.000s  (  0.002s elapsed)\n  Total   time    0.397s  (  0.400s elapsed)\n\n  %GC     time       0.0%  (0.0% elapsed)\n\n  Alloc rate    6,283,363,899 bytes per MUT second\n\n  Productivity  99.1% of total user, 98.6% of total elapsed\n\n\tCommand being timed: \"/tmp/minutxo-migration-cost-scan/scan-bench /tmp/minutxo-migration-cost-scan/immutable/09335.chunk 7 +RTS -s\"\n\tUser time (seconds): 0.39\n\tSystem time (seconds): 0.00\n\tPercent of CPU this job got: 99%\n\tElapsed (wall clock) time (h:mm:ss or m:ss): 0:00.40\n\tAverage shared text size (kbytes): 0\n\tAverage unshared data size (kbytes): 0\n\tAverage stack size (kbytes): 0\n\tAverage total size (kbytes): 0\n\tMaximum resident set size (kbytes): 23296\n\tAverage resident set size (kbytes): 0\n\tMajor (requiring I/O) page faults: 0\n\tMinor (reclaiming a frame) page faults: 3973\n\tVoluntary context switches: 42\n\tInvoluntary context switches: 118\n\tSwaps: 0\n\tFile system inputs: 0\n\tFile system outputs: 16\n\tSocket messages sent: 0\n\tSocket messages received: 0\n\tSignals delivered: 0\n\tPage size (bytes): 4096\n\tExit status: 0\n",
+  "prebabbage_count_estimate": {
+    "method": "Simple random sample of 200 distinct block heights across Shelley through Alonzo; enumerate every output and check current spent status. Multiply mean surviving outputs/block by total blocks.",
+    "sample_seed": 20261029,
+    "checked_date_utc": "2026-10-29",
+    "population_first_block": 4490511,
+    "population_last_block": 7791698,
+    "population_blocks": 3301188,
+    "epochs": [
+      208,
+      364
+    ],
+    "sample_blocks": 200,
+    "sample_transactions": 3119,
+    "sample_outputs": 8304,
+    "sample_currently_unspent": 190,
+    "sample_blocks_with_unspent": 72,
+    "mean_unspent_per_block": 0.95,
+    "estimated_population_unspent": 3136128.5999999996,
+    "standard_error": 577364.5520200667,
+    "normal_95_percent_interval": [
+      2004494.078040669,
+      4267763.1219593305
+    ],
+    "bootstrap_percentile_95_percent_interval": [
+      2145772.2,
+      4374074.1
+    ],
+    "max_unspent_in_sampled_block": 26,
+    "sample_block_counts": [
+      {
+        "height": 7732112,
+        "epoch": 362,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 7709267,
+        "epoch": 361,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 7689772,
+        "epoch": 360,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 7688404,
+        "epoch": 360,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 7687959,
+        "epoch": 360,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 7687784,
+        "epoch": 360,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 7683621,
+        "epoch": 359,
+        "unspent_outputs": 9
+      },
+      {
+        "height": 7659560,
+        "epoch": 358,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 7659200,
+        "epoch": 358,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 7655597,
+        "epoch": 358,
+        "unspent_outputs": 3
+      },
+      {
+        "height": 7654336,
+        "epoch": 358,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 7637111,
+        "epoch": 357,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 7633321,
+        "epoch": 357,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 7612259,
+        "epoch": 356,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 7574341,
+        "epoch": 354,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 7554257,
+        "epoch": 353,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 7477816,
+        "epoch": 349,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 7465972,
+        "epoch": 349,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 7444901,
+        "epoch": 348,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 7438992,
+        "epoch": 348,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 7423941,
+        "epoch": 347,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 7393447,
+        "epoch": 345,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 7375239,
+        "epoch": 344,
+        "unspent_outputs": 3
+      },
+      {
+        "height": 7355867,
+        "epoch": 344,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 7341008,
+        "epoch": 343,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 7326143,
+        "epoch": 342,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 7311189,
+        "epoch": 341,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 7278088,
+        "epoch": 340,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 7234319,
+        "epoch": 338,
+        "unspent_outputs": 8
+      },
+      {
+        "height": 7215253,
+        "epoch": 337,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 7204884,
+        "epoch": 336,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 7183199,
+        "epoch": 335,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 7182732,
+        "epoch": 335,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 7112539,
+        "epoch": 332,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 7059277,
+        "epoch": 329,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 7045064,
+        "epoch": 328,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 7034174,
+        "epoch": 328,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 7004174,
+        "epoch": 326,
+        "unspent_outputs": 2
+      },
+      {
+        "height": 6995477,
+        "epoch": 326,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6984699,
+        "epoch": 325,
+        "unspent_outputs": 13
+      },
+      {
+        "height": 6943297,
+        "epoch": 323,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 6938979,
+        "epoch": 323,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6934966,
+        "epoch": 323,
+        "unspent_outputs": 2
+      },
+      {
+        "height": 6928328,
+        "epoch": 323,
+        "unspent_outputs": 4
+      },
+      {
+        "height": 6893875,
+        "epoch": 321,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 6874443,
+        "epoch": 320,
+        "unspent_outputs": 5
+      },
+      {
+        "height": 6835383,
+        "epoch": 318,
+        "unspent_outputs": 2
+      },
+      {
+        "height": 6827373,
+        "epoch": 318,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 6827230,
+        "epoch": 318,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6827004,
+        "epoch": 318,
+        "unspent_outputs": 3
+      },
+      {
+        "height": 6820884,
+        "epoch": 317,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6787277,
+        "epoch": 316,
+        "unspent_outputs": 2
+      },
+      {
+        "height": 6765190,
+        "epoch": 315,
+        "unspent_outputs": 2
+      },
+      {
+        "height": 6764665,
+        "epoch": 315,
+        "unspent_outputs": 6
+      },
+      {
+        "height": 6737183,
+        "epoch": 313,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 6728966,
+        "epoch": 313,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 6625618,
+        "epoch": 308,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6620901,
+        "epoch": 308,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 6617368,
+        "epoch": 308,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6584164,
+        "epoch": 306,
+        "unspent_outputs": 6
+      },
+      {
+        "height": 6542350,
+        "epoch": 304,
+        "unspent_outputs": 5
+      },
+      {
+        "height": 6532414,
+        "epoch": 304,
+        "unspent_outputs": 2
+      },
+      {
+        "height": 6512772,
+        "epoch": 303,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6511417,
+        "epoch": 303,
+        "unspent_outputs": 6
+      },
+      {
+        "height": 6501720,
+        "epoch": 302,
+        "unspent_outputs": 6
+      },
+      {
+        "height": 6487738,
+        "epoch": 301,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 6475581,
+        "epoch": 301,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6458811,
+        "epoch": 300,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 6449188,
+        "epoch": 300,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6443819,
+        "epoch": 299,
+        "unspent_outputs": 2
+      },
+      {
+        "height": 6423071,
+        "epoch": 298,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6400740,
+        "epoch": 297,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6400460,
+        "epoch": 297,
+        "unspent_outputs": 2
+      },
+      {
+        "height": 6393987,
+        "epoch": 297,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 6385658,
+        "epoch": 297,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6370833,
+        "epoch": 296,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6348514,
+        "epoch": 295,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6339939,
+        "epoch": 294,
+        "unspent_outputs": 2
+      },
+      {
+        "height": 6308837,
+        "epoch": 293,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 6303111,
+        "epoch": 293,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6293946,
+        "epoch": 292,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6290554,
+        "epoch": 292,
+        "unspent_outputs": 26
+      },
+      {
+        "height": 6288999,
+        "epoch": 292,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6265010,
+        "epoch": 291,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6257260,
+        "epoch": 290,
+        "unspent_outputs": 3
+      },
+      {
+        "height": 6254553,
+        "epoch": 290,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6238012,
+        "epoch": 290,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 6231329,
+        "epoch": 289,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6204987,
+        "epoch": 288,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6169094,
+        "epoch": 286,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6147733,
+        "epoch": 285,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6122187,
+        "epoch": 284,
+        "unspent_outputs": 3
+      },
+      {
+        "height": 6113603,
+        "epoch": 284,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 6108641,
+        "epoch": 284,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6092819,
+        "epoch": 283,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6091726,
+        "epoch": 283,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 6079993,
+        "epoch": 282,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6076273,
+        "epoch": 282,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6075653,
+        "epoch": 282,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6070780,
+        "epoch": 282,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6068043,
+        "epoch": 282,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 6026049,
+        "epoch": 280,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 6025330,
+        "epoch": 280,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6015569,
+        "epoch": 279,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 6013053,
+        "epoch": 279,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 6004116,
+        "epoch": 279,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5975180,
+        "epoch": 277,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5966251,
+        "epoch": 277,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5965860,
+        "epoch": 277,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5950491,
+        "epoch": 276,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5942441,
+        "epoch": 276,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5942293,
+        "epoch": 276,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5930017,
+        "epoch": 275,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5926690,
+        "epoch": 275,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5921827,
+        "epoch": 275,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 5911855,
+        "epoch": 274,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5845252,
+        "epoch": 271,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 5834145,
+        "epoch": 271,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5807376,
+        "epoch": 269,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5787230,
+        "epoch": 268,
+        "unspent_outputs": 2
+      },
+      {
+        "height": 5784609,
+        "epoch": 268,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 5776178,
+        "epoch": 268,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5766815,
+        "epoch": 268,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5765663,
+        "epoch": 267,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5738043,
+        "epoch": 266,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 5737984,
+        "epoch": 266,
+        "unspent_outputs": 3
+      },
+      {
+        "height": 5728836,
+        "epoch": 266,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5712468,
+        "epoch": 265,
+        "unspent_outputs": 3
+      },
+      {
+        "height": 5702696,
+        "epoch": 265,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5697142,
+        "epoch": 264,
+        "unspent_outputs": 5
+      },
+      {
+        "height": 5694801,
+        "epoch": 264,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5694469,
+        "epoch": 264,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5679036,
+        "epoch": 263,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 5665401,
+        "epoch": 263,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5653622,
+        "epoch": 262,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5650273,
+        "epoch": 262,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5630029,
+        "epoch": 261,
+        "unspent_outputs": 2
+      },
+      {
+        "height": 5613437,
+        "epoch": 260,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5583346,
+        "epoch": 259,
+        "unspent_outputs": 2
+      },
+      {
+        "height": 5581223,
+        "epoch": 259,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5533342,
+        "epoch": 257,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5496730,
+        "epoch": 255,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5461511,
+        "epoch": 253,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5457252,
+        "epoch": 253,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5442813,
+        "epoch": 252,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5436854,
+        "epoch": 252,
+        "unspent_outputs": 4
+      },
+      {
+        "height": 5427148,
+        "epoch": 251,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5420610,
+        "epoch": 251,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5372498,
+        "epoch": 249,
+        "unspent_outputs": 2
+      },
+      {
+        "height": 5364719,
+        "epoch": 249,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5362316,
+        "epoch": 248,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 5351418,
+        "epoch": 248,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 5351331,
+        "epoch": 248,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 5330686,
+        "epoch": 247,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5321098,
+        "epoch": 246,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5311671,
+        "epoch": 246,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5310699,
+        "epoch": 246,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5296618,
+        "epoch": 245,
+        "unspent_outputs": 2
+      },
+      {
+        "height": 5287965,
+        "epoch": 245,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5284296,
+        "epoch": 245,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5280595,
+        "epoch": 245,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5186136,
+        "epoch": 240,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 5170714,
+        "epoch": 239,
+        "unspent_outputs": 1
+      },
+      {
+        "height": 5167898,
+        "epoch": 239,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5102456,
+        "epoch": 236,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5096149,
+        "epoch": 236,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5085243,
+        "epoch": 235,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5070240,
+        "epoch": 235,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5069186,
+        "epoch": 235,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5040877,
+        "epoch": 233,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5024180,
+        "epoch": 233,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5011624,
+        "epoch": 232,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 5001500,
+        "epoch": 231,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4973158,
+        "epoch": 230,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4963325,
+        "epoch": 230,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4962150,
+        "epoch": 230,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4946501,
+        "epoch": 229,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4928372,
+        "epoch": 228,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4920928,
+        "epoch": 228,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4914217,
+        "epoch": 227,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4912400,
+        "epoch": 227,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4910661,
+        "epoch": 227,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4906151,
+        "epoch": 227,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4900372,
+        "epoch": 227,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4882970,
+        "epoch": 226,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4879738,
+        "epoch": 226,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4854582,
+        "epoch": 225,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4854342,
+        "epoch": 225,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4816884,
+        "epoch": 223,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4745918,
+        "epoch": 219,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4710078,
+        "epoch": 218,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4685082,
+        "epoch": 217,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4636571,
+        "epoch": 214,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4614774,
+        "epoch": 213,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4607835,
+        "epoch": 213,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4599180,
+        "epoch": 213,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4586876,
+        "epoch": 212,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4586401,
+        "epoch": 212,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4575384,
+        "epoch": 211,
+        "unspent_outputs": 0
+      },
+      {
+        "height": 4530724,
+        "epoch": 209,
+        "unspent_outputs": 0
+      }
+    ],
+    "scope": "Shelley, Allegra, Mary, Alonzo creation eras; excludes Byron and outputs created from Babbage onward. Estimates output count, not wallets or ADA. Counts queried at slightly different times, not one atomic snapshot."
+  }
+}

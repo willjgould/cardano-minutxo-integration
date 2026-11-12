@@ -150,7 +150,8 @@ their actual transaction failure rates.
 
 ## Reproduction and checks
 
-Set `IMMUTABLE_DB` to the `immutable` directory of a mainnet node database.
+Set `IMMUTABLE_DB` to the `immutable` directory of the
+[Mithril-certified mainnet snapshot](mainnet-source.json) (chunks `00000`–`09335`).
 
 ```sh
 python3 docs/minutxo-calibration/compare_formula.py \

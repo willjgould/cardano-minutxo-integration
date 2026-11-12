@@ -146,12 +146,12 @@ def main():
               "comparison": "coinsPerUTxOByte * (160 + original received output bytes)",
               "coins_per_utxo_byte": args.price,
               "price_policy": "Fixed comparison price for all rows; no historical min-ADA parameter recovery.",
-              "source_provenance": "../minutxo-migration-cost/mainnet-2026-11-04/source.json",
+              "source_provenance": "mainnet-source.json",
               "chunks": chunks, "holdout_first_chunk": args.holdout_first,
               "script_sha256": {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
                                 for p in (Path(__file__), Path(__file__).with_name("extract.py"))},
               "synthetic_bound": synthetic_bound(args.price), "groups": {}}
-    benchmark_path = Path(__file__).parent.parent / "minutxo-migration-cost" / "measurements.json"
+    benchmark_path = Path(__file__).with_name("scanner-measurements.json")
     benchmark = json.loads(benchmark_path.read_text())["scan_summary"]
     observed = next((chunk for chunk in chunks if Path(chunk["path"]).name == benchmark["chunk"]), None)
     if observed:
@@ -168,7 +168,7 @@ def main():
             if observed[key] != value:
                 raise ValueError(f"Independent Haskell scanner mismatch: {key}")
         result["independent_scanner_comparison"] = {"chunk": benchmark["chunk"], "matched": expected,
-                                                    "source": "../minutxo-migration-cost/measurements.json"}
+                                                    "source": "scanner-measurements.json"}
     all_groups, train_groups, holdout_groups = map(group_rows, (all_rows, train, holdout))
     for name, rows in all_groups.items():
         candidates = []

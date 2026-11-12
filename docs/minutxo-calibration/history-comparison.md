@@ -15,7 +15,7 @@ their ordinary outputs were not created and are excluded.
 
 The full scan took 18.46 minutes with 16 workers.
 This excludes preparation and final verification. Source acquisition was already
-complete; see the [authenticated source record](../minutxo-migration-cost/mainnet-2026-11-04/source.json).
+complete; see the [authenticated source record](mainnet-source.json).
 
 ## Formulas and interpretation
 
@@ -166,7 +166,8 @@ This is structural analysis of authenticated chain data, not a ledger validation
 test. Results weight output creations; they do not measure currently locked ADA
 or the composition of the live UTxO set.
 
-Reproduce from the repository root. Set `IMMUTABLE_DB` to the `immutable` directory of a mainnet node database.
+Reproduce from the repository root. Set `IMMUTABLE_DB` to the `immutable` directory of the
+[Mithril-certified mainnet snapshot](mainnet-source.json) (chunks `00000`–`09335`).
 Download the [mainnet Byron genesis file](https://book.play.dev.cardano.org/environments/mainnet/byron-genesis.json)
 as `mainnet-byron-genesis.json`; the genesis step checks its hash.
 

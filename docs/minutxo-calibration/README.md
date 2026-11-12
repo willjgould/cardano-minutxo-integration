@@ -27,8 +27,7 @@ or execute ledger validation.
 ## Actual mainnet sample
 
 The extractor read 30 authenticated immutable chunks, `09306` through `09335`,
-from the [previously verified snapshot](../minutxo-migration-cost/mainnet-2026-11-04/source.json)
-already in this checkout. This covers slots 201009603 through 201657572,
+from the [previously verified snapshot](mainnet-source.json). This covers slots 201009603 through 201657572,
 approximately 7.5 days, containing 32,012 blocks, 195,524 transactions and
 488,149 created outputs. These are output creations, including subsequently
 spent outputs, rather than a census of the live UTxO set. Repeated application
@@ -156,7 +155,8 @@ bundles. The full two-parameter formula has not met the requested properties.
 
 ## Reproduction and verification
 
-Set `IMMUTABLE_DB` to the `immutable` directory of a mainnet node database.
+Set `IMMUTABLE_DB` to the `immutable` directory of the
+[Mithril-certified mainnet snapshot](mainnet-source.json) (chunks `00000`–`09335`).
 
 ```sh
 python3 docs/minutxo-calibration/calibrate.py \
@@ -179,6 +179,12 @@ enforced by the calibration script when the chunk is included. A separate
 hand-encoded fixture also checked valid/invalid transaction output selection,
 collateral indexing and original output spans; truncated and unsupported
 input failed directly.
+
+The scanner is [ScanBench.hs](ScanBench.hs); its recorded measurements are in
+[scanner-measurements.json](scanner-measurements.json), copied unchanged from the
+migration-cost benchmark. Build it with GHC and the `cborg`, `crypton` and
+`memory` packages, using `-O2 -fno-full-laziness -fno-cse -rtsopts`, and run it
+on `09335.chunk` with argument `7` for seven repetitions.
 
 This verifies the analysis against existing independent measurements. It is
 not a ledger conformance run or a new red/green transaction test. No pricing
