@@ -26,7 +26,8 @@ ADDRESS = [("cip", "Proposed: `250 + 74N + D + R`"),
            ("address_all", "Every address: `250 + 74N + A + D + R`"),
            ("address_all_rebased", "Every address, rebased: `193 + 74N + A + D + R`"),
            ("address_bootstrap_only", "Bootstrap only: `250 + 74N + (A if bootstrap) + D + R`"),
-           ("address_above_57", "Above 57 bytes: `250 + 74N + max(0, A − 57) + D + R`")]
+           ("address_above_57", "Above 57 bytes: `250 + 74N + max(0, A − 57) + D + R`"),
+           ("address_bootstrap_rebased", "Bootstrap only, rebased: `(193 + A if bootstrap, else 250) + 74N + D + R`")]
 ERAS =["Genesis", "Byron", "Shelley", "Allegra", "Mary", "Alonzo", "Babbage", "Conway"]
 HEADER = ("| {} | Underestimates | Median excess | p95 excess | Within 5% above | Mean requirement, ADA | Largest shortfall, ADA |\n"
           "| --- | ---: | ---: | ---: | ---: | ---: | ---: |")

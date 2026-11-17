@@ -1,10 +1,10 @@
 # Historical backtest of a minimum-ADA formula
 
 This backtest compares a proposed minimum-ADA formula, three alternatives and
-four address terms with the current formula, for every output created on
-Cardano mainnet up to
-28 October 2026. Each output is measured from its original bytes, as they
-appear in the block that created it, and priced at 4,310 lovelace per byte.
+five address terms with the current formula, for every output created on
+Cardano mainnet up to 28 October 2026. Each output is measured from its
+original bytes, as they appear in the block that created it, and priced at
+4,310 lovelace per byte.
 
 ## Findings
 
@@ -43,6 +43,11 @@ current formula took effect:
 - **Above 57 bytes** changes almost nothing for other outputs: 6,755
   underestimates and a mean requirement of 2.22 ADA. Bootstrap-address outputs
   have a median excess of 10.2% and a mean requirement of 2.82 ADA.
+- **Bootstrap only, rebased** gives bootstrap-address outputs the same
+  requirement as every address rebased, and every other output the same
+  requirement as the proposed formula. It has 6,755 underestimates and a mean
+  requirement of 2.22 ADA. Compared with bootstrap only, the median excess of
+  bootstrap-address outputs falls from 33.6% to 10.2%.
 - **Large bootstrap addresses have occurred on mainnet.** Before Shelley limited
   bootstrap address attributes to 64 bytes, Byron-era outputs carried addresses
   of up to 22,600 bytes. Across every output, they cause the proposed formula's
@@ -82,7 +87,7 @@ Two more result keys test sensitivity to CBOR wrappers:
 `control_cip_whole_fields` is the proposed formula with whole fields, and
 `alternative_policy_address` is Alt 1 with payload bytes.
 
-Four more result keys add an address term to the proposed formula. The proposed
+Five more result keys add an address term to the proposed formula. The proposed
 formula charges every address at its 250-byte base, whatever the address's
 size, and a bootstrap address can be several kilobytes long. In this table, `A`
 is `serializedAddressBytes`.
@@ -93,9 +98,11 @@ is `serializedAddressBytes`.
 | Every address, rebased | `193 + 74 * numberOfNativeAssets + A + serializedDatumBytes + serializedReferenceScriptBytes` | `address_all_rebased` |
 | Bootstrap only | `250 + 74 * numberOfNativeAssets + (A if bootstrap address, else 0) + serializedDatumBytes + serializedReferenceScriptBytes` | `address_bootstrap_only` |
 | Above 57 bytes | `250 + 74 * numberOfNativeAssets + max(0, A - 57) + serializedDatumBytes + serializedReferenceScriptBytes` | `address_above_57` |
+| Bootstrap only, rebased | `(193 + A if bootstrap address, else 250) + 74 * numberOfNativeAssets + serializedDatumBytes + serializedReferenceScriptBytes` | `address_bootstrap_rebased` |
 
-The rebased base is 250 less the 57 bytes of a base address, the largest
-common Shelley address. The same 57 bytes is the threshold of the last variant.
+The rebased base, 193, is 250 less the 57 bytes of a base address, the largest
+common Shelley address. Bootstrap only, rebased applies it to bootstrap
+addresses only. The same 57 bytes is the threshold of Above 57 bytes.
 
 The measurements, all taken from the output's original bytes:
 
@@ -236,6 +243,7 @@ The metrics:
 | Every address, rebased: `193 + 74N + A + D + R` | 8,034 (0.00350%) | 11.11% | 61.64% | 2.10% | 2.189871 | 2.361880 |
 | Bootstrap only: `250 + 74N + (A if bootstrap) + D + R` | 6,737 (0.00294%) | 15.43% | 61.68% | 1.49% | 2.220894 | 2.361880 |
 | Above 57 bytes: `250 + 74N + max(0, A − 57) + D + R` | 6,755 (0.00294%) | 14.04% | 61.64% | 1.49% | 2.215809 | 2.361880 |
+| Bootstrap only, rebased: `(193 + A if bootstrap, else 250) + 74N + D + R` | 6,755 (0.00294%) | 12.89% | 61.64% | 1.49% | 2.215423 | 2.361880 |
 
 ### Address terms, Conway outputs
 
@@ -249,6 +257,7 @@ The metrics:
 | Every address, rebased: `193 + 74N + A + D + R` | 0 (0.00000%) | 11.11% | 30.82% | 4.22% | 1.888803 | 0.000000 |
 | Bootstrap only: `250 + 74N + (A if bootstrap) + D + R` | 0 (0.00000%) | 11.11% | 38.86% | 3.19% | 1.919600 | 0.000000 |
 | Above 57 bytes: `250 + 74N + max(0, A − 57) + D + R` | 0 (0.00000%) | 11.11% | 37.29% | 3.19% | 1.914224 | 0.000000 |
+| Bootstrap only, rebased: `(193 + A if bootstrap, else 250) + 74N + D + R` | 0 (0.00000%) | 11.11% | 37.29% | 3.19% | 1.913745 | 0.000000 |
 
 ### Address terms, bootstrap-address outputs created since the Babbage hard fork
 
@@ -262,6 +271,7 @@ The metrics:
 | Every address, rebased: `193 + 74N + A + D + R` | 19 (0.00037%) | 10.24% | 77.53% | 0.00% | 2.800824 | 0.607710 |
 | Bootstrap only: `250 + 74N + (A if bootstrap) + D + R` | 1 (0.00002%) | 33.60% | 79.17% | 0.00% | 3.046494 | 0.362040 |
 | Above 57 bytes: `250 + 74N + max(0, A − 57) + D + R` | 19 (0.00037%) | 10.24% | 77.53% | 0.00% | 2.818170 | 0.607710 |
+| Bootstrap only, rebased: `(193 + A if bootstrap, else 250) + 74N + D + R` | 19 (0.00037%) | 10.24% | 77.53% | 0.00% | 2.800824 | 0.607710 |
 
 ### Address terms, every output
 
@@ -275,6 +285,7 @@ The metrics:
 | Every address, rebased: `193 + 74N + A + D + R` | 14,668 (0.00404%) | 11.11% | 62.98% | 1.33% | 2.122073 | 18.231300 |
 | Bootstrap only: `250 + 74N + (A if bootstrap) + D + R` | 13,109 (0.00361%) | 17.49% | 63.19% | 0.94% | 2.164474 | 18.110620 |
 | Above 57 bytes: `250 + 74N + max(0, A − 57) + D + R` | 13,158 (0.00362%) | 12.82% | 63.13% | 0.94% | 2.149418 | 18.110620 |
+| Bootstrap only, rebased: `(193 + A if bootstrap, else 250) + 74N + D + R` | 13,159 (0.00362%) | 11.15% | 63.13% | 0.94% | 2.148319 | 18.110620 |
 
 ## Verification
 
@@ -291,8 +302,8 @@ The metrics:
   total balance are checked.
 - **Rerun:** a rerun from a fresh clone on 12 November 2026 gave identical
   statistics for every formula and group.
-- **Address terms:** the run of 17 November 2026, which added the four address
-  terms, reproduced every statistic of the six earlier formulas in every group,
+- **Address terms:** the runs of 17 November 2026, which added the address
+  terms, reproduced every statistic of the earlier formulas in every group,
   including the recorded outputs.
 
 ## Reproduction

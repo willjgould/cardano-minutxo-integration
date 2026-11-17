@@ -4,8 +4,8 @@
 Datum and reference-script terms count payload bytes only (the hash inputs),
 as the CIP specifies. Two controls keep the 6 November whole-field
 measurements so this run can be checked against that earlier result.
-Four address variants add the address's bytes as written, in full, rebased,
-for bootstrap addresses only, or above 57 bytes.
+Five address variants add the address's bytes as written: in full, rebased,
+for bootstrap addresses only (in full or rebased), or above 57 bytes.
 
 No ledger rule is changed. The common benchmark is 160 plus each output's
 original received byte length; before Babbage this is counterfactual, not the
@@ -43,6 +43,7 @@ FORMULAS = {
     "address_all_rebased": "coinsPerUTxOByte * (193 + 74 * numberOfNativeAssets + serializedAddressBytes + serializedDatumBytes + serializedReferenceScriptBytes)",
     "address_bootstrap_only": "coinsPerUTxOByte * (250 + 74 * numberOfNativeAssets + (serializedAddressBytes if bootstrap address else 0) + serializedDatumBytes + serializedReferenceScriptBytes)",
     "address_above_57": "coinsPerUTxOByte * (250 + 74 * numberOfNativeAssets + max(0, serializedAddressBytes - 57) + serializedDatumBytes + serializedReferenceScriptBytes)",
+    "address_bootstrap_rebased": "coinsPerUTxOByte * ((193 + serializedAddressBytes if bootstrap address else 250) + 74 * numberOfNativeAssets + serializedDatumBytes + serializedReferenceScriptBytes)",
 }
 BYTE_RULE_ERAS = ("Babbage", "Conway")
 QUANTILES = (("p05", 5), ("p50", 50), ("p95", 95), ("p99", 99))
@@ -266,7 +267,8 @@ class Aggregate:
                      250 + 74 * assets + address + payloads,
                      193 + 74 * assets + address + payloads,
                      250 + 74 * assets + (address if bootstrap else 0) + payloads,
-                     250 + 74 * assets + max(0, address - 57) + payloads)
+                     250 + 74 * assets + max(0, address - 57) + payloads,
+                     (193 + address if bootstrap else 250) + 74 * assets + payloads)
         values = [(estimate - baseline, 100 * (estimate - baseline) / baseline,
                    10000 * (estimate - baseline) // baseline) for estimate in estimates]
         for group in group_names(row):
