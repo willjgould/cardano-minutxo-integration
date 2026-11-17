@@ -4,6 +4,8 @@
 Datum and reference-script terms count payload bytes only (the hash inputs),
 as the CIP specifies. Two controls keep the 6 November whole-field
 measurements so this run can be checked against that earlier result.
+Four address variants add the address's bytes as written, in full, rebased,
+for bootstrap addresses only, or above 57 bytes.
 
 No ledger rule is changed. The common benchmark is 160 plus each output's
 original received byte length; before Babbage this is counterfactual, not the
@@ -36,7 +38,13 @@ FORMULAS = {
     "alternative_fixed_ada_width": "coinsPerUTxOByte * (160 + serializedOutputBytes - serializedAdaAmountBytes + 9)",
     "control_cip_whole_fields": "coinsPerUTxOByte * (250 + 74 * numberOfNativeAssets + serializedDatumFieldBytes + serializedReferenceScriptFieldBytes)",
     "control_policy_address_whole_fields": "coinsPerUTxOByte * (175 + serializedAddressFieldBytes + 12 * numberOfNativeAssets + 30 * numberOfMintingPolicies + totalAssetNameBytes + serializedDatumFieldBytes + serializedReferenceScriptFieldBytes)",
+    # Address terms: serializedAddressBytes is the address as written, without its byte-string header.
+    "address_all": "coinsPerUTxOByte * (250 + 74 * numberOfNativeAssets + serializedAddressBytes + serializedDatumBytes + serializedReferenceScriptBytes)",
+    "address_all_rebased": "coinsPerUTxOByte * (193 + 74 * numberOfNativeAssets + serializedAddressBytes + serializedDatumBytes + serializedReferenceScriptBytes)",
+    "address_bootstrap_only": "coinsPerUTxOByte * (250 + 74 * numberOfNativeAssets + (serializedAddressBytes if bootstrap address else 0) + serializedDatumBytes + serializedReferenceScriptBytes)",
+    "address_above_57": "coinsPerUTxOByte * (250 + 74 * numberOfNativeAssets + max(0, serializedAddressBytes - 57) + serializedDatumBytes + serializedReferenceScriptBytes)",
 }
+BYTE_RULE_ERAS = ("Babbage", "Conway")
 QUANTILES = (("p05", 5), ("p50", 50), ("p95", 95), ("p99", 99))
 WITNESS_COUNT = 5
 
@@ -216,6 +224,8 @@ def histogram_quantiles(histogram, count):
 def group_names(row):
     yield "era/" + row["era"]
     yield "address/" + row["address_type"]
+    if row["era"] in BYTE_RULE_ERAS:
+        yield "byte_rule_address/" + row["address_type"]
     assets = row["num_assets"]
     yield "assets/none" if assets == 0 else "assets/native"
     if assets >= 6:
@@ -244,13 +254,19 @@ class Aggregate:
         whole_fields = row["datum_contribution_bytes"] + row["reference_script_contribution_bytes"]
         policy_address = (175 + row["address_contribution_bytes"] + 12 * assets
                           + 30 * row["num_policies"] + row["asset_name_bytes"])
+        address = row["address_bytes"]
+        bootstrap = row["address_type"] == "bootstrap"
         # Order matches FORMULAS.
         estimates = (250 + 74 * assets + payloads,
                      policy_address + payloads,
                      250 + 74 * assets + row["datum_payload_bytes"],
                      baseline - row["coin_encoding_bytes"] + 9,
                      250 + 74 * assets + whole_fields,
-                     policy_address + whole_fields)
+                     policy_address + whole_fields,
+                     250 + 74 * assets + address + payloads,
+                     193 + 74 * assets + address + payloads,
+                     250 + 74 * assets + (address if bootstrap else 0) + payloads,
+                     250 + 74 * assets + max(0, address - 57) + payloads)
         values = [(estimate - baseline, 100 * (estimate - baseline) / baseline,
                    10000 * (estimate - baseline) // baseline) for estimate in estimates]
         for group in group_names(row):
@@ -466,6 +482,7 @@ def main():
             "totalAssetNameBytes": "Sum of raw name lengths per asset pair, including repeated names under different policies.",
             "serializedDatumBytes": "32 for a datum hash; for an inline datum, the original encoded Plutus data inside tag 24 (its datum-hash input). Excludes keys, tags and headers.",
             "serializedReferenceScriptBytes": "The script-hash input without its one-byte language prefix: a native script's original CBOR or a Plutus script's byte-string contents. Excludes keys, tags, headers and the language identifier.",
+            "serializedAddressBytes": "The address as written in the output, without its byte-string header: a Shelley address's bytes, or a bootstrap address's CBOR (tag 24 payload and CRC).",
             "serializedAdaAmountBytes": "Original encoded size of the output's ADA amount.",
             "serializedFieldBytes": "Original entire encoded field contribution, including a map key where present and encoding wrappers (address term, and the whole-field controls).",
         },

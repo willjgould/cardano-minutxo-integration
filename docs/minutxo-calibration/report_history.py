@@ -22,7 +22,12 @@ SENSITIVITY = [("cip", "Proposed, payload bytes (as specified)"),
                ("control_cip_whole_fields", "Proposed, whole fields"),
                ("control_policy_address_whole_fields", "Alt 1, whole fields (as specified)"),
                ("alternative_policy_address", "Alt 1, payload bytes")]
-ERAS = ["Genesis", "Byron", "Shelley", "Allegra", "Mary", "Alonzo", "Babbage", "Conway"]
+ADDRESS = [("cip", "Proposed: `250 + 74N + D + R`"),
+           ("address_all", "Every address: `250 + 74N + A + D + R`"),
+           ("address_all_rebased", "Every address, rebased: `193 + 74N + A + D + R`"),
+           ("address_bootstrap_only", "Bootstrap only: `250 + 74N + (A if bootstrap) + D + R`"),
+           ("address_above_57", "Above 57 bytes: `250 + 74N + max(0, A − 57) + D + R`")]
+ERAS =["Genesis", "Byron", "Shelley", "Allegra", "Mary", "Alonzo", "Babbage", "Conway"]
 HEADER = ("| {} | Underestimates | Median excess | p95 excess | Within 5% above | Mean requirement, ADA | Largest shortfall, ADA |\n"
           "| --- | ---: | ---: | ---: | ---: | ---: | ---: |")
 CONTROLS = {"control_cip_whole_fields": "original_winner",
@@ -110,16 +115,22 @@ def main():
     print(group_table("Era", groups, [("era/" + era, era) for era in ERAS]) + "\n")
     print("### Sensitivity to CBOR wrappers, outputs created since the Babbage hard fork\n")
     print(table(variants, "byte_rule_eras", SENSITIVITY, current=False) + "\n")
+    for group, title in (("byte_rule_eras", "outputs created since the Babbage hard fork"),
+                         ("era/Conway", "Conway outputs"),
+                         ("byte_rule_address/bootstrap", "bootstrap-address outputs created since the Babbage hard fork"),
+                         ("all", "every output")):
+        print(section(f"Address terms, {title}", variants, group, ADDRESS))
     if args.control:
         old = json.loads(args.control.read_text())["variants"]
         print("### Control reproduction\n")
         for new_name, old_name in CONTROLS.items():
             new_groups, old_groups = variants[new_name]["groups"], old[old_name]["groups"]
-            same_groups = set(new_groups) == set(old_groups)
+            # Later runs add groups (byte_rule_address/*); every earlier group must still be present.
+            same_groups = set(old_groups) <= set(new_groups)
             differing = [g for g in old_groups
                          if not same(without_witnesses(new_groups.get(g, {})), without_witnesses(old_groups[g]))]
             print(f"- `{new_name}` vs earlier `{old_name}`: {len(old_groups)} groups, "
-                  f"group sets identical: {same_groups}, groups differing: {len(differing)}"
+                  f"all earlier groups present: {same_groups}, groups differing: {len(differing)}"
                   + (f" ({', '.join(differing[:5])})" if differing else ""))
 
 

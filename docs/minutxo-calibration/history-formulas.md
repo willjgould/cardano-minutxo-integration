@@ -1,7 +1,8 @@
 # Historical backtest of a minimum-ADA formula
 
-This backtest compares a proposed minimum-ADA formula and three alternatives
-with the current formula, for every output created on Cardano mainnet up to
+This backtest compares a proposed minimum-ADA formula, three alternatives and
+four address terms with the current formula, for every output created on
+Cardano mainnet up to
 28 October 2026. Each output is measured from its original bytes, as they
 appear in the block that created it, and priced at 4,310 lovelace per byte.
 
@@ -29,6 +30,24 @@ current formula took effect:
   change from 6,756 to 6,727. Alt 1 depends on them: with payload bytes only,
   988,221 outputs (0.43%) fall below the current formula, because its 175-byte
   base was fitted to whole fields.
+- **Adding every address to the 250-byte base** raises the median excess from
+  13.7% to 36.4%, and the mean requirement from 2.21 to 2.44 ADA. Only 234
+  outputs fall below the current formula.
+- **Rebased to 193**, the same term has a median excess of 11.1% and a mean
+  requirement of 2.19 ADA, with 8,034 underestimates. The extra ones are
+  enterprise-address outputs from the Babbage era. There are none in Conway.
+- **Bootstrap only** barely changes the totals: 6,737 underestimates and a mean
+  requirement of 2.22 ADA. The 5,110,390 bootstrap-address outputs carry the
+  cost. Their median excess rises from 2.5% to 33.6%, and their mean
+  requirement from 2.76 to 3.05 ADA.
+- **Above 57 bytes** changes almost nothing for other outputs: 6,755
+  underestimates and a mean requirement of 2.22 ADA. Bootstrap-address outputs
+  have a median excess of 10.2% and a mean requirement of 2.82 ADA.
+- **Large bootstrap addresses have occurred on mainnet.** Before Shelley limited
+  bootstrap address attributes to 64 bytes, Byron-era outputs carried addresses
+  of up to 22,600 bytes. Across every output, they cause the proposed formula's
+  largest shortfall, 97.03 ADA. Each address term reduces the largest shortfall
+  to about 18 ADA.
 
 ## Data
 
@@ -63,6 +82,21 @@ Two more result keys test sensitivity to CBOR wrappers:
 `control_cip_whole_fields` is the proposed formula with whole fields, and
 `alternative_policy_address` is Alt 1 with payload bytes.
 
+Four more result keys add an address term to the proposed formula. The proposed
+formula charges every address at its 250-byte base, whatever the address's
+size, and a bootstrap address can be several kilobytes long. In this table, `A`
+is `serializedAddressBytes`.
+
+| Name | Formula | Result key |
+| --- | --- | --- |
+| Every address | `250 + 74 * numberOfNativeAssets + A + serializedDatumBytes + serializedReferenceScriptBytes` | `address_all` |
+| Every address, rebased | `193 + 74 * numberOfNativeAssets + A + serializedDatumBytes + serializedReferenceScriptBytes` | `address_all_rebased` |
+| Bootstrap only | `250 + 74 * numberOfNativeAssets + (A if bootstrap address, else 0) + serializedDatumBytes + serializedReferenceScriptBytes` | `address_bootstrap_only` |
+| Above 57 bytes | `250 + 74 * numberOfNativeAssets + max(0, A - 57) + serializedDatumBytes + serializedReferenceScriptBytes` | `address_above_57` |
+
+The rebased base is 250 less the 57 bytes of a base address, the largest
+common Shelley address. The same 57 bytes is the threshold of the last variant.
+
 The measurements, all taken from the output's original bytes:
 
 - `numberOfNativeAssets`: distinct pairs of policy ID and asset name, excluding
@@ -74,6 +108,9 @@ The measurements, all taken from the output's original bytes:
 - `serializedReferenceScriptBytes`: what the script hash is computed over,
   without its one-byte language prefix. This is a native script's CBOR, or the
   contents of a Plutus script's byte string.
+- `serializedAddressBytes`: the address as written in the output, without its
+  byte-string header. This is a Shelley address's bytes, or a bootstrap
+  address's CBOR, including its CRC.
 - `serializedAddressFieldBytes`, `serializedDatumFieldBytes` and
   `serializedReferenceScriptFieldBytes`: everything the field adds to the
   output's encoding, including its map key and CBOR wrappers.
@@ -187,6 +224,58 @@ The metrics:
 | Alt 1, whole fields (as specified) | 9,422 (0.00411%) | 4.00% | 12.82% | 78.44% | 1.638749 | 2.995450 |
 | Alt 1, payload bytes | 988,221 (0.43062%) | 4.00% | 12.80% | 83.19% | 1.634256 | 2.995450 |
 
+### Address terms, outputs created since the Babbage hard fork
+
+229,486,615 outputs.
+
+| Formula | Underestimates | Median excess | p95 excess | Within 5% above | Mean requirement, ADA | Largest shortfall, ADA |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Current: `160 + serializedOutputBytes` | – | – | – | – | 1.492008 | – |
+| Proposed: `250 + 74N + D + R` | 6,756 (0.00294%) | 13.73% | 61.64% | 2.78% | 2.214510 | 2.361880 |
+| Every address: `250 + 74N + A + D + R` | 234 (0.00010%) | 36.44% | 69.83% | 0.01% | 2.435541 | 2.116210 |
+| Every address, rebased: `193 + 74N + A + D + R` | 8,034 (0.00350%) | 11.11% | 61.64% | 2.10% | 2.189871 | 2.361880 |
+| Bootstrap only: `250 + 74N + (A if bootstrap) + D + R` | 6,737 (0.00294%) | 15.43% | 61.68% | 1.49% | 2.220894 | 2.361880 |
+| Above 57 bytes: `250 + 74N + max(0, A − 57) + D + R` | 6,755 (0.00294%) | 14.04% | 61.64% | 1.49% | 2.215809 | 2.361880 |
+
+### Address terms, Conway outputs
+
+85,672,524 outputs.
+
+| Formula | Underestimates | Median excess | p95 excess | Within 5% above | Mean requirement, ADA | Largest shortfall, ADA |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Current: `160 + serializedOutputBytes` | – | – | – | – | 1.432822 | – |
+| Proposed: `250 + 74N + D + R` | 0 (0.00000%) | 11.11% | 37.29% | 4.42% | 1.912922 | 0.000000 |
+| Every address: `250 + 74N + A + D + R` | 0 (0.00000%) | 36.44% | 48.46% | 0.01% | 2.134473 | 0.000000 |
+| Every address, rebased: `193 + 74N + A + D + R` | 0 (0.00000%) | 11.11% | 30.82% | 4.22% | 1.888803 | 0.000000 |
+| Bootstrap only: `250 + 74N + (A if bootstrap) + D + R` | 0 (0.00000%) | 11.11% | 38.86% | 3.19% | 1.919600 | 0.000000 |
+| Above 57 bytes: `250 + 74N + max(0, A − 57) + D + R` | 0 (0.00000%) | 11.11% | 37.29% | 3.19% | 1.914224 | 0.000000 |
+
+### Address terms, bootstrap-address outputs created since the Babbage hard fork
+
+5,110,390 outputs.
+
+| Formula | Underestimates | Median excess | p95 excess | Within 5% above | Mean requirement, ADA | Largest shortfall, ADA |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Current: `160 + serializedOutputBytes` | – | – | – | – | 1.838323 | – |
+| Proposed: `250 + 74N + D + R` | 20 (0.00039%) | 2.45% | 76.99% | 58.16% | 2.759820 | 0.689600 |
+| Every address: `250 + 74N + A + D + R` | 1 (0.00002%) | 33.60% | 79.17% | 0.00% | 3.046494 | 0.362040 |
+| Every address, rebased: `193 + 74N + A + D + R` | 19 (0.00037%) | 10.24% | 77.53% | 0.00% | 2.800824 | 0.607710 |
+| Bootstrap only: `250 + 74N + (A if bootstrap) + D + R` | 1 (0.00002%) | 33.60% | 79.17% | 0.00% | 3.046494 | 0.362040 |
+| Above 57 bytes: `250 + 74N + max(0, A − 57) + D + R` | 19 (0.00037%) | 10.24% | 77.53% | 0.00% | 2.818170 | 0.607710 |
+
+### Address terms, every output
+
+363,308,474 outputs.
+
+| Formula | Underestimates | Median excess | p95 excess | Within 5% above | Mean requirement, ADA | Largest shortfall, ADA |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Current: `160 + serializedOutputBytes` | – | – | – | – | 1.432446 | – |
+| Proposed: `250 + 74N + D + R` | 13,312 (0.00366%) | 12.65% | 63.11% | 5.45% | 2.145522 | 97.026720 |
+| Every address: `250 + 74N + A + D + R` | 311 (0.00009%) | 36.44% | 72.01% | 0.01% | 2.367743 | 17.985630 |
+| Every address, rebased: `193 + 74N + A + D + R` | 14,668 (0.00404%) | 11.11% | 62.98% | 1.33% | 2.122073 | 18.231300 |
+| Bootstrap only: `250 + 74N + (A if bootstrap) + D + R` | 13,109 (0.00361%) | 17.49% | 63.19% | 0.94% | 2.164474 | 18.110620 |
+| Above 57 bytes: `250 + 74N + max(0, A − 57) + D + R` | 13,158 (0.00362%) | 12.82% | 63.13% | 0.94% | 2.149418 | 18.110620 |
+
 ## Verification
 
 - **Source:** `mithril-client` verified the snapshot's certificate chain and
@@ -202,11 +291,14 @@ The metrics:
   total balance are checked.
 - **Rerun:** a rerun from a fresh clone on 12 November 2026 gave identical
   statistics for every formula and group.
+- **Address terms:** the run of 17 November 2026, which added the four address
+  terms, reproduced every statistic of the six earlier formulas in every group,
+  including the recorded outputs.
 
 ## Reproduction
 
 You need Python 3.11 or later, with no other packages, and about 233 GB of
-chain data. With 24 workers, the run takes about 23 minutes.
+chain data. With 30 workers, the run takes about 35 minutes.
 
 1. Clone this repository, check out the commit you are reading, and fetch the
    ledger submodule, whose test fixtures the genesis step reads:
@@ -233,7 +325,7 @@ chain data. With 24 workers, the run takes about 23 minutes.
    python3 docs/minutxo-calibration/backtest_history.py \
      --source "$IMMUTABLE_DB" --last-chunk 9335 \
      --genesis mainnet-byron-genesis.json \
-     --work-dir backtest-work --result backtest-result.json --workers 24
+     --work-dir backtest-work --result backtest-result.json --workers 30
    python3 docs/minutxo-calibration/report_history.py backtest-result.json
    ```
 
