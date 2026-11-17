@@ -1,7 +1,7 @@
 # Historical backtest of a minimum-ADA formula
 
-This backtest compares a proposed minimum-ADA formula, three alternatives and
-five address terms with the current formula, for every output created on
+This backtest compares a proposed minimum-ADA formula, an alternative to it and
+other candidate formulas with the current formula, for every output created on
 Cardano mainnet up to 28 October 2026. Each output is measured from its
 original bytes, as they appear in the block that created it, and priced at
 4,310 lovelace per byte.
@@ -11,48 +11,49 @@ original bytes, as they appear in the block that created it, and priced at
 For the 229,486,615 outputs created since the Babbage hard fork, when the
 current formula took effect:
 
-- **The proposed formula** requires less than the current formula for 6,756
-  outputs (0.003%), by at most 2.36 ADA. None of them were created in the
-  Conway era. Its median excess is 13.7%, and its mean requirement is 2.21 ADA,
-  against 1.49 ADA for the current formula.
+- **The proposed formula** requires less than the current formula for 8,034
+  outputs (0.004%), by at most 2.36 ADA. None of them were created in the
+  Conway era. Across every output, 14,519 of its 14,668 underestimates are
+  outputs with zero-quantity asset entries, which the ledger discards. Its
+  median excess is 11.1%, and its mean requirement is 2.19 ADA, against
+  1.49 ADA for the current formula.
 - **Its upper tail comes from outputs with native assets.** Its p95 excess is
   61.6%, because 74 bytes per asset assumes that each asset has its own policy
-  and a 32-byte name. Across every output, the p95 excess is 26.9% for outputs
+  and a 32-byte name. Across every output, the p95 excess is 12.7% for outputs
   without native assets and 255.0% for outputs with six or more.
-- **Alt 1** has a median excess of 4.0%, and requires less than the current
-  formula for 9,422 outputs (0.004%).
-- **Alt 2** has no reference-script term. It requires less than the current
-  formula for 96.6% of outputs with a reference script, by up to 69.33 ADA.
-- **Alt 3** never requires less than the current formula, because an ADA amount
-  never encodes to more than 9 bytes. Its median excess is 1.5%.
-- **CBOR wrappers barely matter for the proposed formula.** If it counted whole
-  datum and script fields instead of their payloads, its underestimates would
-  change from 6,756 to 6,727. Alt 1 depends on them: with payload bytes only,
-  988,221 outputs (0.43%) fall below the current formula, because its 175-byte
-  base was fitted to whole fields.
-- **Adding every address to the 250-byte base** raises the median excess from
-  13.7% to 36.4%, and the mean requirement from 2.21 to 2.44 ADA. Only 234
-  outputs fall below the current formula.
-- **Rebased to 193**, the same term has a median excess of 11.1% and a mean
-  requirement of 2.19 ADA, with 8,034 underestimates. The extra ones are
-  enterprise-address outputs from the Babbage era. There are none in Conway.
-- **Bootstrap only** barely changes the totals: 6,737 underestimates and a mean
-  requirement of 2.22 ADA. The 5,110,390 bootstrap-address outputs carry the
-  cost. Their median excess rises from 2.5% to 33.6%, and their mean
-  requirement from 2.76 to 3.05 ADA.
-- **Above 57 bytes** changes almost nothing for other outputs: 6,755
-  underestimates and a mean requirement of 2.22 ADA. Bootstrap-address outputs
-  have a median excess of 10.2% and a mean requirement of 2.82 ADA.
-- **Bootstrap only, rebased** gives bootstrap-address outputs the same
-  requirement as every address rebased, and every other output the same
-  requirement as the proposed formula. It has 6,755 underestimates and a mean
-  requirement of 2.22 ADA. Compared with bootstrap only, the median excess of
-  bootstrap-address outputs falls from 33.6% to 10.2%.
+- **The alternative** charges only bootstrap addresses for their size, and
+  keeps a 250-byte base for every other output. Bootstrap-address outputs get
+  the same requirement as under the proposed formula. Outputs with addresses
+  shorter than 57 bytes, such as enterprise addresses, pay as if their address
+  were 57 bytes. It requires less than the current formula for 6,755 outputs
+  (0.003%). Its median excess is 12.9%, and its mean requirement is 2.22 ADA.
+- **Without an address term**, the formula charges every address at its
+  250-byte base, whatever the address's size. It requires less than the current
+  formula for 6,756 outputs (0.003%). Its median excess is 13.7%, and its mean
+  requirement is 2.21 ADA.
 - **Large bootstrap addresses have occurred on mainnet.** Before Shelley limited
   bootstrap address attributes to 64 bytes, Byron-era outputs carried addresses
-  of up to 22,600 bytes. Across every output, they cause the proposed formula's
-  largest shortfall, 97.03 ADA. Each address term reduces the largest shortfall
-  to about 18 ADA.
+  of up to 22,600 bytes. Across every output, they cause the largest shortfall
+  of the formula without an address term, 97.03 ADA. Each address term reduces
+  the largest shortfall to about 18 ADA.
+- **Alt 1** has a median excess of 4.0%, and requires less than the current
+  formula for 9,422 outputs (0.004%).
+- **Alt 2** has neither an address term nor a reference-script term. It
+  requires less than the current formula for 96.6% of outputs with a reference
+  script, by up to 69.33 ADA.
+- **Alt 3** never requires less than the current formula, because an ADA amount
+  never encodes to more than 9 bytes. Its median excess is 1.5%.
+- **CBOR wrappers barely matter without an address term.** If that formula
+  counted whole datum and script fields instead of their payloads, its
+  underestimates would change from 6,756 to 6,727. Alt 1 depends on them: with
+  payload bytes only, 988,221 outputs (0.43%) fall below the current formula,
+  because its 175-byte base was fitted to whole fields.
+- **Other address terms.** Adding every address to the 250-byte base raises the
+  median excess to 36.4% and the mean requirement to 2.44 ADA, with 234
+  underestimates. Adding bootstrap addresses in full to the 250-byte base gives
+  6,737 underestimates, but raises the median excess of bootstrap-address
+  outputs from 10.2% to 33.6%. Charging address bytes above 57 gives 6,755
+  underestimates and a mean requirement of 2.22 ADA.
 
 ## Data
 
@@ -78,31 +79,29 @@ formula in [history-formulas.json](history-formulas.json).
 | Name | Formula | Result key |
 | --- | --- | --- |
 | Current | `160 + serializedOutputBytes` | – |
-| Proposed | `250 + 74 * numberOfNativeAssets + serializedDatumBytes + serializedReferenceScriptBytes` | `cip` |
+| Proposed | `193 + 74 * numberOfNativeAssets + serializedAddressBytes + serializedDatumBytes + serializedReferenceScriptBytes` | `address_all_rebased` |
+| Alternative | `(193 + serializedAddressBytes if bootstrap address, else 250) + 74 * numberOfNativeAssets + serializedDatumBytes + serializedReferenceScriptBytes` | `address_bootstrap_rebased` |
+| No address term | `250 + 74 * numberOfNativeAssets + serializedDatumBytes + serializedReferenceScriptBytes` | `cip` |
 | Alt 1 | `175 + serializedAddressFieldBytes + 12 * numberOfNativeAssets + 30 * numberOfMintingPolicies + totalAssetNameBytes + serializedDatumFieldBytes + serializedReferenceScriptFieldBytes` | `control_policy_address_whole_fields` |
 | Alt 2 | `250 + 74 * numberOfNativeAssets + serializedDatumBytes` | `alternative_datum_only` |
 | Alt 3 | `160 + serializedOutputBytes - serializedAdaAmountBytes + 9` | `alternative_fixed_ada_width` |
 
-Two more result keys test sensitivity to CBOR wrappers:
-`control_cip_whole_fields` is the proposed formula with whole fields, and
-`alternative_policy_address` is Alt 1 with payload bytes.
+The base of 193 is 250 less the 57 bytes of a base address, the largest common
+Shelley address. The formula without an address term has the result key `cip`
+because it was the CIP's first proposal.
 
-Five more result keys add an address term to the proposed formula. The proposed
-formula charges every address at its 250-byte base, whatever the address's
-size, and a bootstrap address can be several kilobytes long. In this table, `A`
-is `serializedAddressBytes`.
+Two more result keys test sensitivity to CBOR wrappers:
+`control_cip_whole_fields` is the formula without an address term, counting
+whole fields, and `alternative_policy_address` is Alt 1 with payload bytes.
+
+Three more result keys test other address terms. In this table, `A` is
+`serializedAddressBytes`.
 
 | Name | Formula | Result key |
 | --- | --- | --- |
-| Every address | `250 + 74 * numberOfNativeAssets + A + serializedDatumBytes + serializedReferenceScriptBytes` | `address_all` |
-| Every address, rebased | `193 + 74 * numberOfNativeAssets + A + serializedDatumBytes + serializedReferenceScriptBytes` | `address_all_rebased` |
-| Bootstrap only | `250 + 74 * numberOfNativeAssets + (A if bootstrap address, else 0) + serializedDatumBytes + serializedReferenceScriptBytes` | `address_bootstrap_only` |
+| Every address, 250 base | `250 + 74 * numberOfNativeAssets + A + serializedDatumBytes + serializedReferenceScriptBytes` | `address_all` |
+| Bootstrap only, 250 base | `250 + 74 * numberOfNativeAssets + (A if bootstrap address, else 0) + serializedDatumBytes + serializedReferenceScriptBytes` | `address_bootstrap_only` |
 | Above 57 bytes | `250 + 74 * numberOfNativeAssets + max(0, A - 57) + serializedDatumBytes + serializedReferenceScriptBytes` | `address_above_57` |
-| Bootstrap only, rebased | `(193 + A if bootstrap address, else 250) + 74 * numberOfNativeAssets + serializedDatumBytes + serializedReferenceScriptBytes` | `address_bootstrap_rebased` |
-
-The rebased base, 193, is 250 less the 57 bytes of a base address, the largest
-common Shelley address. Bootstrap only, rebased applies it to bootstrap
-addresses only. The same 57 bytes is the threshold of Above 57 bytes.
 
 The measurements, all taken from the output's original bytes:
 
@@ -148,7 +147,9 @@ The metrics:
 | Formula | Underestimates | Median excess | p95 excess | Within 5% above | Mean requirement, ADA | Largest shortfall, ADA |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | Current: `160 + serializedOutputBytes` | – | – | – | – | 1.492008 | – |
-| Proposed: `250 + 74N + D + R` | 6,756 (0.00294%) | 13.73% | 61.64% | 2.78% | 2.214510 | 2.361880 |
+| Proposed: `193 + 74N + A + D + R` | 8,034 (0.00350%) | 11.11% | 61.64% | 2.10% | 2.189871 | 2.361880 |
+| Alternative: `(193 + A if bootstrap, else 250) + 74N + D + R` | 6,755 (0.00294%) | 12.89% | 61.64% | 1.49% | 2.215423 | 2.361880 |
+| No address term: `250 + 74N + D + R` | 6,756 (0.00294%) | 13.73% | 61.64% | 2.78% | 2.214510 | 2.361880 |
 | Alt 1: address, policy and name sizes | 9,422 (0.00411%) | 4.00% | 12.82% | 78.44% | 1.638749 | 2.995450 |
 | Alt 2: no reference-script term | 21,013 (0.00916%) | 13.73% | 61.64% | 2.78% | 2.213097 | 69.330660 |
 | Alt 3: fixed ADA width | 0 (0.00000%) | 1.54% | 2.03% | 100.00% | 1.507211 | 0.000000 |
@@ -160,7 +161,9 @@ The metrics:
 | Formula | Underestimates | Median excess | p95 excess | Within 5% above | Mean requirement, ADA | Largest shortfall, ADA |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | Current: `160 + serializedOutputBytes` | – | – | – | – | 1.432446 | – |
-| Proposed: `250 + 74N + D + R` | 13,312 (0.00366%) | 12.65% | 63.11% | 5.45% | 2.145522 | 97.026720 |
+| Proposed: `193 + 74N + A + D + R` | 14,668 (0.00404%) | 11.11% | 62.98% | 1.33% | 2.122073 | 18.231300 |
+| Alternative: `(193 + A if bootstrap, else 250) + 74N + D + R` | 13,159 (0.00362%) | 11.15% | 63.13% | 0.94% | 2.148319 | 18.110620 |
+| No address term: `250 + 74N + D + R` | 13,312 (0.00366%) | 12.65% | 63.11% | 5.45% | 2.145522 | 97.026720 |
 | Alt 1: address, policy and name sizes | 16,194 (0.00446%) | 4.00% | 13.54% | 78.58% | 1.578943 | 18.300260 |
 | Alt 2: no reference-script term | 27,569 (0.00759%) | 12.65% | 63.11% | 5.45% | 2.144630 | 97.026720 |
 | Alt 3: fixed ADA width | 0 (0.00000%) | 1.63% | 2.03% | 100.00% | 1.447650 | 0.000000 |
@@ -172,7 +175,9 @@ The metrics:
 | Formula | Underestimates | Median excess | p95 excess | Within 5% above | Mean requirement, ADA | Largest shortfall, ADA |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | Current: `160 + serializedOutputBytes` | – | – | – | – | 1.892346 | – |
-| Proposed: `250 + 74N + D + R` | 869 (0.00332%) | 16.09% | 37.79% | 12.98% | 2.188675 | 0.969750 |
+| Proposed: `193 + 74N + A + D + R` | 1,014 (0.00387%) | 11.91% | 28.42% | 18.40% | 2.134777 | 0.969750 |
+| Alternative: `(193 + A if bootstrap, else 250) + 74N + D + R` | 869 (0.00332%) | 16.09% | 37.79% | 12.98% | 2.188675 | 0.969750 |
+| No address term: `250 + 74N + D + R` | 869 (0.00332%) | 16.09% | 37.79% | 12.98% | 2.188675 | 0.969750 |
 | Alt 1: address, policy and name sizes | 1,058 (0.00404%) | 2.90% | 6.07% | 79.13% | 1.949795 | 1.008540 |
 | Alt 2: no reference-script term | 8,122 (0.03100%) | 16.09% | 37.79% | 12.96% | 2.182472 | 68.783290 |
 | Alt 3: fixed ADA width | 0 (0.00000%) | 0.82% | 1.43% | 100.00% | 1.905717 | 0.000000 |
@@ -184,7 +189,9 @@ The metrics:
 | Formula | Underestimates | Median excess | p95 excess | Within 5% above | Mean requirement, ADA | Largest shortfall, ADA |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | Current: `160 + serializedOutputBytes` | – | – | – | – | 1.362344 | – |
-| Proposed: `250 + 74N + D + R` | 266 (0.00086%) | 19.49% | 31.25% | 0.02% | 1.645856 | 0.193950 |
+| Proposed: `193 + 74N + A + D + R` | 919 (0.00296%) | 16.33% | 25.73% | 0.01% | 1.595084 | 0.193950 |
+| Alternative: `(193 + A if bootstrap, else 250) + 74N + D + R` | 265 (0.00085%) | 19.49% | 31.25% | 0.02% | 1.645856 | 0.193950 |
+| No address term: `250 + 74N + D + R` | 266 (0.00086%) | 19.49% | 31.25% | 0.02% | 1.645856 | 0.193950 |
 | Alt 1: address, policy and name sizes | 934 (0.00300%) | 4.66% | 6.00% | 55.66% | 1.427302 | 0.284460 |
 | Alt 2: no reference-script term | 4,509 (0.01450%) | 19.49% | 31.25% | 0.00% | 1.642457 | 66.205910 |
 | Alt 3: fixed ADA width | 0 (0.00000%) | 1.32% | 1.73% | 100.00% | 1.376194 | 0.000000 |
@@ -196,7 +203,9 @@ The metrics:
 | Formula | Underestimates | Median excess | p95 excess | Within 5% above | Mean requirement, ADA | Largest shortfall, ADA |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | Current: `160 + serializedOutputBytes` | – | – | – | – | 23.537771 | – |
-| Proposed: `250 + 74N + D + R` | 0 (0.00000%) | 0.62% | 6.97% | 88.19% | 23.702357 | 0.000000 |
+| Proposed: `193 + 74N + A + D + R` | 0 (0.00000%) | 0.21% | 4.12% | 96.18% | 23.613870 | 0.000000 |
+| Alternative: `(193 + A if bootstrap, else 250) + 74N + D + R` | 0 (0.00000%) | 0.62% | 6.97% | 88.19% | 23.702357 | 0.000000 |
+| No address term: `250 + 74N + D + R` | 0 (0.00000%) | 0.62% | 6.97% | 88.19% | 23.702357 | 0.000000 |
 | Alt 1: address, policy and name sizes | 0 (0.00000%) | 0.21% | 1.80% | 99.67% | 23.586387 | 0.000000 |
 | Alt 2: no reference-script term | 14,257 (96.55289%) | -94.25% | -59.55% | 3.24% | 1.747399 | 69.330660 |
 | Alt 3: fixed ADA width | 0 (0.00000%) | 0.06% | 0.55% | 100.00% | 23.555011 | 0.000000 |
@@ -205,29 +214,29 @@ The metrics:
 
 | Native assets | Underestimates | Median excess | p95 excess | Within 5% above | Mean requirement, ADA | Largest shortfall, ADA |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| None (217,834,833 outputs) | 12,982 (0.00596%) | 11.11% | 26.90% | 8.99% | 1.103353 | 97.026720 |
-| One or more (145,473,641 outputs) | 330 (0.00023%) | 22.26% | 134.56% | 0.16% | 3.706084 | 0.435310 |
-| Six or more (23,911,793 outputs) | 0 (0.00000%) | 94.47% | 255.01% | 0.00% | 14.097682 | 0.000000 |
+| None (217,834,833 outputs) | 14,297 (0.00656%) | 11.11% | 12.69% | 1.77% | 1.085952 | 18.231300 |
+| One or more (145,473,641 outputs) | 371 (0.00026%) | 20.44% | 134.48% | 0.67% | 3.673579 | 0.435310 |
+| Six or more (23,911,793 outputs) | 0 (0.00000%) | 94.45% | 254.97% | 0.00% | 14.097338 | 0.000000 |
 
 ### Proposed formula by creation era
 
 | Era | Underestimates | Median excess | p95 excess | Within 5% above | Mean requirement, ADA | Largest shortfall, ADA |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Genesis (14,505 outputs) | 0 (0.00000%) | 17.37% | 17.37% | 0.00% | 1.077500 | 0.000000 |
-| Byron (5,918,937 outputs) | 152 (0.00257%) | 1.62% | 19.61% | 84.06% | 1.077500 | 97.026720 |
-| Shelley (1,621,975 outputs) | 0 (0.00000%) | 11.11% | 18.48% | 24.22% | 1.077500 | 0.000000 |
-| Allegra (3,592,375 outputs) | 0 (0.00000%) | 11.11% | 18.48% | 29.48% | 1.077500 | 0.000000 |
-| Mary (18,891,199 outputs) | 705 (0.00373%) | 11.11% | 26.90% | 19.09% | 1.528403 | 0.181020 |
-| Alonzo (103,782,868 outputs) | 5,699 (0.00549%) | 17.81% | 78.58% | 3.27% | 2.220027 | 18.110620 |
-| Babbage (143,814,091 outputs) | 6,756 (0.00470%) | 16.27% | 79.31% | 1.80% | 2.394171 | 2.361880 |
-| Conway (85,672,524 outputs) | 0 (0.00000%) | 11.11% | 37.29% | 4.42% | 1.912922 | 0.000000 |
+| Genesis (14,505 outputs) | 0 (0.00000%) | 10.79% | 10.79% | 0.00% | 1.017159 | 0.000000 |
+| Byron (5,918,937 outputs) | 0 (0.00000%) | 9.34% | 12.91% | 0.00% | 1.136996 | 0.000000 |
+| Shelley (1,621,975 outputs) | 0 (0.00000%) | 9.76% | 11.84% | 0.00% | 1.084874 | 0.000000 |
+| Allegra (3,592,375 outputs) | 0 (0.00000%) | 10.24% | 11.84% | 0.00% | 1.090324 | 0.000000 |
+| Mary (18,891,199 outputs) | 732 (0.00387%) | 11.11% | 20.44% | 0.00% | 1.520883 | 0.181020 |
+| Alonzo (103,782,868 outputs) | 5,902 (0.00569%) | 12.69% | 78.52% | 0.00% | 2.189846 | 18.231300 |
+| Babbage (143,814,091 outputs) | 8,034 (0.00559%) | 11.55% | 79.31% | 0.84% | 2.369223 | 2.361880 |
+| Conway (85,672,524 outputs) | 0 (0.00000%) | 11.11% | 30.82% | 4.22% | 1.888803 | 0.000000 |
 
 ### Sensitivity to CBOR wrappers, outputs created since the Babbage hard fork
 
 | Formula | Underestimates | Median excess | p95 excess | Within 5% above | Mean requirement, ADA | Largest shortfall, ADA |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Proposed, payload bytes (as specified) | 6,756 (0.00294%) | 13.73% | 61.64% | 2.78% | 2.214510 | 2.361880 |
-| Proposed, whole fields | 6,727 (0.00293%) | 14.48% | 61.64% | 2.39% | 2.219003 | 2.361880 |
+| No address term, payload bytes (as specified) | 6,756 (0.00294%) | 13.73% | 61.64% | 2.78% | 2.214510 | 2.361880 |
+| No address term, whole fields | 6,727 (0.00293%) | 14.48% | 61.64% | 2.39% | 2.219003 | 2.361880 |
 | Alt 1, whole fields (as specified) | 9,422 (0.00411%) | 4.00% | 12.82% | 78.44% | 1.638749 | 2.995450 |
 | Alt 1, payload bytes | 988,221 (0.43062%) | 4.00% | 12.80% | 83.19% | 1.634256 | 2.995450 |
 
@@ -238,12 +247,12 @@ The metrics:
 | Formula | Underestimates | Median excess | p95 excess | Within 5% above | Mean requirement, ADA | Largest shortfall, ADA |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | Current: `160 + serializedOutputBytes` | – | – | – | – | 1.492008 | – |
-| Proposed: `250 + 74N + D + R` | 6,756 (0.00294%) | 13.73% | 61.64% | 2.78% | 2.214510 | 2.361880 |
+| No address term: `250 + 74N + D + R` | 6,756 (0.00294%) | 13.73% | 61.64% | 2.78% | 2.214510 | 2.361880 |
 | Every address: `250 + 74N + A + D + R` | 234 (0.00010%) | 36.44% | 69.83% | 0.01% | 2.435541 | 2.116210 |
-| Every address, rebased: `193 + 74N + A + D + R` | 8,034 (0.00350%) | 11.11% | 61.64% | 2.10% | 2.189871 | 2.361880 |
+| Every address, rebased (proposed): `193 + 74N + A + D + R` | 8,034 (0.00350%) | 11.11% | 61.64% | 2.10% | 2.189871 | 2.361880 |
 | Bootstrap only: `250 + 74N + (A if bootstrap) + D + R` | 6,737 (0.00294%) | 15.43% | 61.68% | 1.49% | 2.220894 | 2.361880 |
 | Above 57 bytes: `250 + 74N + max(0, A − 57) + D + R` | 6,755 (0.00294%) | 14.04% | 61.64% | 1.49% | 2.215809 | 2.361880 |
-| Bootstrap only, rebased: `(193 + A if bootstrap, else 250) + 74N + D + R` | 6,755 (0.00294%) | 12.89% | 61.64% | 1.49% | 2.215423 | 2.361880 |
+| Bootstrap only, rebased (alternative): `(193 + A if bootstrap, else 250) + 74N + D + R` | 6,755 (0.00294%) | 12.89% | 61.64% | 1.49% | 2.215423 | 2.361880 |
 
 ### Address terms, Conway outputs
 
@@ -252,12 +261,12 @@ The metrics:
 | Formula | Underestimates | Median excess | p95 excess | Within 5% above | Mean requirement, ADA | Largest shortfall, ADA |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | Current: `160 + serializedOutputBytes` | – | – | – | – | 1.432822 | – |
-| Proposed: `250 + 74N + D + R` | 0 (0.00000%) | 11.11% | 37.29% | 4.42% | 1.912922 | 0.000000 |
+| No address term: `250 + 74N + D + R` | 0 (0.00000%) | 11.11% | 37.29% | 4.42% | 1.912922 | 0.000000 |
 | Every address: `250 + 74N + A + D + R` | 0 (0.00000%) | 36.44% | 48.46% | 0.01% | 2.134473 | 0.000000 |
-| Every address, rebased: `193 + 74N + A + D + R` | 0 (0.00000%) | 11.11% | 30.82% | 4.22% | 1.888803 | 0.000000 |
+| Every address, rebased (proposed): `193 + 74N + A + D + R` | 0 (0.00000%) | 11.11% | 30.82% | 4.22% | 1.888803 | 0.000000 |
 | Bootstrap only: `250 + 74N + (A if bootstrap) + D + R` | 0 (0.00000%) | 11.11% | 38.86% | 3.19% | 1.919600 | 0.000000 |
 | Above 57 bytes: `250 + 74N + max(0, A − 57) + D + R` | 0 (0.00000%) | 11.11% | 37.29% | 3.19% | 1.914224 | 0.000000 |
-| Bootstrap only, rebased: `(193 + A if bootstrap, else 250) + 74N + D + R` | 0 (0.00000%) | 11.11% | 37.29% | 3.19% | 1.913745 | 0.000000 |
+| Bootstrap only, rebased (alternative): `(193 + A if bootstrap, else 250) + 74N + D + R` | 0 (0.00000%) | 11.11% | 37.29% | 3.19% | 1.913745 | 0.000000 |
 
 ### Address terms, bootstrap-address outputs created since the Babbage hard fork
 
@@ -266,12 +275,12 @@ The metrics:
 | Formula | Underestimates | Median excess | p95 excess | Within 5% above | Mean requirement, ADA | Largest shortfall, ADA |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | Current: `160 + serializedOutputBytes` | – | – | – | – | 1.838323 | – |
-| Proposed: `250 + 74N + D + R` | 20 (0.00039%) | 2.45% | 76.99% | 58.16% | 2.759820 | 0.689600 |
+| No address term: `250 + 74N + D + R` | 20 (0.00039%) | 2.45% | 76.99% | 58.16% | 2.759820 | 0.689600 |
 | Every address: `250 + 74N + A + D + R` | 1 (0.00002%) | 33.60% | 79.17% | 0.00% | 3.046494 | 0.362040 |
-| Every address, rebased: `193 + 74N + A + D + R` | 19 (0.00037%) | 10.24% | 77.53% | 0.00% | 2.800824 | 0.607710 |
+| Every address, rebased (proposed): `193 + 74N + A + D + R` | 19 (0.00037%) | 10.24% | 77.53% | 0.00% | 2.800824 | 0.607710 |
 | Bootstrap only: `250 + 74N + (A if bootstrap) + D + R` | 1 (0.00002%) | 33.60% | 79.17% | 0.00% | 3.046494 | 0.362040 |
 | Above 57 bytes: `250 + 74N + max(0, A − 57) + D + R` | 19 (0.00037%) | 10.24% | 77.53% | 0.00% | 2.818170 | 0.607710 |
-| Bootstrap only, rebased: `(193 + A if bootstrap, else 250) + 74N + D + R` | 19 (0.00037%) | 10.24% | 77.53% | 0.00% | 2.800824 | 0.607710 |
+| Bootstrap only, rebased (alternative): `(193 + A if bootstrap, else 250) + 74N + D + R` | 19 (0.00037%) | 10.24% | 77.53% | 0.00% | 2.800824 | 0.607710 |
 
 ### Address terms, every output
 
@@ -280,12 +289,12 @@ The metrics:
 | Formula | Underestimates | Median excess | p95 excess | Within 5% above | Mean requirement, ADA | Largest shortfall, ADA |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | Current: `160 + serializedOutputBytes` | – | – | – | – | 1.432446 | – |
-| Proposed: `250 + 74N + D + R` | 13,312 (0.00366%) | 12.65% | 63.11% | 5.45% | 2.145522 | 97.026720 |
+| No address term: `250 + 74N + D + R` | 13,312 (0.00366%) | 12.65% | 63.11% | 5.45% | 2.145522 | 97.026720 |
 | Every address: `250 + 74N + A + D + R` | 311 (0.00009%) | 36.44% | 72.01% | 0.01% | 2.367743 | 17.985630 |
-| Every address, rebased: `193 + 74N + A + D + R` | 14,668 (0.00404%) | 11.11% | 62.98% | 1.33% | 2.122073 | 18.231300 |
+| Every address, rebased (proposed): `193 + 74N + A + D + R` | 14,668 (0.00404%) | 11.11% | 62.98% | 1.33% | 2.122073 | 18.231300 |
 | Bootstrap only: `250 + 74N + (A if bootstrap) + D + R` | 13,109 (0.00361%) | 17.49% | 63.19% | 0.94% | 2.164474 | 18.110620 |
 | Above 57 bytes: `250 + 74N + max(0, A − 57) + D + R` | 13,158 (0.00362%) | 12.82% | 63.13% | 0.94% | 2.149418 | 18.110620 |
-| Bootstrap only, rebased: `(193 + A if bootstrap, else 250) + 74N + D + R` | 13,159 (0.00362%) | 11.15% | 63.13% | 0.94% | 2.148319 | 18.110620 |
+| Bootstrap only, rebased (alternative): `(193 + A if bootstrap, else 250) + 74N + D + R` | 13,159 (0.00362%) | 11.15% | 63.13% | 0.94% | 2.148319 | 18.110620 |
 
 ## Verification
 

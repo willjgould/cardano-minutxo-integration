@@ -14,20 +14,22 @@ from pathlib import Path
 # Result keys, as named in backtest_history.FORMULAS, with their report labels.
 # Alternative 1 is specified with whole datum and script fields, so its result
 # key is control_policy_address_whole_fields.
-MAIN = [("cip", "Proposed: `250 + 74N + D + R`"),
+MAIN = [("address_all_rebased", "Proposed: `193 + 74N + A + D + R`"),
+        ("address_bootstrap_rebased", "Alternative: `(193 + A if bootstrap, else 250) + 74N + D + R`"),
+        ("cip", "No address term: `250 + 74N + D + R`"),
         ("control_policy_address_whole_fields", "Alt 1: address, policy and name sizes"),
         ("alternative_datum_only", "Alt 2: no reference-script term"),
         ("alternative_fixed_ada_width", "Alt 3: fixed ADA width")]
-SENSITIVITY = [("cip", "Proposed, payload bytes (as specified)"),
-               ("control_cip_whole_fields", "Proposed, whole fields"),
+SENSITIVITY = [("cip", "No address term, payload bytes (as specified)"),
+               ("control_cip_whole_fields", "No address term, whole fields"),
                ("control_policy_address_whole_fields", "Alt 1, whole fields (as specified)"),
                ("alternative_policy_address", "Alt 1, payload bytes")]
-ADDRESS = [("cip", "Proposed: `250 + 74N + D + R`"),
+ADDRESS = [("cip", "No address term: `250 + 74N + D + R`"),
            ("address_all", "Every address: `250 + 74N + A + D + R`"),
-           ("address_all_rebased", "Every address, rebased: `193 + 74N + A + D + R`"),
+           ("address_all_rebased", "Every address, rebased (proposed): `193 + 74N + A + D + R`"),
            ("address_bootstrap_only", "Bootstrap only: `250 + 74N + (A if bootstrap) + D + R`"),
            ("address_above_57", "Above 57 bytes: `250 + 74N + max(0, A − 57) + D + R`"),
-           ("address_bootstrap_rebased", "Bootstrap only, rebased: `(193 + A if bootstrap, else 250) + 74N + D + R`")]
+           ("address_bootstrap_rebased", "Bootstrap only, rebased (alternative): `(193 + A if bootstrap, else 250) + 74N + D + R`")]
 ERAS =["Genesis", "Byron", "Shelley", "Allegra", "Mary", "Alonzo", "Babbage", "Conway"]
 HEADER = ("| {} | Underestimates | Median excess | p95 excess | Within 5% above | Mean requirement, ADA | Largest shortfall, ADA |\n"
           "| --- | ---: | ---: | ---: | ---: | ---: | ---: |")
@@ -108,7 +110,7 @@ def main():
                          ("payload/hash_datum", "Outputs with a datum hash"),
                          ("payload/reference_script", "Outputs with a reference script")):
         print(section(title, variants, group))
-    groups = variants["cip"]["groups"]
+    groups = variants["address_all_rebased"]["groups"]
     print("### Proposed formula by native assets, every output\n")
     print(group_table("Native assets", groups, [("assets/none", "None"), ("assets/native", "One or more"),
                                                 ("assets/six_or_more", "Six or more")]) + "\n")
