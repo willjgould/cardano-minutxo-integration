@@ -231,6 +231,10 @@ def group_names(row):
     yield "assets/none" if assets == 0 else "assets/native"
     if assets >= 6:
         yield "assets/six_or_more"
+        if row["era"] in BYTE_RULE_ERAS:
+            yield "byte_rule_assets/six_or_more"
+        if row["era"] == "Conway":
+            yield "conway_assets/six_or_more"
     if row["has_reference_script"]:
         yield "payload/reference_script"
     if row["datum_type"] != "none":

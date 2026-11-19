@@ -105,10 +105,14 @@ def main():
     print(f"{report['outputs']:,} outputs ({report['transaction_created_outputs']:,} created by transactions, "
           f"{report['genesis_outputs']:,} in genesis); {report['bytes'] / 1e9:.3f} GB of chunks.\n")
     print(section("Outputs created since the Babbage hard fork", variants, "byte_rule_eras"))
+    print(section("Conway outputs", variants, "era/Conway"))
     print(section("Every output", variants, "all"))
     for group, title in (("payload/inline_datum", "Outputs with an inline datum"),
                          ("payload/hash_datum", "Outputs with a datum hash"),
-                         ("payload/reference_script", "Outputs with a reference script")):
+                         ("payload/reference_script", "Outputs with a reference script"),
+                         ("byte_rule_assets/six_or_more",
+                          "Outputs with six or more native assets, created since the Babbage hard fork"),
+                         ("conway_assets/six_or_more", "Conway outputs with six or more native assets")):
         print(section(title, variants, group))
     groups = variants["address_all_rebased"]["groups"]
     print("### Proposed formula by native assets, every output\n")

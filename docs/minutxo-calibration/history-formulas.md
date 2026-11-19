@@ -154,6 +154,20 @@ The metrics:
 | Alt 2: no reference-script term | 21,013 (0.00916%) | 13.73% | 61.64% | 2.78% | 2.213097 | 69.330660 |
 | Alt 3: fixed ADA width | 0 (0.00000%) | 1.54% | 2.03% | 100.00% | 1.507211 | 0.000000 |
 
+### Conway outputs
+
+85,672,524 outputs.
+
+| Formula | Underestimates | Median excess | p95 excess | Within 5% above | Mean requirement, ADA | Largest shortfall, ADA |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Current: `160 + serializedOutputBytes` | – | – | – | – | 1.432822 | – |
+| Proposed: `193 + 74N + A + D + R` | 0 (0.00000%) | 11.11% | 30.82% | 4.22% | 1.888803 | 0.000000 |
+| Alternative: `(193 + A if bootstrap, else 250) + 74N + D + R` | 0 (0.00000%) | 11.11% | 37.29% | 3.19% | 1.913745 | 0.000000 |
+| No address term: `250 + 74N + D + R` | 0 (0.00000%) | 11.11% | 37.29% | 4.42% | 1.912922 | 0.000000 |
+| Alt 1: address, policy and name sizes | 0 (0.00000%) | 4.00% | 6.79% | 87.51% | 1.532831 | 0.000000 |
+| Alt 2: no reference-script term | 5,253 (0.00613%) | 11.11% | 37.29% | 4.42% | 1.911737 | 69.235840 |
+| Alt 3: fixed ADA width | 0 (0.00000%) | 1.50% | 2.03% | 100.00% | 1.447485 | 0.000000 |
+
 ### Every output
 
 363,308,474 outputs.
@@ -209,6 +223,34 @@ The metrics:
 | Alt 1: address, policy and name sizes | 0 (0.00000%) | 0.21% | 1.80% | 99.67% | 23.586387 | 0.000000 |
 | Alt 2: no reference-script term | 14,257 (96.55289%) | -94.25% | -59.55% | 3.24% | 1.747399 | 69.330660 |
 | Alt 3: fixed ADA width | 0 (0.00000%) | 0.06% | 0.55% | 100.00% | 23.555011 | 0.000000 |
+
+### Outputs with six or more native assets, created since the Babbage hard fork
+
+15,013,067 outputs.
+
+| Formula | Underestimates | Median excess | p95 excess | Within 5% above | Mean requirement, ADA | Largest shortfall, ADA |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Current: `160 + serializedOutputBytes` | – | – | – | – | 6.130877 | – |
+| Proposed: `193 + 74N + A + D + R` | 0 (0.00000%) | 91.56% | 248.54% | 0.00% | 14.380178 | 0.000000 |
+| Alternative: `(193 + A if bootstrap, else 250) + 74N + D + R` | 0 (0.00000%) | 91.58% | 248.76% | 0.00% | 14.382168 | 0.000000 |
+| No address term: `250 + 74N + D + R` | 0 (0.00000%) | 91.58% | 248.76% | 0.00% | 14.380353 | 0.000000 |
+| Alt 1: address, policy and name sizes | 17 (0.00011%) | 19.48% | 43.29% | 0.79% | 7.701045 | 2.995450 |
+| Alt 2: no reference-script term | 0 (0.00000%) | 91.58% | 248.76% | 0.00% | 14.380353 | 0.000000 |
+| Alt 3: fixed ADA width | 0 (0.00000%) | 0.46% | 0.88% | 100.00% | 6.147557 | 0.000000 |
+
+### Conway outputs with six or more native assets
+
+3,210,361 outputs.
+
+| Formula | Underestimates | Median excess | p95 excess | Within 5% above | Mean requirement, ADA | Largest shortfall, ADA |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Current: `160 + serializedOutputBytes` | – | – | – | – | 6.489228 | – |
+| Proposed: `193 + 74N + A + D + R` | 0 (0.00000%) | 80.71% | 245.87% | 0.00% | 14.454884 | 0.000000 |
+| Alternative: `(193 + A if bootstrap, else 250) + 74N + D + R` | 0 (0.00000%) | 80.72% | 245.93% | 0.00% | 14.459201 | 0.000000 |
+| No address term: `250 + 74N + D + R` | 0 (0.00000%) | 80.70% | 245.93% | 0.00% | 14.454975 | 0.000000 |
+| Alt 1: address, policy and name sizes | 0 (0.00000%) | 17.14% | 42.33% | 1.01% | 8.012047 | 0.000000 |
+| Alt 2: no reference-script term | 0 (0.00000%) | 80.70% | 245.93% | 0.00% | 14.454975 | 0.000000 |
+| Alt 3: fixed ADA width | 0 (0.00000%) | 0.39% | 0.85% | 100.00% | 6.505258 | 0.000000 |
 
 ### Proposed formula by native assets, every output
 
@@ -313,6 +355,10 @@ The metrics:
   statistics for every formula and group.
 - **Address terms:** the runs of 17 November 2026, which added the address
   terms, reproduced every statistic of the earlier formulas in every group,
+  including the recorded outputs.
+- **Six-or-more groups:** the run of 19 November 2026, which added the groups
+  of outputs with six or more native assets created since the Babbage hard
+  fork and in the Conway era, reproduced every statistic of the earlier groups,
   including the recorded outputs.
 
 ## Reproduction
